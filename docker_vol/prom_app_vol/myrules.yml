@@ -1,0 +1,14 @@
+#
+#
+# Copyright (c) 2021 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl/
+#
+#
+
+
+groups:
+  - name: database-system-rules
+    rules:
+      - record: job:os:total_cpu_elpased_time
+        expr: oracledb_os_value{stat_name="BUSY_TIME"} + ignoring(stat_name) oracledb_os_value{stat_name="IDLE_TIME"}
+  

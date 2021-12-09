@@ -1,0 +1,19 @@
+#
+#
+# Copyright (c) 2021 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl/
+#
+#
+
+datasources:
+  - name: 'Prometheus'
+    type: 'prometheus'
+    access: 'proxy'
+    org_id: 1
+    url: 'https://prometheus:9090'
+    is_default: true
+    version: 1
+    editable: true
+    jsonData:
+      tlsSkipVerify: true
+      tlsAuthWithCACert: true

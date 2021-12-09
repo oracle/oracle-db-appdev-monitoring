@@ -1,0 +1,6 @@
+dist/
+*.rpm
+.idea
+*.apk
+*.pub
+oci8.pc
