@@ -96,7 +96,14 @@ public class OracleDBMetricsExporter extends OracleDBMetricsExporterEnvConfig {
         }
         request = next.get("request").asText(); // the sql query
         ignorezeroresult = next.get("ignorezeroresult") == null ? "false" : next.get("ignorezeroresult").asText();
-        ResultSet resultSet = connection.prepareStatement(request).executeQuery();
+        ResultSet resultSet;
+        try {
+             resultSet = connection.prepareStatement(request).executeQuery();
+        } catch(SQLException e) { //this can be due to table not existing etc.
+            LOG.debug("OracleDBMetricsExporter.processMetric  during:" + request);
+            LOG.debug("OracleDBMetricsExporter.processMetric  exception:" + e);
+            return;
+        }
         while (resultSet.next()) { //should only be one row
             translateQueryToPrometheusMetric(context, metricsdesc, labelNames, resultSet);
         }
