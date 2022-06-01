@@ -7,8 +7,7 @@ export IMAGE_NAME=observability-exporter
 export IMAGE_VERSION=0.1.0
 
 if [ -z "$DOCKER_REGISTRY" ]; then
-    echo "DOCKER_REGISTRY not set. Will get it with state_get"
-  export DOCKER_REGISTRY=$(state_get DOCKER_REGISTRY)
+    echo "DOCKER_REGISTRY not set."
 fi
 
 export IMAGE=${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_VERSION}

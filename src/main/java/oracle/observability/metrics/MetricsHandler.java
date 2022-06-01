@@ -15,7 +15,6 @@ import java.util.Set;
 public class MetricsHandler implements HttpHandler {
     @Override
     public void handle(HttpExchange exchange) throws IOException {
-        System.out.println("MetricsHandler.handle");
         String response =  getMetricsString();
         exchange.sendResponseHeaders(200, response.length());
         OutputStream os = exchange.getResponseBody();
@@ -25,7 +24,6 @@ public class MetricsHandler implements HttpHandler {
 
 
     public static String getMetricsString() {
-//        Set<String> filters = new HashSet<>(req.queryParams().all("name[]"));
         Set<String> filters = new HashSet<>(); //todo provide filtering
         CollectorRegistry collectorRegistry = CollectorRegistry.defaultRegistry;
         Enumeration<Collector.MetricFamilySamples> mfs = collectorRegistry.filteredMetricFamilySamples(filters);
