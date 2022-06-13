@@ -1,0 +1,17 @@
+[[metric]]
+context = "orderpdb_propagation_disabled_status"
+labels = ["value"]
+metricsdesc = { value = "Total number of propagation schedules disabled by queue name"}
+request = "select count(*) as value from DBA_QUEUE_SCHEDULES where qname = 'ORDERQUEUE' and SCHEDULE_DISABLED = 'Y'"
+ignorezeroresult = true
+
+[[log]]
+context = "orderpdb_propagation_disabled_status"
+logdesc = { value = "Severe events from alert logs"}
+request = "select ORIGINATING_TIMESTAMP, MODULE_ID, EXECUTION_CONTEXT_ID, MESSAGE_TEXT from V$diag_alert_ext"
+
+[[trace]]
+context = "orderpdb_propagation_disabled_status"
+tracingdesc = { value = "Trace including sqltext with bind values of all sessions by orderuser"}
+request = "select ECID, SQL_ID from GV$SESSION where ECID IS NOT NULL"
+

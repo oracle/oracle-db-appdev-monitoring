@@ -24,9 +24,8 @@ public class MetricsHandler implements HttpHandler {
 
 
     public static String getMetricsString() {
-        Set<String> filters = new HashSet<>(); //todo provide filtering
         CollectorRegistry collectorRegistry = CollectorRegistry.defaultRegistry;
-        Enumeration<Collector.MetricFamilySamples> mfs = collectorRegistry.filteredMetricFamilySamples(filters);
+        Enumeration<Collector.MetricFamilySamples> mfs = collectorRegistry.filteredMetricFamilySamples(new HashSet<>());
         return compose(mfs);
     }
 
@@ -66,9 +65,9 @@ public class MetricsHandler implements HttpHandler {
                 }
                 System.out.println("MetricsHandler.compose sample.value:" + sample.value);
                 result.append(' ')
-//                        .append(1)
-                        .append(sample.value)
-                        .append(Collector.doubleToGoString(sample.value))
+                        .append(1)
+//                        .append(sample.value)
+//                        .append(Collector.doubleToGoString(sample.value))
                         .append('\n');
             }
         }

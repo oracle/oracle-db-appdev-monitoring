@@ -5,38 +5,27 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.Tracer;
 
-import io.opentelemetry.api.OpenTelemetry;
-import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 import io.opentelemetry.context.propagation.ContextPropagators;
 import io.opentelemetry.context.propagation.TextMapPropagator;
-import io.opentelemetry.exporter.jaeger.JaegerGrpcSpanExporter;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
-import io.opentelemetry.sdk.resources.Resource;
-import io.opentelemetry.sdk.trace.SdkTracerProvider;
-import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
-import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import java.sql.Connection;
-import java.sql.SQLException;
 
-import oracle.jdbc.driver.OracleConnection;
 import oracle.ucp.jdbc.PoolDataSource;
 import oracle.ucp.jdbc.PoolDataSourceFactory;
 
-public final class OracleDBTracingExporter {
+public final class DBTracingExporter {
 
     List<String> processedTraces = new ArrayList<String>();
 
     public static void main(String[] args) throws Exception {
-        new OracleDBTracingExporter().doMain(args[0]);
+//        new DBTracingExporter().doMain(args[0]);
     }
 
     private void doMain(String traceid) throws Exception {
