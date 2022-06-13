@@ -85,6 +85,10 @@ public class OracleDBMetricsExporterEnvConfig {
 //    String dbpassword = System.getenv("dbpassword");
     String DATA_SOURCE_NAME = System.getenv("DATA_SOURCE_NAME"); //eg %USER%/$(dbpassword)@%PDB_NAME%_tp
     String TNS_ADMIN = System.getenv("TNS_ADMIN");  //eg /msdataworkshop/creds
-    String DEFAULT_METRICS = System.getenv("DEFAULT_METRICS");  //eg /msdataworkshop/creds
-    String CUSTOM_METRICS = System.getenv("CUSTOM_METRICS");  //eg /msdataworkshop/creds
+    String DEFAULT_METRICS = System.getenv("DEFAULT_METRICS");  //eg /msdataworkshop/observability/default-metrics.toml
+    String CUSTOM_METRICS = System.getenv("CUSTOM_METRICS");  //eg /msdataworkshop/observability/custom-metrics.toml
+    String OCI_REGION = System.getenv("OCI_REGION");  //eg us-ashburn-1
+    String VAULT_SECRET_OCID = System.getenv("VAULT_SECRET_OCID");  //eg ocid....
+    String OCI_CONFIG_FILE = System.getenv("OCI_CONFIG_FILE");  //eg "~/.oci/config"
+
 }

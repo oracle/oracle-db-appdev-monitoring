@@ -59,11 +59,15 @@ public class MetricsHandler implements HttpHandler {
                         result.append(sample.labelNames.get(i))
                                 .append("=\"");
                         appendEscapedLabelValue(result, sample.labelValues.get(i));
-                        if (i != sample.labelNames.size() - 1) result.append("\",");
+                        result.append("\"");
+                        if (i != sample.labelNames.size() - 1) result.append(",");
                     }
                     result.append('}');
                 }
+                System.out.println("MetricsHandler.compose sample.value:" + sample.value);
                 result.append(' ')
+//                        .append(1)
+                        .append(sample.value)
                         .append(Collector.doubleToGoString(sample.value))
                         .append('\n');
             }
