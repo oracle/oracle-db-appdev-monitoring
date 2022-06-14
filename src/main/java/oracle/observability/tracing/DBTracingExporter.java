@@ -1,5 +1,7 @@
 package oracle.observability.tracing;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.dataformat.toml.TomlMapper;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
@@ -10,23 +12,64 @@ import io.opentelemetry.context.Scope;
 import io.opentelemetry.context.propagation.ContextPropagators;
 import io.opentelemetry.context.propagation.TextMapPropagator;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import java.sql.Connection;
 
+import oracle.observability.ObservabilityExporter;
+import oracle.observability.metrics.MetricEntry;
 import oracle.ucp.jdbc.PoolDataSource;
 import oracle.ucp.jdbc.PoolDataSourceFactory;
+import org.slf4j.LoggerFactory;
+import org.springframework.web.bind.annotation.RestController;
 
-public final class DBTracingExporter {
+import javax.annotation.PostConstruct;
+
+
+@RestController
+public final class DBTracingExporter extends ObservabilityExporter {
 
     List<String> processedTraces = new ArrayList<String>();
 
-    public static void main(String[] args) throws Exception {
-//        new DBTracingExporter().doMain(args[0]);
+    private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(DBTracingExporter.class);
+
+    @PostConstruct
+    public void init() throws Exception {
+        LOG.debug("Successfully loaded default metrics from:" + DEFAULT_METRICS);
+        LOG.debug("OracleDBTracingExporter CUSTOM_METRICS:" + CUSTOM_METRICS); //todo only default metrics are processed currently
+        File tomlfile = new File(DEFAULT_METRICS);
+        TomlMapper mapper = new TomlMapper();
+        JsonNode jsonNode = mapper.readerFor(MetricEntry.class).readTree(new FileInputStream(tomlfile));
+        Iterator<JsonNode> traces = jsonNode.get("trace").iterator();
+        try (Connection connection = getPoolDataSource().getConnection()) {
+            while (traces.hasNext()) { //for each "log" entry in toml/config...
+                JsonNode next = traces.next();
+                String request = next.get("request").asText(); // the sql query
+                System.out.println("DBTracingExporter.request:" + request);
+                String ignorezeroresult = next.get("ignorezeroresult") == null ? "false" : next.get("ignorezeroresult").asText(); //todo
+                ResultSet resultSet = connection.prepareStatement(request).executeQuery();
+                while (resultSet.next()) {
+                    int columnCount = resultSet.getMetaData().getColumnCount();
+                    String logString = "";
+                    for (int i = 0; i < columnCount; i++) { //for each column...
+                        logString += resultSet.getMetaData().getColumnName(i + 1) + "=" + resultSet.getObject(i + 1) + " ";
+                    }
+                    System.out.println(logString);
+                }
+//				int queryRetryInterval = queryRetryIntervalString == null ||
+//						queryRetryIntervalString.trim().equals("") ?
+//						DEFAULT_RETRY_INTERVAL : Integer.parseInt(queryRetryIntervalString.trim());
+//				Thread.sleep(1000 * queryRetryInterval);
+            }
+        }
     }
+
 
     private void doMain(String traceid) throws Exception {
         OpenTelemetry openTelemetry = OpenTelemetryInitializer.initOpenTelemetry();

@@ -63,11 +63,9 @@ public class MetricsHandler implements HttpHandler {
                     }
                     result.append('}');
                 }
-                System.out.println("MetricsHandler.compose sample.value:" + sample.value);
+//                System.out.println("MetricsHandler.compose sample.value:" + sample.value);
                 result.append(' ')
-                        .append(1)
-//                        .append(sample.value)
-//                        .append(Collector.doubleToGoString(sample.value))
+                        .append(Collector.doubleToGoString(sample.value))
                         .append('\n');
             }
         }
