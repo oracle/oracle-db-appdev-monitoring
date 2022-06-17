@@ -10,19 +10,15 @@ import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
 
 
-import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
 import io.opentelemetry.context.propagation.ContextPropagators;
-//import io.opentelemetry.exporter.logging.LoggingSpanExporter;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
-import io.opentelemetry.sdk.trace.SdkTracerProvider;
-import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 
 import java.util.concurrent.TimeUnit;
 
 public class OpenTelemetryInitializer {
 
     static OpenTelemetry initOpenTelemetry() {
+        //todo uses Jaeger currently
         JaegerGrpcSpanExporter jaegerExporter =
                 JaegerGrpcSpanExporter.builder()
                         .setEndpoint("http://localhost:14250")
@@ -35,15 +31,11 @@ public class OpenTelemetryInitializer {
                         .addSpanProcessor(SimpleSpanProcessor.create(jaegerExporter))
                         .setResource(Resource.getDefault().merge(serviceNameResource))
                         .build();
-//        OpenTelemetrySdk openTelemetry =
-//                OpenTelemetrySdk.builder().setTracerProvider(tracerProvider).build();
         OpenTelemetrySdk openTelemetry =
                 OpenTelemetrySdk.builder().setTracerProvider(tracerProvider)
                         .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
                         .buildAndRegisterGlobal();
         Runtime.getRuntime().addShutdownHook(new Thread(tracerProvider::close));
         return openTelemetry;
-
-
     }
 }

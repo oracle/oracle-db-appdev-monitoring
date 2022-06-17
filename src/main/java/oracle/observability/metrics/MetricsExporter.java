@@ -2,6 +2,8 @@ package oracle.observability.metrics;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.dataformat.toml.TomlMapper;
+import io.prometheus.client.Collector;
+import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.Gauge;
 import oracle.observability.ObservabilityExporter;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,7 +22,7 @@ import java.sql.SQLException;
 import java.util.*;
 
 @RestController
-public class DBMetricsExporter extends ObservabilityExporter {
+public class MetricsExporter extends ObservabilityExporter {
 
     public String LISTEN_ADDRESS      = System.getenv("LISTEN_ADDRESS"); // ":9161"
     public String TELEMETRY_PATH         = System.getenv("TELEMETRY_PATH"); // "/metrics"
@@ -28,7 +30,7 @@ public class DBMetricsExporter extends ObservabilityExporter {
     public String SCRAPE_INTERVAL     = System.getenv("scrape.interval"); // "0s"
     public static final String ORACLEDB_METRIC_PREFIX = "oracledb_";
     Map<String, Gauge> gaugeMap = new HashMap<>();
-    private static final Logger LOG = LoggerFactory.getLogger(DBMetricsExporter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MetricsExporter.class);
 
     /**
      * The endpoint that prometheus will scrape
@@ -38,7 +40,7 @@ public class DBMetricsExporter extends ObservabilityExporter {
     @GetMapping(value = "/metrics", produces = "text/plain")
     public String metrics() throws Exception {
         processMetrics();
-        return MetricsHandler.getMetricsString();
+        return getMetricsString();
     }
 
     @PostConstruct
@@ -51,7 +53,7 @@ public class DBMetricsExporter extends ObservabilityExporter {
         LOG.debug("OracleDBMetricsExporter CUSTOM_METRICS:" + CUSTOM_METRICS); //todo only default metrics are processed currently
         File tomlfile = new File(DEFAULT_METRICS);
         TomlMapper mapper = new TomlMapper();
-        JsonNode jsonNode = mapper.readerFor(MetricEntry.class).readTree(new FileInputStream(tomlfile));
+        JsonNode jsonNode = mapper.readerFor(MetricsExporterConfigEntry.class).readTree(new FileInputStream(tomlfile));
         Iterator<JsonNode> metric = jsonNode.get("metric").iterator();
         int isConnectionSuccessful = 0;
         try(Connection connection = getPoolDataSource().getConnection()) {
@@ -112,8 +114,7 @@ public class DBMetricsExporter extends ObservabilityExporter {
         try {
              resultSet = connection.prepareStatement(request).executeQuery();
         } catch(SQLException e) { //this can be due to table not existing etc.
-            LOG.debug("OracleDBMetricsExporter.processMetric  during:" + request);
-            LOG.debug("OracleDBMetricsExporter.processMetric  exception:" + e);
+            LOG.warn("OracleDBMetricsExporter.processMetric  during:" + request + " exception:" + e);
             return;
         }
         while (resultSet.next()) {
@@ -183,13 +184,104 @@ public class DBMetricsExporter extends ObservabilityExporter {
                 if(labelValues.length >0 )
                     try {
                         gaugeMap.get(ORACLEDB_METRIC_PREFIX + context + "_" + sqlQueryResultsEntry.getKey().toLowerCase()).labels(labelValues).set(valueToSet);
-                    } catch (Exception ex) {
-                        //todo gate the get above as is done with if(metricsDescMap.containsKey(columnName)) previously to avoid NPE
-                        LOG.error("OracleDBMetricsExporter.translateQueryToPrometheusMetric Exc:" + ex);
-                        //     ex.printStackTrace();
+                    } catch (Exception ex) { //todo filter to avoid unnecessary exception handling
+                        LOG.debug("OracleDBMetricsExporter.translateQueryToPrometheusMetric Exc:" + ex);
                     }
                 else gaugeMap.get(ORACLEDB_METRIC_PREFIX + context + "_" + sqlQueryResultsEntry.getKey().toLowerCase()).set(valueToSet);
             }
+        }
+    }
+
+    public static String getMetricsString() {
+        CollectorRegistry collectorRegistry = CollectorRegistry.defaultRegistry;
+        Enumeration<Collector.MetricFamilySamples> mfs = collectorRegistry.filteredMetricFamilySamples(new HashSet<>());
+        return compose(mfs);
+    }
+
+    private static String compose(Enumeration<Collector.MetricFamilySamples> mfs) {
+        StringBuilder result = new StringBuilder();
+        while (mfs.hasMoreElements()) {
+            Collector.MetricFamilySamples metricFamilySamples = mfs.nextElement();
+            result.append("# HELP ")
+                    .append(metricFamilySamples.name)
+                    .append(' ');
+            appendEscapedHelp(result, metricFamilySamples.help);
+            result.append('\n');
+
+            result.append("# TYPE ")
+                    .append(metricFamilySamples.name)
+                    .append(' ')
+                    .append(typeString(metricFamilySamples.type))
+                    .append('\n');
+
+            for (Collector.MetricFamilySamples.Sample sample: metricFamilySamples.samples) {
+                result.append(sample.name);
+                if (!sample.labelNames.isEmpty()) {
+                    result.append('{');
+                    for (int i = 0; i < sample.labelNames.size(); ++i) {
+                        result.append(sample.labelNames.get(i))
+                                .append("=\"");
+                        appendEscapedLabelValue(result, sample.labelValues.get(i));
+                        result.append("\"");
+                        if (i != sample.labelNames.size() - 1) result.append(",");
+                    }
+                    result.append('}');
+                }
+                result.append(' ')
+                        .append(Collector.doubleToGoString(sample.value))
+                        .append('\n');
+            }
+        }
+        return result.toString();
+    }
+
+    private static void appendEscapedHelp(StringBuilder sb, String s) {
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '\\':
+                    sb.append("\\\\");
+                    break;
+                case '\n':
+                    sb.append("\\n");
+                    break;
+                default:
+                    sb.append(c);
+            }
+        }
+    }
+
+    private static void appendEscapedLabelValue(StringBuilder sb, String s) {
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '\\':
+                    sb.append("\\\\");
+                    break;
+                case '\"':
+                    sb.append("\\\"");
+                    break;
+                case '\n':
+                    sb.append("\\n");
+                    break;
+                default:
+                    sb.append(c);
+            }
+        }
+    }
+
+    private static String typeString(Collector.Type t) {
+        switch (t) {
+            case GAUGE:
+                return "gauge";
+            case COUNTER:
+                return "counter";
+            case SUMMARY:
+                return "summary";
+            case HISTOGRAM:
+                return "histogram";
+            default:
+                return "untyped";
         }
     }
 }

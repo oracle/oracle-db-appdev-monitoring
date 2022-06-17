@@ -1,15 +1,6 @@
 package oracle.observability.metrics;
 
-public class MetricEntry {
-//    public String getMetric() {
-//        return metric;
-//    }
-//
-//    public void setMetric(String metric) {
-//        this.metric = metric;
-//    }
-
-//    String metric;
+public class MetricsExporterConfigEntry {
     String context;
     String metricsdesc;
     String request;
@@ -23,16 +14,7 @@ public class MetricEntry {
                 '}';
     }
 
-    public MetricEntry() {}
-
-//    public MetricEntry(String metric, String context, String metricsdesc, String request) {
-//        this.metric = metric;
-//        this.context = context;
-//        this.metricsdesc = metricsdesc;
-//        this.request = request;
-//    }
-
-    public MetricEntry(String context, String metricsdesc, String request) {
+    public MetricsExporterConfigEntry(String context, String metricsdesc, String request) {
         this.context = context;
         this.metricsdesc = metricsdesc;
         this.request = request;

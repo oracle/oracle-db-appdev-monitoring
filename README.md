@@ -1,6 +1,6 @@
 # Unified App Dev Monitoring with Oracle Database
 
-This distribution contains scripts and code for exporting metrics and logs from the Oracle Database, to provide converged app-dev monitoring for data-centric applications. Metrics from the application layer, Kubernetes, and Oracle Database will be combined to provide unified observability to developers. The project uses Prometheus for metrics and Loki for logs, and uses Grafana as the single pane-of-glass dashboard.
+This distribution contains scripts and code for exporting metrics, logs, and traces from the Oracle Database, to provide converged app-dev observability for data-centric applications. Metrics from the application layer, Kubernetes, and Oracle Database will be combined to provide unified observability to developers. The project uses Prometheus for metrics and Loki for logs, and uses Grafana as the single pane-of-glass dashboard.
 
 v1 (preview) - contains export of key database metrics to Prometheus and suggested Grafana dashboard
 
@@ -32,6 +32,24 @@ The following metrics are exposed currently by default.
 - oracledb_resource_current_utilization
 - oracledb_resource_limit_value
 
+
+### Build
+
+Build without running tests using the following.
+
+`mvn clean package -DskipTests`
+
+Tests use a live database and require `DATA_SOURCE_NAME` environment variable be set (see section on Running) and can be run using the following.
+
+`mvn clean package`
+
+Docker image can be build using the following.
+
+`./build.sh`
+
+Docker image can be pushed to $DOCKER_REGISTRY using the following.
+
+`./push.sh`
 
 ### Running
 
