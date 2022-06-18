@@ -1,37 +1,10 @@
 # Unified App Dev Monitoring with Oracle Database
 
-This distribution contains scripts and code for exporting metrics, logs, and traces from the Oracle Database, to provide converged app-dev observability for data-centric applications. Metrics from the application layer, Kubernetes, and Oracle Database will be combined to provide unified observability to developers. The project uses Prometheus for metrics and Loki for logs, and uses Grafana as the single pane-of-glass dashboard.
+This v1 (preview) distribution contains scripts and code for exporting metrics, logs, and traces from any Oracle Database to provide converged observability for data-centric applications. 
 
-v1 (preview) - contains export of key database metrics to Prometheus and suggested Grafana dashboard
+Metrics from the application layer, Kubernetes, and Oracle Database can be combined to provide unified observability to developers within a single Grafana console. 
 
-The following metrics are exposed currently by default.
-
-- oracledb_exporter_last_scrape_duration_seconds
-- oracledb_exporter_last_scrape_error
-- oracledb_exporter_scrapes_total
-- oracledb_up
-- oracledb_activity_execute_count
-- oracledb_activity_parse_count_total
-- oracledb_activity_user_commits
-- oracledb_activity_user_rollbacks
-- oracledb_sessions_activity
-- oracledb_wait_time_application
-- oracledb_wait_time_commit
-- oracledb_wait_time_concurrency
-- oracledb_wait_time_configuration
-- oracledb_wait_time_network
-- oracledb_wait_time_other
-- oracledb_wait_time_scheduler
-- oracledb_wait_time_system_io
-- oracledb_wait_time_user_io
-- oracledb_tablespace_bytes
-- oracledb_tablespace_max_bytes
-- oracledb_tablespace_free
-- oracledb_tablespace_used_percent
-- oracledb_process_count
-- oracledb_resource_current_utilization
-- oracledb_resource_limit_value
-
+Each 
 
 ### Build
 
@@ -74,6 +47,18 @@ export DATA_SOURCE_NAME=user/password@//primaryhost:1521,standbyhost:1521/+ASM?a
 # Then run the exporter
 /path/to/binary/oracle-db-monitoring-exporter --log.level error --web.listen-address 0.0.0.0:9161
 ```
+
+### Security and Other
+
+The exporters are built on the Spring Boot framework and thereby inherit all of the capabilities present there, including
+
+Enabling HTTPS: https://docs.spring.io/spring-cloud-skipper/docs/1.0.0.BUILD-SNAPSHOT/reference/html/configuration-security-enabling-https.html
+
+Basic Auth: https://docs.spring.io/spring-security/reference/servlet/authentication/passwords/basic.html
+
+OAuth2 https://spring.io/guides/tutorials/spring-boot-oauth2/
+
+The reader is referred to this material to configure security and other aspects as appropriate.
 
 ### Usage
 

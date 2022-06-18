@@ -1,0 +1,27 @@
+The following metrics are exposed currently by default.
+
+- oracledb_exporter_last_scrape_duration_seconds
+- oracledb_exporter_last_scrape_error
+- oracledb_exporter_scrapes_total
+- oracledb_up
+- oracledb_activity_execute_count
+- oracledb_activity_parse_count_total
+- oracledb_activity_user_commits
+- oracledb_activity_user_rollbacks
+- oracledb_sessions_activity
+- oracledb_wait_time_application
+- oracledb_wait_time_commit
+- oracledb_wait_time_concurrency
+- oracledb_wait_time_configuration
+- oracledb_wait_time_network
+- oracledb_wait_time_other
+- oracledb_wait_time_scheduler
+- oracledb_wait_time_system_io
+- oracledb_wait_time_user_io
+- oracledb_tablespace_bytes
+- oracledb_tablespace_max_bytes
+- oracledb_tablespace_free
+- oracledb_tablespace_used_percent
+- oracledb_process_count
+- oracledb_resource_current_utilization
+- oracledb_resource_limit_value
