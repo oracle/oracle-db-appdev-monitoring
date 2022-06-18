@@ -1,4 +1,4 @@
-# Unified App Dev Monitoring with Oracle Database
+# Unified Observability with Oracle Database
 
 This v1 (preview) distribution contains scripts and code for exporting metrics, logs, and traces from any Oracle Database to provide converged observability for data-centric applications. 
 
