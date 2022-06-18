@@ -84,13 +84,6 @@ OAuth2 https://spring.io/guides/tutorials/spring-boot-oauth2/
 The reader is referred to this material to configure security and other aspects as appropriate.
 
 
-#### Environment Variables
-
-- `TNS_ENTRY`: Name of the entry to use (`database` in the example file above)
-- `TNS_ADMIN`: Path you choose for the tns admin folder (`/path/to/tns_admin` in the example file above)
-- `DATA_SOURCE_NAME`: Datasource pointing to the `TNS_ENTRY` (`user/password@database` in the example file above)
-
-
 [Metrics Exporter]: Metrics.md
 [Log Exporter]: Logs.md
 [Trace Exporter]: Tracing.md
