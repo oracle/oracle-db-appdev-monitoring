@@ -6,13 +6,14 @@ Metrics from the application layer, Kubernetes, and Oracle Database can be combi
 
 All three exporters (metrics, log, and trace) can be configured in the same file and each is explanined in the corresponding doc pages:
 
-Metrics Exporter
 
-Log Exporter
+[Metrics Exporter][Metrics Exporter]
 
-Trace Exporter
+[Log Exporter][Log Exporter]
 
-The old version of the metrics exporter can be found in the branch and the new metrics exporter implementation is backward compatible such that the same configuration can be used.
+[Trace Exporter][Trace Exporter]
+
+The old version of the metrics exporter can be found in the branch and the new metrics exporter implementation is backward compatible such that the same configuration for both database connection and metrics definition can be used.
 
 ### Build
 
@@ -34,7 +35,7 @@ Docker image can be pushed to $DOCKER_REGISTRY using the following.
 
 ### Running
 
-Ensure the environment variable DATA_SOURCE_NAME is set correctly before starting.
+Ensure the environment variable DATA_SOURCE_NAME (and TNS_ADMIN if appropriate) is set correctly before starting.
 DATA_SOURCE_NAME should be in Oracle EZCONNECT format:  
 <https://docs.oracle.com/en/database/oracle/oracle-database/19/netag/configuring-naming-methods.html#GUID-B0437826-43C1-49EC-A94D-B650B6A4A6EE>  
 19c Oracle Client supports enhanced EZCONNECT, you are able to failover to standby DB or gather some heavy metrics from active standby DB and specify some additional parameters. Within 19c client you are able to connect 12c primary/standby DB too :)
@@ -58,6 +59,18 @@ export DATA_SOURCE_NAME=user/password@//primaryhost:1521,standbyhost:1521/+ASM?a
 
 The only other required environment variable is DEFAULT_METRICS value which is set to the location of the config file.
 
+Run using Java:
+
+`java -jar target/observability-exporter-0.1.0.jar`
+
+Run using Docker
+
+`docker container run observability-exporter-0.1.0`
+
+Run within Kubernetes:
+
+See example yaml in examples directory
+
 ### Security and Other
 
 The exporters are built on the Spring Boot framework and thereby inherit all of the capabilities present there, including
@@ -76,3 +89,8 @@ The reader is referred to this material to configure security and other aspects 
 - `TNS_ENTRY`: Name of the entry to use (`database` in the example file above)
 - `TNS_ADMIN`: Path you choose for the tns admin folder (`/path/to/tns_admin` in the example file above)
 - `DATA_SOURCE_NAME`: Datasource pointing to the `TNS_ENTRY` (`user/password@database` in the example file above)
+
+
+[Metrics Exporter]: Metrics.md
+[Log Exporter]: Logs.md
+[Trace Exporter]: Tracing.md

@@ -1,0 +1,10 @@
+oracle/observability/metrics/MetricsExporterConfigEntry.class
+oracle/observability/metrics/MetricsExporter.class
+oracle/observability/logs/LogExporterConfigEntry.class
+oracle/observability/tracing/TraceExporter.class
+oracle/observability/tracing/TraceExporter$1.class
+oracle/observability/ObservabilityExporter.class
+oracle/observability/ObservabilityExporterApplication.class
+oracle/observability/metrics/MetricsExporter$1.class
+oracle/observability/tracing/TraceExporterConfigEntry.class
+oracle/observability/logs/LogExporter.class
