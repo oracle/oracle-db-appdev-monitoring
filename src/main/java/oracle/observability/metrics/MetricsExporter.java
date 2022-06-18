@@ -48,21 +48,22 @@ public class MetricsExporter extends ObservabilityExporter {
         processMetrics();
     }
 
-    private void processMetrics() throws IOException {
-        LOG.debug("Successfully loaded default metrics from:" + DEFAULT_METRICS);
-        LOG.debug("OracleDBMetricsExporter CUSTOM_METRICS:" + CUSTOM_METRICS); //todo only default metrics are processed currently
+    private void processMetrics() throws IOException, SQLException {
         File tomlfile = new File(DEFAULT_METRICS);
         TomlMapper mapper = new TomlMapper();
         JsonNode jsonNode = mapper.readerFor(MetricsExporterConfigEntry.class).readTree(new FileInputStream(tomlfile));
-        Iterator<JsonNode> metric = jsonNode.get("metric").iterator();
+        JsonNode metric = jsonNode.get("metric");
+        if(metric == null || metric.isEmpty()) {
+            LOG.info("No logs records configured");
+            return;
+        }
+        Iterator<JsonNode> metrics = metric.iterator();
         int isConnectionSuccessful = 0;
         try(Connection connection = getPoolDataSource().getConnection()) {
             isConnectionSuccessful = 1;
-            while (metric.hasNext()) {
-                processMetric(connection, metric);
+            while (metrics.hasNext()) {
+                processMetric(connection, metrics);
             }
-        } catch (SQLException sqlException) {
-            LOG.debug("Successfully loaded default metrics from:" + DEFAULT_METRICS);
         } finally {
             Gauge gauge = gaugeMap.get(ORACLEDB_METRIC_PREFIX + "up");
             if (gauge == null) {
@@ -84,11 +85,11 @@ public class MetricsExporter extends ObservabilityExporter {
      * Request          string
      * IgnoreZeroResult bool
      */
-    private void processMetric(Connection connection, Iterator<JsonNode> metric) throws SQLException {
+    private void processMetric(Connection connection, Iterator<JsonNode> metric) {
         JsonNode next = metric.next();
         //todo ignore case
         String context = next.get("context").asText(); // eg context = "teq"
-        String metricsType = next.get("metricstype") == null ? "" :next.get("metricstype").asText(); // gauge todo counter, histogram, or unspecified
+        String metricsType = next.get("metricstype") == null ? "" :next.get("metricstype").asText();
         JsonNode metricsdescNode = next.get("metricsdesc");
         // eg metricsdesc = { enqueued_msgs = "Total enqueued messages.", dequeued_msgs = "Total dequeued messages.", remained_msgs = "Total remained messages."}
         Iterator<Map.Entry<String, JsonNode>> metricsdescIterator = metricsdescNode.fields();
@@ -97,7 +98,7 @@ public class MetricsExporter extends ObservabilityExporter {
             Map.Entry<String, JsonNode> metricsdesc = metricsdescIterator.next();
             metricsDescMap.put(metricsdesc.getKey(), metricsdesc.getValue().asText());
         }
-        LOG.debug("----context:" + context);
+        LOG.debug("context:" + context);
         String[] labelNames = new String[0];
         if (next.get("labels") != null) {
             int size = next.get("labels").size();
@@ -109,16 +110,16 @@ public class MetricsExporter extends ObservabilityExporter {
             LOG.debug("\n");
         }
         String request = next.get("request").asText(); // the sql query
-        String ignorezeroresult = next.get("ignorezeroresult") == null ? "false" : next.get("ignorezeroresult").asText(); //todo
+        String ignorezeroresult = next.get("ignorezeroresult") == null ? "false" : next.get("ignorezeroresult").asText(); //todo, currently defaults to true
         ResultSet resultSet;
         try {
              resultSet = connection.prepareStatement(request).executeQuery();
+             while (resultSet.next()) {
+                 translateQueryToPrometheusMetric(context,  metricsDescMap, labelNames, resultSet);
+             }
         } catch(SQLException e) { //this can be due to table not existing etc.
-            LOG.warn("OracleDBMetricsExporter.processMetric  during:" + request + " exception:" + e);
+            LOG.warn("DBMetricsExporter.processMetric  during:" + request + " exception:" + e);
             return;
-        }
-        while (resultSet.next()) {
-            translateQueryToPrometheusMetric(context,  metricsDescMap, labelNames, resultSet);
         }
     }
 

@@ -16,9 +16,9 @@ import java.sql.*;
 import java.util.List;
 
 @RestController
-public class LogExporter extends ObservabilityExporter implements Runnable {
+public class LogsExporter extends ObservabilityExporter implements Runnable {
 
-	private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(LogExporter.class);
+	private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(LogsExporter.class);
 	public String LOG_INTERVAL     = System.getenv("LOG_INTERVAL"); // "30s"
 	private int logInterval = 30;
 	List<String> lastLogged = new ArrayList<>();
@@ -39,8 +39,13 @@ public class LogExporter extends ObservabilityExporter implements Runnable {
 				LOG.debug("LogExporter logInterval:" + logInterval);
 				File tomlfile = new File(DEFAULT_METRICS);
 				TomlMapper mapper = new TomlMapper();
-				JsonNode jsonNode = mapper.readerFor(LogExporterConfigEntry.class).readTree(new FileInputStream(tomlfile));
-				Iterator<JsonNode> logs = jsonNode.get("log").iterator();
+				JsonNode jsonNode = mapper.readerFor(LogsExporterConfigEntry.class).readTree(new FileInputStream(tomlfile));
+				JsonNode log = jsonNode.get("log");
+				if(log == null || log.isEmpty()) {
+					LOG.info("No logs records configured");
+					return;
+				}
+				Iterator<JsonNode> logs = log.iterator();
 				List<String> currentLogged = new ArrayList<>();
 				try (Connection connection = getPoolDataSource().getConnection()) {
 					while (logs.hasNext()) { //for each "log" entry in toml/config...

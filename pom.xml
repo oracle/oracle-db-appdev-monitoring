@@ -21,19 +21,11 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
-
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-
-
-
-
-
-
-
 		<dependency>
 			<groupId>com.oracle.database.jdbc</groupId>
 			<artifactId>ojdbc11-production</artifactId>
@@ -100,8 +92,6 @@
 			<artifactId>simpleclient</artifactId>
 			<version>0.9.0</version>
 		</dependency>
-
-
 		<dependency>
 			<groupId>com.oracle.oci.sdk</groupId>
 			<artifactId>oci-java-sdk-vault</artifactId>
@@ -117,7 +107,6 @@
 			<artifactId>oci-java-sdk-secrets</artifactId>
 			<version>1.32.2</version>
 		</dependency>
-
 	</dependencies>
 
 	<build>

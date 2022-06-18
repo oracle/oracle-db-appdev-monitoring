@@ -25,6 +25,7 @@ public class ObservabilityExporter {
     public String OCI_REGION = System.getenv("OCI_REGION");  //eg us-ashburn-1
     public String VAULT_SECRET_OCID = System.getenv("VAULT_SECRET_OCID");  //eg ocid....
     public String OCI_CONFIG_FILE = System.getenv("OCI_CONFIG_FILE");  //eg "~/.oci/config"
+    public String OCI_PROFILE = System.getenv("OCI_PROFILE");  //eg "DEFAULT"
 
     PoolDataSource observabilityDB;
     public PoolDataSource getPoolDataSource() throws SQLException {
@@ -55,7 +56,8 @@ public class ObservabilityExporter {
         if (OCI_CONFIG_FILE == null || OCI_CONFIG_FILE.trim().equals("")) {
             secretsClient = new SecretsClient(InstancePrincipalsAuthenticationDetailsProvider.builder().build());
         } else {
-            secretsClient = new SecretsClient(new ConfigFileAuthenticationDetailsProvider(OCI_CONFIG_FILE, "DEFAULT")); //todo allow profile override as well
+            String profile = OCI_PROFILE==null || OCI_PROFILE.trim().equals("") ? "DEFAULT": OCI_PROFILE;
+            secretsClient = new SecretsClient(new ConfigFileAuthenticationDetailsProvider(OCI_CONFIG_FILE, profile));
         }
         secretsClient.setRegion(OCI_REGION);
         GetSecretBundleRequest getSecretBundleRequest = GetSecretBundleRequest
