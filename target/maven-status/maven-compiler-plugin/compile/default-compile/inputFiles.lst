@@ -1,8 +1,0 @@
-/Users/pparkins/go/src/github.com/paulparkinson/oracle-db-appdev-monitoring/src/main/java/oracle/observability/ObservabilityExporter.java
-/Users/pparkins/go/src/github.com/paulparkinson/oracle-db-appdev-monitoring/src/main/java/oracle/observability/logs/LogExporter.java
-/Users/pparkins/go/src/github.com/paulparkinson/oracle-db-appdev-monitoring/src/main/java/oracle/observability/ObservabilityExporterApplication.java
-/Users/pparkins/go/src/github.com/paulparkinson/oracle-db-appdev-monitoring/src/main/java/oracle/observability/tracing/TraceExporterConfigEntry.java
-/Users/pparkins/go/src/github.com/paulparkinson/oracle-db-appdev-monitoring/src/main/java/oracle/observability/logs/LogExporterConfigEntry.java
-/Users/pparkins/go/src/github.com/paulparkinson/oracle-db-appdev-monitoring/src/main/java/oracle/observability/metrics/MetricsExporterConfigEntry.java
-/Users/pparkins/go/src/github.com/paulparkinson/oracle-db-appdev-monitoring/src/main/java/oracle/observability/tracing/TraceExporter.java
-/Users/pparkins/go/src/github.com/paulparkinson/oracle-db-appdev-monitoring/src/main/java/oracle/observability/metrics/MetricsExporter.java
