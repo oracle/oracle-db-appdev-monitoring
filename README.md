@@ -13,7 +13,7 @@ All three exporters (metrics, log, and trace) can be configured in the same file
 
 [Trace Exporter][Trace Exporter]
 
-The old version of the metrics exporter can be found in the branch and the new metrics exporter implementation is backward compatible such that the same configuration for both database connection and metrics definition can be used.
+The old version of the metrics exporter can be found in the [old implementation branch][old implementation branch] and the new metrics exporter implementation is backward compatible such that the same configuration for both database connection and metrics definition can be used.
 
 ### Build
 
@@ -87,3 +87,4 @@ The reader is referred to this material to configure security and other aspects 
 [Metrics Exporter]: Metrics.md
 [Log Exporter]: Logs.md
 [Trace Exporter]: Tracing.md
+[old implementation branch]: https://github.com/oracle/oracle-db-appdev-monitoring/tree/old-go-implementation
