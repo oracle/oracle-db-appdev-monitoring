@@ -1,0 +1,238 @@
+[[metric]]
+context = "ownership"
+metricsdesc = { inst_id = "Owner instance of the current queues." }
+request = '''
+SELECT
+    inst_id
+FROM
+    gv$persistent_queues
+WHERE
+    ROWNUM < 2
+'''
+
+[[metric]]
+context = "teq"
+metricsdesc = { curr_inst_id = "ID of current instance" }
+request = "SELECT instance_number AS curr_inst_id FROM v$instance"
+
+[[metric]]
+context = "teq"
+labels = ["inst_id"]
+metricsdesc = { total_queues = "Total number of queues"}
+request = '''
+SELECT
+    inst_id,
+    COUNT(*) AS total_queues
+FROM
+    (
+        SELECT DISTINCT
+            t1.inst_id,
+            t2.queue_name
+        FROM
+            gv$persistent_subscribers   t1
+            JOIN gv$persistent_queues            t2 ON t1.queue_id = t2.queue_id
+    )
+GROUP BY
+    inst_id
+'''
+
+
+[[metric]]
+context = "teq"
+labels = ["inst_id"]
+metricsdesc = { total_subscribers = "Total number of subscribers"}
+request = '''
+SELECT
+    inst_id,
+    COUNT(*) AS total_subscribers
+FROM
+    (
+        SELECT DISTINCT
+            inst_id,
+            subscriber_id
+        FROM
+            gv$persistent_subscribers
+    )
+GROUP BY
+    inst_id
+'''
+
+[[metric]]
+context = "teq"
+labels = ["inst_id", "queue_name", "subscriber_name"]
+metricsdesc = { enqueued_msgs = "Total enqueued messages.", dequeued_msgs = "Total dequeued messages.", remained_msgs = "Total remained messages.", time_since_last_dequeue = "Time since last dequeue.", estd_time_to_drain_no_enq = "Estimated time to drain if no enqueue.", message_latency_1 = "Message latency for last 5 mins.", message_latency_2 = "Message latency for last 1 hour.", message_latency_3 = "Message latency for last 5 hours."}
+request = '''
+SELECT DISTINCT
+    t1.inst_id,
+    t1.queue_id,
+    t2.queue_name,
+    t1.subscriber_id AS subscriber_name,
+    t1.enqueued_msgs,
+    t1.dequeued_msgs,
+    t1.remained_msgs,
+    t1.message_latency_1,
+    t1.message_latency_2,
+    t1.message_latency_3
+FROM
+    (
+        SELECT
+            inst_id,
+            queue_id,
+            subscriber_id,
+            SUM(enqueued_msgs) AS enqueued_msgs,
+            SUM(dequeued_msgs) AS dequeued_msgs,
+            SUM(enqueued_msgs - dequeued_msgs) AS remained_msgs,
+            AVG(10) AS message_latency_1,
+            AVG(20) AS message_latency_2,
+            AVG(30) AS message_latency_3
+        FROM
+            gv$persistent_subscribers
+        GROUP BY
+            queue_id,
+            subscriber_id,
+            inst_id
+    ) t1
+    JOIN gv$persistent_queues t2 ON t1.queue_id = t2.queue_id
+'''
+
+
+[[metric]]
+context = "sessions"
+labels = ["inst_id", "status", "type"]
+metricsdesc = { value = "Gauge metric with count of sessions by status and type." }
+request = '''
+SELECT
+    inst_id,
+    status,
+    type,
+    COUNT(*) AS value
+FROM
+    gv$session
+GROUP BY
+    status,
+    type,
+    inst_id
+'''
+
+
+[[metric]]
+context = "asm_diskgroup"
+labels = ["inst_id", "name"]
+metricsdesc = { total = "Total size of ASM disk group.", free = "Free space available on ASM disk group." }
+request = '''
+SELECT
+    inst_id,
+    name,
+    total_mb * 1024 * 1024 AS total,
+    free_mb * 1024 * 1024 AS free
+FROM
+    gv$asm_diskgroup
+'''
+ignorezeroresult = true
+
+
+[[metric]]
+context = "activity"
+labels = ["inst_id", "name"]
+metricsdesc = { value = "Generic counter metric from gv$sysstat view in Oracle." }
+request = '''
+SELECT
+    inst_id,
+    name,
+    value
+FROM
+    gv$sysstat
+WHERE
+    name IN (
+        'parse count (total)',
+        'execute count',
+        'user commits',
+        'user rollbacks'
+    )
+'''
+
+
+[[metric]]
+context = "process"
+labels = ["inst_id"]
+metricsdesc = { count = "Gauge metric with count of processes." }
+request = '''
+SELECT
+    inst_id,
+    COUNT(*) AS count
+FROM
+    gv$process
+GROUP BY
+    inst_id
+'''
+
+[[metric]]
+context = "wait_class"
+labels = ["inst_id", "wait_class"]
+metricsdesc = { total_waits = "Number of times waits of the class occurred", time_waited = "Amount of time spent in the wait by all sessions in the instance" }
+request = '''
+SELECT
+    inst_id,
+    wait_class,
+    total_waits,
+    time_waited
+FROM
+    gv$system_wait_class
+'''
+
+[[metric]]
+context = "system"
+labels = ["inst_id", "stat_name"]
+metricsdesc = { value = "os metric from gv$osstat view in Oracle." }
+request = '''
+SELECT
+    inst_id,
+    stat_name,
+    value
+FROM
+    gv$osstat
+WHERE
+    upper(stat_name) IN (
+        'NUM_CPUS',
+        'LOAD',
+        'IDLE_TIME',
+        'BUSY_TIME',
+        'USER_TIME',
+        'PHYSICAL_MEMORY_BYTES',
+        'FREE_MEMORY_BYTES'
+    )
+'''
+
+[[metric]]
+context = "system_network"
+labels = ["inst_id"]
+metricsdesc = { received_from_client = "Bytes received from client.", sent_to_client = "Bytes sent to client." }
+request = '''
+SELECT
+    t1.inst_id                AS inst_id,
+    t1.received_from_client   AS received_from_client,
+    t2.sent_to_client         AS sent_to_client
+FROM
+    (
+        SELECT
+            inst_id,
+            value AS received_from_client
+        FROM
+            gv$sysstat
+        WHERE
+            lower(name) LIKE '%received via sql*net from client%'
+        ORDER BY
+            value DESC
+    ) t1
+    LEFT JOIN (
+        SELECT
+            inst_id,
+            value AS sent_to_client
+        FROM
+            gv$sysstat
+        WHERE
+            lower(name) LIKE '%sent via sql*net to client%'
+        ORDER BY
+            value DESC
+    ) t2 ON t1.inst_id = t2.inst_id
+'''
