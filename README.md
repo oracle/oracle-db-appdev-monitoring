@@ -33,31 +33,34 @@ Docker image can be pushed to $DOCKER_REGISTRY using the following.
 
 `./push.sh`
 
-### Running
+### Run
 
 Ensure the environment variable DATA_SOURCE_NAME (and TNS_ADMIN if appropriate) is set correctly before starting.
-DATA_SOURCE_NAME should be in Oracle EZCONNECT format:  
-<https://docs.oracle.com/en/database/oracle/oracle-database/19/netag/configuring-naming-methods.html#GUID-B0437826-43C1-49EC-A94D-B650B6A4A6EE>  
-19c Oracle Client supports enhanced EZCONNECT, you are able to failover to standby DB or gather some heavy metrics from active standby DB and specify some additional parameters. Within 19c client you are able to connect 12c primary/standby DB too :)
 
 For Example:
 
 ```bash
-# export Oracle location:
-export DATA_SOURCE_NAME=system/password@oracle-sid
-# or using a complete url:
-export DATA_SOURCE_NAME=user/password@//myhost:1521/service
-# 19c client for primary/standby configuration
-export DATA_SOURCE_NAME=user/password@//primaryhost:1521,standbyhost:1521/service
-# 19c client for primary/standby configuration with options
-export DATA_SOURCE_NAME=user/password@//primaryhost:1521,standbyhost:1521/service?connect_timeout=5&transport_connect_timeout=3&retry_count=3
-# 19c client for ASM instance connection (requires SYSDBA)
-export DATA_SOURCE_NAME=user/password@//primaryhost:1521,standbyhost:1521/+ASM?as=sysdba
-# Then run the exporter
-/path/to/binary/oracle-db-monitoring-exporter --log.level error --web.listen-address 0.0.0.0:9161
+export DATA_SOURCE_NAME="%USER%/$(dbpassword)@%PDB_NAME%_tp"
+```
+
+Kubernetes Secrets, etc. an of course be used to store password.
+
+OCI Vault support for storing/accessing password values is built into exporters and is enabled by simply setting the OCI_REGION and VAULT_SECRET_OCID variables.
+
+For Example:
+
+```bash
+export OCI_REGION="us-ashburn-1"
+export VAULT_SECRET_OCID="ocid..."
 ```
 
 The only other required environment variable is DEFAULT_METRICS value which is set to the location of the config file.
+
+For Example:
+
+```bash
+export DEFAULT_METRICS="/msdataworkshop/observability/db-metrics-%EXPORTER_NAME%-exporter-metrics.toml"
+```
 
 Run using Java:
 
