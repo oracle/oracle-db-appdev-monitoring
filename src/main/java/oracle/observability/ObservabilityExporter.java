@@ -26,6 +26,8 @@ public class ObservabilityExporter {
     public String VAULT_SECRET_OCID = System.getenv("VAULT_SECRET_OCID");  //eg ocid....
     public String OCI_CONFIG_FILE = System.getenv("OCI_CONFIG_FILE");  //eg "~/.oci/config"
     public String OCI_PROFILE = System.getenv("OCI_PROFILE");  //eg "DEFAULT"
+    public static final String CONTEXT = "context";
+    public static final String REQUEST = "request";
 
     PoolDataSource observabilityDB;
     public PoolDataSource getPoolDataSource() throws SQLException {

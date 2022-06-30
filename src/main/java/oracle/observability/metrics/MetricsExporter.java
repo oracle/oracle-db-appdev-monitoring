@@ -24,13 +24,19 @@ import java.util.*;
 @RestController
 public class MetricsExporter extends ObservabilityExporter {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(MetricsExporter.class);
+    public static final String UP = "up";
+    public static final String METRICSTYPE = "metricstype";
+    public static final String METRICSDESC = "metricsdesc";
+    public static final String LABELS = "labels";
+    public static final String IGNOREZERORESULT = "ignorezeroresult";
+    public static final String FALSE = "false";
     public String LISTEN_ADDRESS      = System.getenv("LISTEN_ADDRESS"); // ":9161"
     public String TELEMETRY_PATH         = System.getenv("TELEMETRY_PATH"); // "/metrics"
     //Interval between each scrape. Default is to scrape on collect requests. scrape.interval
     public String SCRAPE_INTERVAL     = System.getenv("scrape.interval"); // "0s"
     public static final String ORACLEDB_METRIC_PREFIX = "oracledb_";
     Map<String, Gauge> gaugeMap = new HashMap<>();
-    private static final Logger LOG = LoggerFactory.getLogger(MetricsExporter.class);
 
     /**
      * The endpoint that prometheus will scrape
@@ -54,7 +60,7 @@ public class MetricsExporter extends ObservabilityExporter {
         JsonNode jsonNode = mapper.readerFor(MetricsExporterConfigEntry.class).readTree(new FileInputStream(tomlfile));
         JsonNode metric = jsonNode.get("metric");
         if(metric == null || metric.isEmpty()) {
-            LOG.info("No logs records configured");
+            LOGGER.info("No logs records configured");
             return;
         }
         Iterator<JsonNode> metrics = metric.iterator();
@@ -65,11 +71,11 @@ public class MetricsExporter extends ObservabilityExporter {
                 processMetric(connection, metrics);
             }
         } finally {
-            Gauge gauge = gaugeMap.get(ORACLEDB_METRIC_PREFIX + "up");
+            Gauge gauge = gaugeMap.get(ORACLEDB_METRIC_PREFIX + UP);
             if (gauge == null) {
-                Gauge upgauge = Gauge.build().name(ORACLEDB_METRIC_PREFIX + "up").help("Whether the Oracle database server is up.").register();
+                Gauge upgauge = Gauge.build().name(ORACLEDB_METRIC_PREFIX + UP).help("Whether the Oracle database server is up.").register();
                 upgauge.set(isConnectionSuccessful);
-                gaugeMap.put(ORACLEDB_METRIC_PREFIX + "up", upgauge);
+                gaugeMap.put(ORACLEDB_METRIC_PREFIX + UP, upgauge);
             } else gauge.set(isConnectionSuccessful);
         }
     }
@@ -87,10 +93,9 @@ public class MetricsExporter extends ObservabilityExporter {
      */
     private void processMetric(Connection connection, Iterator<JsonNode> metric) {
         JsonNode next = metric.next();
-        //todo ignore case
-        String context = next.get("context").asText(); // eg context = "teq"
-        String metricsType = next.get("metricstype") == null ? "" :next.get("metricstype").asText();
-        JsonNode metricsdescNode = next.get("metricsdesc");
+        String context = next.get(CONTEXT).asText(); // eg context = "teq"
+        String metricsType = next.get(METRICSTYPE) == null ? "" :next.get(METRICSTYPE).asText();
+        JsonNode metricsdescNode = next.get(METRICSDESC);
         // eg metricsdesc = { enqueued_msgs = "Total enqueued messages.", dequeued_msgs = "Total dequeued messages.", remained_msgs = "Total remained messages."}
         Iterator<Map.Entry<String, JsonNode>> metricsdescIterator = metricsdescNode.fields();
         Map<String, String> metricsDescMap = new HashMap<>();
@@ -98,19 +103,19 @@ public class MetricsExporter extends ObservabilityExporter {
             Map.Entry<String, JsonNode> metricsdesc = metricsdescIterator.next();
             metricsDescMap.put(metricsdesc.getKey(), metricsdesc.getValue().asText());
         }
-        LOG.debug("context:" + context);
+        LOGGER.debug("context:" + context);
         String[] labelNames = new String[0];
-        if (next.get("labels") != null) {
-            int size = next.get("labels").size();
-            Iterator<JsonNode> labelIterator = next.get("labels").iterator();
+        if (next.get(LABELS) != null) {
+            int size = next.get(LABELS).size();
+            Iterator<JsonNode> labelIterator = next.get(LABELS).iterator();
             labelNames = new String[size];
             for (int i = 0; i < size; i++) {
                 labelNames[i] = labelIterator.next().asText();
             }
-            LOG.debug("\n");
+            LOGGER.debug("\n");
         }
-        String request = next.get("request").asText(); // the sql query
-        String ignorezeroresult = next.get("ignorezeroresult") == null ? "false" : next.get("ignorezeroresult").asText(); //todo, currently defaults to true
+        String request = next.get(REQUEST).asText(); // the sql query
+        String ignorezeroresult = next.get(IGNOREZERORESULT) == null ? FALSE : next.get(IGNOREZERORESULT).asText(); //todo, currently defaults to true
         ResultSet resultSet;
         try {
              resultSet = connection.prepareStatement(request).executeQuery();
@@ -118,7 +123,7 @@ public class MetricsExporter extends ObservabilityExporter {
                  translateQueryToPrometheusMetric(context,  metricsDescMap, labelNames, resultSet);
              }
         } catch(SQLException e) { //this can be due to table not existing etc.
-            LOG.warn("DBMetricsExporter.processMetric  during:" + request + " exception:" + e);
+            LOGGER.warn("MetricsExporter.processMetric  during:" + request + " exception:" + e);
             return;
         }
     }
@@ -127,7 +132,7 @@ public class MetricsExporter extends ObservabilityExporter {
                                                   String[] labelNames,
                                                   ResultSet resultSet) throws SQLException {
         String[] labelValues = new String[labelNames.length];
-        Map<String, Integer> sqlQueryResults =
+        Map<String, Long> sqlQueryResults =
                 extractGaugesAndLabelValues(context, metricsDescMap, labelNames, resultSet, labelValues, resultSet.getMetaData().getColumnCount());
         setLabelValues(context, labelNames, labelValues, sqlQueryResults.entrySet().iterator());
     }
@@ -142,10 +147,10 @@ public class MetricsExporter extends ObservabilityExporter {
      * @param columnCount
      * @throws SQLException
      */
-    private Map<String, Integer> extractGaugesAndLabelValues(
+    private Map<String, Long> extractGaugesAndLabelValues(
             String context, Map<String, String> metricsDescMap, String[] labelNames, ResultSet resultSet,
             String[] labelValues, int columnCount) throws SQLException {
-        Map<String, Integer> sqlQueryResults = new HashMap<>();
+        Map<String, Long> sqlQueryResults = new HashMap<>();
         String columnName;
         String columnTypeName;
         for (int i = 0; i < columnCount; i++) { //for each column...
@@ -154,9 +159,9 @@ public class MetricsExporter extends ObservabilityExporter {
             if (columnTypeName.equals("VARCHAR2"))  //.  typename is 2/NUMBER or 12/VARCHAR2
                 ;
             else
-                sqlQueryResults.put(resultSet.getMetaData().getColumnName(i + 1), resultSet.getInt(i + 1));
+                sqlQueryResults.put(resultSet.getMetaData().getColumnName(i + 1), resultSet.getLong(i + 1));
             String gaugeName = ORACLEDB_METRIC_PREFIX + context + "_" + columnName;
-            LOG.debug("---gaugeName:" + gaugeName);
+            LOGGER.debug("---gaugeName:" + gaugeName);
             Gauge gauge = gaugeMap.get(gaugeName);
             if (gauge == null) {
                 if(metricsDescMap.containsKey(columnName)) {
@@ -173,9 +178,9 @@ public class MetricsExporter extends ObservabilityExporter {
         return sqlQueryResults;
     }
 
-    private void setLabelValues(String context, String[] labelNames, String[] labelValues, Iterator<Map.Entry<String, Integer>> sqlQueryRestulsEntryIterator) {
+    private void setLabelValues(String context, String[] labelNames, String[] labelValues, Iterator<Map.Entry<String, Long>> sqlQueryRestulsEntryIterator) {
         while(sqlQueryRestulsEntryIterator.hasNext()) { //for each column
-            Map.Entry<String, Integer> sqlQueryResultsEntry =   sqlQueryRestulsEntryIterator.next();
+            Map.Entry<String, Long> sqlQueryResultsEntry =   sqlQueryRestulsEntryIterator.next();
             boolean isLabel = false;
             for (int ii = 0; ii< labelNames.length; ii++) {
                 if(labelNames[ii].equals(sqlQueryResultsEntry.getKey())) isLabel =true;  // continue
@@ -186,7 +191,7 @@ public class MetricsExporter extends ObservabilityExporter {
                     try {
                         gaugeMap.get(ORACLEDB_METRIC_PREFIX + context + "_" + sqlQueryResultsEntry.getKey().toLowerCase()).labels(labelValues).set(valueToSet);
                     } catch (Exception ex) { //todo filter to avoid unnecessary exception handling
-                        LOG.debug("OracleDBMetricsExporter.translateQueryToPrometheusMetric Exc:" + ex);
+                        LOGGER.debug("OracleDBMetricsExporter.translateQueryToPrometheusMetric Exc:" + ex);
                     }
                 else gaugeMap.get(ORACLEDB_METRIC_PREFIX + context + "_" + sqlQueryResultsEntry.getKey().toLowerCase()).set(valueToSet);
             }

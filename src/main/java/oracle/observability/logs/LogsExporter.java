@@ -18,11 +18,15 @@ import java.util.List;
 @RestController
 public class LogsExporter extends ObservabilityExporter implements Runnable {
 
-	private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(LogsExporter.class);
+	private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(LogsExporter.class);
+	public static final String TIMESTAMPFIELD = "timestampfield";
+	public static final String LOG = "log";
 	public String LOG_INTERVAL     = System.getenv("LOG_INTERVAL"); // "30s"
 	private int logInterval = 30;
 	List<String> lastLogged = new ArrayList<>();
 	private java.sql.Timestamp alertLogQueryLastLocalDateTime;
+
+	private int consecutiveExceptionCount = 0; //used to backoff todo should be a finer/log entry level rather than global
 
 
 	@PostConstruct
@@ -34,15 +38,17 @@ public class LogsExporter extends ObservabilityExporter implements Runnable {
 	public void run() {
 		while (true) {
 			try {
-				LOG.debug("LogExporter default metrics from:" + DEFAULT_METRICS);
+				Thread.sleep(consecutiveExceptionCount * 1000);
+				Thread.sleep(logInterval * 1000);
+				LOGGER.debug("LogsExporter default metrics from:" + DEFAULT_METRICS);
 				if(LOG_INTERVAL!=null && !LOG_INTERVAL.trim().equals("")) logInterval = Integer.getInteger(LOG_INTERVAL);
-				LOG.debug("LogExporter logInterval:" + logInterval);
+				LOGGER.debug("LogsExporter logInterval:" + logInterval);
 				File tomlfile = new File(DEFAULT_METRICS);
 				TomlMapper mapper = new TomlMapper();
 				JsonNode jsonNode = mapper.readerFor(LogsExporterConfigEntry.class).readTree(new FileInputStream(tomlfile));
-				JsonNode log = jsonNode.get("log");
+				JsonNode log = jsonNode.get(LOG);
 				if(log == null || log.isEmpty()) {
-					LOG.info("No logs records configured");
+					LOGGER.info("No logs records configured");
 					return;
 				}
 				Iterator<JsonNode> logs = log.iterator();
@@ -50,10 +56,15 @@ public class LogsExporter extends ObservabilityExporter implements Runnable {
 				try (Connection connection = getPoolDataSource().getConnection()) {
 					while (logs.hasNext()) { //for each "log" entry in toml/config...
 						JsonNode next = logs.next();
-						String request = next.get("request").asText(); // the sql query
-						LOG.debug("DBLogsExporter. request:" + request);
-						String timestampfield = next.get("timestampfield").asText(); // eg ORIGINATING_TIMESTAMP
-						LOG.debug("DBLogsExporter. timestampfield:" + timestampfield);
+						String request = next.get(REQUEST).asText(); // the sql query
+						LOGGER.debug("LogsExporter request:" + request);
+						JsonNode timestampfieldNode = next.get(TIMESTAMPFIELD);
+						if (timestampfieldNode==null) {
+							LOGGER.warn("LogsExporter entry does not contain `timestampfield' value request:" + request);
+							continue;
+						}
+						String timestampfield = timestampfieldNode.asText(); // eg ORIGINATING_TIMESTAMP
+						LOGGER.debug("LogsExporter timestampfield:" + timestampfield);
 						PreparedStatement statement = connection.prepareStatement(
 								alertLogQueryLastLocalDateTime == null ? request : request + " WHERE " + timestampfield + " > ?");
 						if(alertLogQueryLastLocalDateTime!=null) statement.setTimestamp(1, alertLogQueryLastLocalDateTime);
@@ -82,10 +93,11 @@ public class LogsExporter extends ObservabilityExporter implements Runnable {
 						}
 					}
 					lastLogged = currentLogged;
+					consecutiveExceptionCount = 0;
 				}
-				Thread.sleep(logInterval * 1000);
 			} catch (Exception e) {
-				throw new RuntimeException(e);
+				consecutiveExceptionCount++;
+				LOGGER.warn("LogsExporter.processMetric exception:" + e);
 			}
 		}
 	}
