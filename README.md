@@ -15,6 +15,8 @@ All three exporters (metrics, log, and trace) can be configured in the same file
 
 The old version of the metrics exporter can be found in the [old implementation branch][old implementation branch] and the new metrics exporter implementation is backward compatible such that the same configuration for both database connection and metrics definition can be used.
 
+Users are encouraged to open issues and enhancements requests against this github repos and feel free to ask any questions.  We will actively work on them as we will the development of the exporters.
+
 ### Build
 
 Build without running tests using the following.
