@@ -1,10 +1,10 @@
 # Unified Observability with Oracle Database
 
-This v1 (preview) distribution contains scripts and code for exporting metrics, logs, and traces from any Oracle Database to provide converged observability for data-centric applications. 
+This distribution contains scripts and code for exporting metrics, logs, and traces from any Oracle Database to provide converged observability for data-centric applications. 
 
 Metrics from the application layer, Kubernetes, and Oracle Database can be combined to provide unified observability to developers within a single Grafana console. 
 
-All three exporters (metrics, log, and trace) can be configured in the same file and each is explanined in the corresponding doc pages:
+All three exporters (metrics, log, and trace) can be configured in the same file and each is explained in the corresponding doc pages:
 
 
 [Metrics Exporter][Metrics Exporter]
@@ -15,7 +15,11 @@ All three exporters (metrics, log, and trace) can be configured in the same file
 
 The old version of the metrics exporter can be found in the [old implementation branch][old implementation branch] and the new metrics exporter implementation is backward compatible such that the same configuration for both database connection and metrics definition can be used.
 
-Users are encouraged to open issues and enhancements requests against this github repos and feel free to ask any questions.  We will actively work on them as we will the development of the exporters.
+Users are encouraged to open issues and enhancements requests against this repos (https://github.com/oracle/oracle-db-appdev-monitoring/issues ) and are encouraged to ask any questions.  We will actively work on them as we will the development of the exporters.
+
+### Pull
+
+The image can be pulled via `docker pull container-registry.oracle.com/database/observability-exporter:0.1.0`
 
 ### Build
 
