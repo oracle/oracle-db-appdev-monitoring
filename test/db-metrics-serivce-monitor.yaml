@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: prometheus-db-metrics-exporter
+  namespace: msdataworkshop
+  labels:
+    app: db-metrics-exporter
+    release: stable
+spec:
+  endpoints:
+    - interval: 20s
+      port: metrics
+  selector:
+    matchLabels:
+      app: db-metrics-exporter

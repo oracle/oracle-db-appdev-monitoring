@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-metrics-exporter-svc
+  namespace: msdataworkshop
+  labels:
+    app: db-metrics-exporter
+    release: stable
+spec:
+  type: NodePort
+  ports:
+    - port: 9161
+      name: metrics
+  selector:
+    app: db-metrics-exporter

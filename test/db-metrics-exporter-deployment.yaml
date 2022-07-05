@@ -1,0 +1,56 @@
+## Copyright (c) 2021 Oracle and/or its affiliates.
+## Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl/
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-metrics-exporter
+  namespace: msdataworkshop
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db-metrics-exporter
+  template:
+    metadata:
+      labels:
+        app: db-metrics-exporter
+    spec:
+      containers:
+        - name: db-metrics-exporter
+          image: container-registry.oracle.com/database/observability-exporter:0.1.0
+          imagePullPolicy: Always
+          env:
+            - name: DEFAULT_METRICS
+              value: /msdataworkshop/observability/default-metrics-teq.toml
+            - name: TNS_ADMIN
+              value: "/msdataworkshop/tns_admin"
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: username
+                  optional: false
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: password
+                  optional: false
+            - name: DATA_SOURCE_NAME
+              value: "$(DB_USERNAME)/$(DB_PASSWORD)@PDB1"
+          volumeMounts:
+            - name: tns-admin
+              mountPath: /msdataworkshop/tns_admin
+            - name: config-volume
+              mountPath: /msdataworkshop/observability/default-metrics-teq.toml
+              subPath: default-metrics-teq.toml
+          ports:
+            - containerPort: 8080
+      restartPolicy: Always
+      volumes:
+        - name: tns-admin
+          configMap:
+            name: db-metrics-tns-admin
+        - name: config-volume
+          configMap:
+            name: db-metrics-teq-exporter-config
