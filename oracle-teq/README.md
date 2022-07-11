@@ -189,7 +189,7 @@ This step illustrates how to create the Grafana Dashboard to proactively monitor
 
     Select the Configuration gear icon on the left-hand side and select Data Sources.
 
-    <img src="images/grafana-config-datasource-menu.png" alt="grafana-ds-menu" style="width:250px;"/>
+    ![grafana-ds-menu](images/grafana-config-datasource-menu.png " ")
 
     Click the Prometheus option.
 
@@ -197,7 +197,7 @@ This step illustrates how to create the Grafana Dashboard to proactively monitor
 
     Click Test button and verify success.
 
-    <img src="images/grafana-config-datasource-test.png" alt="grafana-ds-test" style="width:400px;"/>
+    ![grafana-ds-test](images/grafana-config-datasource-test.png " ")
 
     Click the Back button.
 
@@ -205,13 +205,13 @@ This step illustrates how to create the Grafana Dashboard to proactively monitor
 
     Select the + icon on the left-hand side and select Import
 
-    <img src="images/grafana-dashboard-import.png" alt="grafana-dashboard-import" style="width:250px;"/>
+    ![grafana-dashboard-import](images/grafana-dashboard-import.png " ")
 
     Copy the contents of the [TEQ Dashboard JSON](dashboards/teq-dashboard-basics.json)
 
     Paste the contents in the Import via panel json text field and click the Load button
 
-    <img src="images/grafana-dashboard-import-json.png" alt="grafana-dashboard-import" style="width:400px;"/>
+    ![grafana-dashboard-import-json](images/grafana-dashboard-import-json.png " ")
 
     Confirm upload and click Import button.
 
@@ -221,14 +221,14 @@ This step illustrates how to create the Grafana Dashboard to proactively monitor
 
     In the Dashboards panel query for `TEQ`
 
-    <img src="images/grafana-dashboard-browse.png" alt="grafana-dashboard-browse" style="width:400px;"/>
+    ![grafana-dashboard-browse](images/grafana-dashboard-browse.png " ")
 
     In the Dashboards panel select `TEQ Monitor` to access Dashboard and study their content which includes metrics about:
     - Subscribers
     - Message counts, latency, etc.
     - Enqueue and Dequeue rates
 
-        <img src="images/grafana-dashboard-teq-02.png" alt="grafana-dashboard-teq-02" style="width:900px;"/>
+        ![grafana-dashboard-teq-02](images/grafana-dashboard-teq-02.png " ")
 
     > Note: the metrics are presented as soon as the events are being produced and consumed in the topics. If you want to simulate you can use the scripts samples [produceTEQ.sql](scripts/produceTEQ.sql) and [consumeTEQL.sql](scripts/consumeTEQ.sql).
 
