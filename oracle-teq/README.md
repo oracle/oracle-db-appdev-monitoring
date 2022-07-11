@@ -91,7 +91,7 @@ If you already have an existing TEQ topic that you want to use, you can skip to 
 
 ### Create Oracle Database secret
 
-This steps illustrates how to create the K8s secret to store the Oracle Database User credentials that is used by Oracle Observability Exporter.
+This step creates the K8s secret to store the Oracle Database User credentials that is used by Oracle Observability Exporter.
 
 ```bash
 kubectl create secret generic db-secret         \
@@ -104,7 +104,7 @@ kubectl create secret generic db-secret         \
 
 ### Create ConfigMap to store TNS_ADMIN
 
-This steps illustrates how to create the K8s ConfigMap to store the Oracle Database TNS data that is used by Oracle Observability Exporter.
+This step creates the K8s ConfigMap to store the Oracle Database TNS data that is used by Oracle Observability Exporter.
 
 ```bash
 kubectl create configmap db-metrics-tns-admin \
@@ -114,7 +114,7 @@ kubectl create configmap db-metrics-tns-admin \
 
 ### Create ConfigMap to store TEQ Metrics Configuration
 
-This steps illustrates how to create the K8s ConfigMap to store the TEQ metrics configuration file that is used by Oracle Observability Exporter.
+This step creates the K8s ConfigMap to store the TEQ metrics configuration file that is used by Oracle Observability Exporter.
 
 ```bash
 kubectl create configmap db-metrics-teq-exporter-config  \
@@ -124,14 +124,44 @@ kubectl create configmap db-metrics-teq-exporter-config  \
 
 ### Deploy Oracle Database Observability Exporter
 
-This steps illustrates how to deploy the Oracle Database Observability Exporter using.
+This step request the deployment of the Oracle Database Observability Exporter in Kubernetes.
 
 ```bash
 kubectl create -f teq-metrics-exporter-deployment.yaml  \
         --namespace <"NAMESPACE">
 ```
 
+```bash
+kubectl logs pods/db-metrics-exporter-75948b556f-28btc -n msdataworkshop                                                                                
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v2.7.0)
+
+2022-07-11 12:07:26.305  INFO 1 --- [           main] o.o.ObservabilityExporterApplication     : Starting ObservabilityExporterApplication v0.1.0 using Java 11.0.15 on db-metrics-exporter-75948b556f-28btc with PID 1 (/usr/share/observability-exporter.jar started by root in /)
+2022-07-11 12:07:26.313  INFO 1 --- [           main] o.o.ObservabilityExporterApplication     : No active profile set, falling back to 1 default profile: "default"
+2022-07-11 12:07:28.448  INFO 1 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port(s): 9161 (http)
+2022-07-11 12:07:28.470  INFO 1 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2022-07-11 12:07:28.470  INFO 1 --- [           main] org.apache.catalina.core.StandardEngine  : Starting Servlet engine: [Apache Tomcat/9.0.63]
+2022-07-11 12:07:28.611  INFO 1 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2022-07-11 12:07:28.611  INFO 1 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2174 ms
+.......
+.......
+.......
+2022-07-11 12:07:31.856  INFO 1 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port(s): 9161 (http) with context path ''
+2022-07-11 12:07:31.880  INFO 1 --- [           main] o.o.ObservabilityExporterApplication     : Started ObservabilityExporterApplication in 6.697 seconds (JVM running for 7.74)
+2022-07-11 12:07:32.370  INFO 1 --- [nio-9161-exec-2] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2022-07-11 12:07:32.370  INFO 1 --- [nio-9161-exec-2] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2022-07-11 12:07:32.371  INFO 1 --- [nio-9161-exec-2] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+```
+
 ### Deploy Service and Monitor Services
+
+Once we have This step request the deployment of the Oracle Database Observability Exporter in Kubernetes.
 
 ```bash
 kubectl create -f teq-metrics-exporter-service.yaml  \
@@ -144,3 +174,5 @@ kubectl create -f teq-metrics-exporter-monitor.yaml  \
 ```
 
 ### Set up Grafana Dashboard
+
+This step illustrates how to create the K8s secret to store the Oracle Database User credentials that is used by Oracle Observability Exporter.
