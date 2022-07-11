@@ -4,7 +4,6 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: prometheus-teq-metrics-exporter
-  namespace: msdataworkshop
   labels:
     app: teq-metrics-exporter
     release: stable

@@ -4,7 +4,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: teq-metrics-exporter
-  namespace: msdataworkshop
 spec:
   replicas: 1
   selector:
