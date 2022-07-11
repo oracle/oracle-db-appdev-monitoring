@@ -161,12 +161,14 @@ kubectl logs pods/db-metrics-exporter-75948b556f-28btc -n msdataworkshop
 
 ### Deploy Service and Monitor Services
 
-Once we have This step request the deployment of the Oracle Database Observability Exporter in Kubernetes.
+Once we have the `ObservabilityExporterApplication` running, we can expose its service that will be the target monitored by Prometheus ServiceMonitor component, also deployed in this task. First let's deploy the Oracle Observability Exporter service.
 
 ```bash
 kubectl create -f teq-metrics-exporter-service.yaml  \
         --namespace <"NAMESPACE">
 ```
+
+Now let's deploy the Prometheus ServiceMonitor component that will access the Observability Exporter service every 20 seconds and get the metrics made available by it.
 
 ```bash
 kubectl create -f teq-metrics-exporter-monitor.yaml  \
@@ -175,4 +177,65 @@ kubectl create -f teq-metrics-exporter-monitor.yaml  \
 
 ### Set up Grafana Dashboard
 
-This step illustrates how to create the K8s secret to store the Oracle Database User credentials that is used by Oracle Observability Exporter.
+This step illustrates how to create the Grafana Dashboard to proactively monitoring the Oracle Transactional Event Queues. As an assumption, you already have a Grafana and Prometheus stack up and configured, so we will create the Dashboard to monitor the TEQ.
+
+1. Open a new browser tab in the grafana path as the URL:
+
+    `https://<EXTERNAL-IP>/grafana`
+
+    ![Grafana Home](images/grafana-home.png " ")
+
+2. View pre-configured Prometheus data source:
+
+    Select the Configuration gear icon on the left-hand side and select Data Sources.
+
+    <img src="images/grafana-config-datasource-menu.png" alt="grafana-ds-menu" style="width:250px;"/>
+
+    Click the Prometheus option.
+
+    ![Grafana Prometheus Data Source Configuration](images/grafana-config-datasource-prometheus.png " ")
+
+    Click Test button and verify success.
+
+    <img src="images/grafana-config-datasource-test.png" alt="grafana-ds-test" style="width:400px;"/>
+
+    Click the Back button.
+
+3. Install the Oracle TEQ ("TEQ Monitor") Dashboard
+
+    Select the + icon on the left-hand side and select Import
+
+    <img src="images/grafana-dashboard-import.png" alt="grafana-dashboard-import" style="width:250px;"/>
+
+    Copy the contents of the [TEQ Dashboard JSON](dashboards/teq-dashboard-basics.json)
+
+    Paste the contents in the Import via panel json text field and click the Load button
+
+    <img src="images/grafana-dashboard-import-json.png" alt="grafana-dashboard-import" style="width:400px;"/>
+
+    Confirm upload and click Import button.
+
+4. Open and Study the TEQ Monitor Dashboard Screen and Metrics    
+
+    Select the four squares icon on the left-hand side and select 'Dashboards'
+
+    In the Dashboards panel query for `TEQ`
+
+    <img src="images/grafana-dashboard-browse.png" alt="grafana-dashboard-browse" style="width:400px;"/>
+
+    In the Dashboards panel select `TEQ Monitor` to access Dashboard and study their content which includes metrics about:
+    - Subscribers
+    - Message counts, latency, etc.
+    - Enqueue and Dequeue rates
+
+        <img src="images/grafana-dashboard-teq-02.png" alt="grafana-dashboard-teq-02" style="width:900px;"/>
+
+    > Note: the metrics are presented as soon as the events are being produced and consumed in the topics. If you want to simulate you can use the scripts samples [produceTEQ.sql](scripts/produceTEQ.sql) and [consumeTEQL.sql](scripts/consumeTEQ.sql).
+
+## Learn More
+
+- Ask for help and connect with us on the [Oracle DB Microservices Slack Channel](https://bit.ly/oracle-db-microservices-help-slack) channel #oracle-db-microservices
+
+- Experiment our workshop [Unified Observability in Grafana with converged Oracle Database](http://bit.ly/unifiedobservability)
+
+- Our blog [Unified Observability: Metrics, Logs, and Tracing of App and Database Tiers in a Single Grafana Console](https://blogs.oracle.com/developers/post/unified-observability-metrics-logs-and-tracing-of-app-and-database-tiers-in-a-single-grafana-console)
