@@ -8,7 +8,7 @@ Oracle Observability Exporter gather the Oracle TEQ metrics and expose through H
 
 ## Solution overview
 
-The solution in this session is part of the Unified Observability strategy for Oracle Database but will focus only in Oracle TEQ Metrics handling the two following issues:
+The solution in this session is part of the Unified Observability strategy for Oracle Database but will focus only on Oracle TEQ Metrics handling the two following issues:
 
 - Gather the Oracle TEQ metrics and expose them through an HTTP endpoint using Prometheus standard using Oracle Observability Exporter.
 
