@@ -124,7 +124,7 @@ kubectl create configmap db-metrics-teq-exporter-config  \
 
 ### Deploy Oracle Database Observability Exporter
 
-This steps illustrates how to create the K8s ConfigMap to store the TEQ metrics configuration file that is used by Oracle Observability Exporter.
+This steps illustrates how to deploy the Oracle Database Observability Exporter using.
 
 ```bash
 kubectl create -f teq-metrics-exporter-deployment.yaml  \

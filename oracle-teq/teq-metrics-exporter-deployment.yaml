@@ -20,9 +20,9 @@ spec:
         imagePullPolicy: Always
         env:
           - name: DEFAULT_METRICS
-            value: /msdataworkshop/observability/teq-default-metrics.toml
+            value: /oracleteq/observability/teq-default-metrics.toml
           - name: TNS_ADMIN
-            value: "/msdataworkshop/tns_admin"
+            value: "/oracleteq/tns_admin"
           - name: DB_USERNAME
             valueFrom:
               secretKeyRef:
@@ -39,9 +39,9 @@ spec:
             value: "$(DB_USERNAME)/$(DB_PASSWORD)@PDB1"
         volumeMounts:
           - name: tns-admin
-            mountPath: /msdataworkshop/tns_admin
+            mountPath: /oracleteq/tns_admin
           - name: config-volume
-            mountPath: /msdataworkshop/observability/teq-default-metrics.toml
+            mountPath: /oracleteq/observability/teq-default-metrics.toml
             subPath: teq-default-metrics.toml
         resources:
           requests:
