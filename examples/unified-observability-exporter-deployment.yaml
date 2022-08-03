@@ -1,0 +1,49 @@
+## Copyright (c) 2021 Oracle and/or its affiliates.
+## Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl/
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unified-observability-exporter-%EXPORTER_NAME%
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: unified-observability-exporter-%EXPORTER_NAME%
+  template:
+    metadata:
+      labels:
+        app: unified-observability-exporter-%EXPORTER_NAME%
+    spec:
+      containers:
+        - name: unified-observability-exporter-%EXPORTER_NAME%
+          image: container-registry.oracle.com/database/observability-exporter:0.1.0
+          imagePullPolicy: Always
+          env:
+            - name: DEFAULT_METRICS
+              value: /observability/unified-observability-%EXPORTER_NAME%-exporter-metrics.toml
+            - name: TNS_ADMIN
+              value: "/creds"
+            - name: dbpassword
+              valueFrom:
+                secretKeyRef:
+                  name: dbuser
+                  key: dbpassword
+                  optional: true
+            - name: DATA_SOURCE_NAME
+              value: "%USER%/$(dbpassword)@%PDB_NAME%_tp"
+          volumeMounts:
+            - name: creds
+              mountPath: /creds
+            - name: config-volume
+              mountPath: /observability/unified-observability-%EXPORTER_NAME%-exporter-metrics.toml
+              subPath: unified-observability-%EXPORTER_NAME%-exporter-metrics.toml
+          ports:
+            - containerPort: 8080
+      restartPolicy: Always
+      volumes:
+        - name: creds
+          secret:
+            secretName: %db-wallet-secret%
+        - name: config-volume
+          configMap:
+            name: unified-observability-%EXPORTER_NAME%-exporter-config
