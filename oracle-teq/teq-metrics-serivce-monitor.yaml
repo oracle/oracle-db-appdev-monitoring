@@ -1,0 +1,16 @@
+## Copyright (c) 2021 Oracle and/or its affiliates.
+## Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl/
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: prometheus-teq-metrics-exporter
+  labels:
+    app: teq-metrics-exporter
+    release: stable
+spec:
+  endpoints:
+    - interval: 20s
+      port: metrics
+  selector:
+    matchLabels:
+      app: teq-metrics-exporter
