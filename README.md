@@ -80,7 +80,13 @@ Run within Kubernetes:
 
 See example yaml in examples directory
 
-### Security and Other
+## Contributing
+
+This project welcomes contributions from the community. Before submitting a pull request, please [review our contribution guide](./CONTRIBUTING.md)
+
+## Security
+
+Please consult the [security guide](./SECURITY.md) for our responsible security vulnerability disclosure process
 
 The exporters are built on the Spring Boot framework and thereby inherit all of the capabilities present there, including
 
@@ -97,3 +103,10 @@ The reader is referred to this material to configure security and other aspects 
 [Log Exporter]: Logs.md
 [Trace Exporter]: Tracing.md
 [old implementation branch]: https://github.com/oracle/oracle-db-appdev-monitoring/tree/old-go-implementation
+
+## License
+
+Copyright (c) 20221 Oracle and/or its affiliates.
+
+Released under the Universal Permissive License v1.0 as shown at
+<https://oss.oracle.com/licenses/upl/>.
