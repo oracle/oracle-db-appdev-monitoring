@@ -106,7 +106,7 @@ The reader is referred to this material to configure security and other aspects 
 
 ## License
 
-Copyright (c) 20221 Oracle and/or its affiliates.
+Copyright (c) 2021 Oracle and/or its affiliates.
 
 Released under the Universal Permissive License v1.0 as shown at
 <https://oss.oracle.com/licenses/upl/>.
