@@ -7,6 +7,7 @@ import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.Gauge;
 import oracle.observability.ObservabilityExporter;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import org.slf4j.Logger;
@@ -31,30 +32,38 @@ public class MetricsExporter extends ObservabilityExporter {
     public static final String LABELS = "labels";
     public static final String IGNOREZERORESULT = "ignorezeroresult";
     public static final String FALSE = "false";
-    public String LISTEN_ADDRESS      = System.getenv("LISTEN_ADDRESS"); // ":9161"
-    public String TELEMETRY_PATH         = System.getenv("TELEMETRY_PATH"); // "/metrics"
-    //Interval between each scrape. Default is to scrape on collect requests. scrape.interval
-    public String SCRAPE_INTERVAL     = System.getenv("scrape.interval"); // "0s"
     public static final String ORACLEDB_METRIC_PREFIX = "oracledb_";
     Map<String, Gauge> gaugeMap = new HashMap<>();
+    Map<String, CollectorRegistry> dnsToCollectorRegistryMap = new HashMap<>();
+
+
 
     /**
      * The endpoint that prometheus will scrape
      * @return Prometheus metric
-     * @throws Exception
      */
     @GetMapping(value = "/metrics", produces = "text/plain")
     public String metrics() throws Exception {
-        processMetrics();
-        return getMetricsString();
+        processMetrics(DATA_SOURCE_NAME, CollectorRegistry.defaultRegistry);
+        return getMetricsString(CollectorRegistry.defaultRegistry);
+    }
+    @GetMapping(value = "/scrape", produces = "text/plain")
+    public String scrape(@RequestParam("target") String target) throws Exception {
+        CollectorRegistry collectorRegistry = dnsToCollectorRegistryMap.get(target);
+        if (collectorRegistry == null) {
+            collectorRegistry = new CollectorRegistry();
+            dnsToCollectorRegistryMap.put(target, collectorRegistry);
+        }
+        processMetrics(target, dnsToCollectorRegistryMap.get(target));
+        return getMetricsString(collectorRegistry);
     }
 
     @PostConstruct
     public void init() throws Exception {
-        processMetrics();
+        processMetrics(DATA_SOURCE_NAME, CollectorRegistry.defaultRegistry);
     }
 
-    private void processMetrics() throws IOException, SQLException {
+    private void processMetrics(String datasourceName, CollectorRegistry registry) throws IOException, SQLException {
         File tomlfile = new File(DEFAULT_METRICS);
         TomlMapper mapper = new TomlMapper();
         JsonNode jsonNode = mapper.readerFor(MetricsExporterConfigEntry.class).readTree(new FileInputStream(tomlfile));
@@ -65,15 +74,15 @@ public class MetricsExporter extends ObservabilityExporter {
         }
         Iterator<JsonNode> metrics = metric.iterator();
         int isConnectionSuccessful = 0;
-        try(Connection connection = getPoolDataSource().getConnection()) {
+        try(Connection connection = getPoolDataSource(datasourceName).getConnection()) {
             isConnectionSuccessful = 1;
             while (metrics.hasNext()) {
-                processMetric(connection, metrics);
+                processMetric(registry, connection, metrics);
             }
         } finally {
             Gauge gauge = gaugeMap.get(ORACLEDB_METRIC_PREFIX + UP);
             if (gauge == null) {
-                Gauge upgauge = Gauge.build().name(ORACLEDB_METRIC_PREFIX + UP).help("Whether the Oracle database server is up.").register();
+                Gauge upgauge = Gauge.build().name(ORACLEDB_METRIC_PREFIX + UP).help("Whether the Oracle database server is up.").register(registry);
                 upgauge.set(isConnectionSuccessful);
                 gaugeMap.put(ORACLEDB_METRIC_PREFIX + UP, upgauge);
             } else gauge.set(isConnectionSuccessful);
@@ -91,7 +100,7 @@ public class MetricsExporter extends ObservabilityExporter {
      * Request          string
      * IgnoreZeroResult bool
      */
-    private void processMetric(Connection connection, Iterator<JsonNode> metric) {
+    private void processMetric(CollectorRegistry registry, Connection connection, Iterator<JsonNode> metric) {
         JsonNode next = metric.next();
         String context = next.get(CONTEXT).asText(); // eg context = "teq"
         String metricsType = next.get(METRICSTYPE) == null ? "" :next.get(METRICSTYPE).asText();
@@ -120,7 +129,7 @@ public class MetricsExporter extends ObservabilityExporter {
         try {
              resultSet = connection.prepareStatement(request).executeQuery();
              while (resultSet.next()) {
-                 translateQueryToPrometheusMetric(context,  metricsDescMap, labelNames, resultSet);
+                 translateQueryToPrometheusMetric(registry, context,  metricsDescMap, labelNames, resultSet);
              }
         } catch(SQLException e) { //this can be due to table not existing etc.
             LOGGER.warn("MetricsExporter.processMetric  during:" + request + " exception:" + e);
@@ -128,26 +137,19 @@ public class MetricsExporter extends ObservabilityExporter {
         }
     }
 
-    private void translateQueryToPrometheusMetric(String context, Map<String, String> metricsDescMap,
+    private void translateQueryToPrometheusMetric(CollectorRegistry registry, String context, Map<String, String> metricsDescMap,
                                                   String[] labelNames,
                                                   ResultSet resultSet) throws SQLException {
         String[] labelValues = new String[labelNames.length];
         Map<String, Long> sqlQueryResults =
-                extractGaugesAndLabelValues(context, metricsDescMap, labelNames, resultSet, labelValues, resultSet.getMetaData().getColumnCount());
+                extractGaugesAndLabelValues(registry, context, metricsDescMap, labelNames, resultSet, labelValues, resultSet.getMetaData().getColumnCount());
         setLabelValues(context, labelNames, labelValues, sqlQueryResults.entrySet().iterator());
     }
 
     /**
      * Creates Gauges and gets label values
-     * @param context
-     * @param metricsDescMap
-     * @param labelNames
-     * @param resultSet
-     * @param labelValues
-     * @param columnCount
-     * @throws SQLException
      */
-    private Map<String, Long> extractGaugesAndLabelValues(
+    private Map<String, Long> extractGaugesAndLabelValues(CollectorRegistry registry,
             String context, Map<String, String> metricsDescMap, String[] labelNames, ResultSet resultSet,
             String[] labelValues, int columnCount) throws SQLException {
         Map<String, Long> sqlQueryResults = new HashMap<>();
@@ -166,8 +168,8 @@ public class MetricsExporter extends ObservabilityExporter {
             if (gauge == null) {
                 if(metricsDescMap.containsKey(columnName)) {
                     if (labelNames.length > 0) {
-                        gauge = Gauge.build().name(gaugeName.toLowerCase()).help(metricsDescMap.get(columnName)).labelNames(labelNames).register();
-                    } else gauge = Gauge.build().name(gaugeName.toLowerCase()).help(metricsDescMap.get(columnName)).register();
+                        gauge = Gauge.build().name(gaugeName.toLowerCase()).help(metricsDescMap.get(columnName)).labelNames(labelNames).register(registry);
+                    } else gauge = Gauge.build().name(gaugeName.toLowerCase()).help(metricsDescMap.get(columnName)).register(registry);
                     gaugeMap.put(gaugeName, gauge);
                 }
             }
@@ -198,8 +200,7 @@ public class MetricsExporter extends ObservabilityExporter {
         }
     }
 
-    public static String getMetricsString() {
-        CollectorRegistry collectorRegistry = CollectorRegistry.defaultRegistry;
+    public static String getMetricsString(CollectorRegistry collectorRegistry) {
         Enumeration<Collector.MetricFamilySamples> mfs = collectorRegistry.filteredMetricFamilySamples(new HashSet<>());
         return compose(mfs);
     }

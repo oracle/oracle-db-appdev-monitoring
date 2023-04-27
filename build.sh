@@ -15,3 +15,4 @@ export IMAGE=${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_VERSION}
 
 mvn clean package -DskipTests
 docker build -t=$IMAGE .
+docker push $IMAGE
