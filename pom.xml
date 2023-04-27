@@ -15,6 +15,7 @@
 	<description>Exporter for metrics, logs, and tracing from Oracle database</description>
 	<properties>
 		<java.version>11</java.version>
+		<oracle.jdbc.version>21.7.0.0</oracle.jdbc.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -28,9 +29,28 @@
 		</dependency>
 		<dependency>
 			<groupId>com.oracle.database.jdbc</groupId>
-			<artifactId>ojdbc11-production</artifactId>
-			<version>21.3.0.0</version>
-			<type>pom</type>
+			<artifactId>ojdbc11</artifactId>
+			<version>${oracle.jdbc.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.oracle.database.jdbc</groupId>
+			<artifactId>ucp</artifactId>
+			<version>${oracle.jdbc.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.oracle.database.security</groupId>
+			<artifactId>oraclepki</artifactId>
+			<version>${oracle.jdbc.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.oracle.database.security</groupId>
+			<artifactId>osdt_core</artifactId>
+			<version>${oracle.jdbc.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.oracle.database.security</groupId>
+			<artifactId>osdt_cert</artifactId>
+			<version>${oracle.jdbc.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>io.opentelemetry</groupId>
