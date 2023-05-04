@@ -43,6 +43,7 @@ public class LogsExporter extends ObservabilityExporter implements Runnable {
 				LOGGER.debug("LogsExporter default metrics from:" + DEFAULT_METRICS);
 				if(LOG_INTERVAL!=null && !LOG_INTERVAL.trim().equals("")) logInterval = Integer.getInteger(LOG_INTERVAL);
 				LOGGER.debug("LogsExporter logInterval:" + logInterval);
+				//todo move to common/ObservabilityExporter location and log something friendly if it does not exist and exit, ie fast fail startup
 				File tomlfile = new File(DEFAULT_METRICS);
 				TomlMapper mapper = new TomlMapper();
 				JsonNode jsonNode = mapper.readerFor(LogsExporterConfigEntry.class).readTree(new FileInputStream(tomlfile));

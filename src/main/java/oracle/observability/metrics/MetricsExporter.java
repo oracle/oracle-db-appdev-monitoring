@@ -5,6 +5,7 @@ import com.fasterxml.jackson.dataformat.toml.TomlMapper;
 import io.prometheus.client.Collector;
 import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.Gauge;
+import oracle.observability.DataSourceConfig;
 import oracle.observability.ObservabilityExporter;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -12,11 +13,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.yaml.snakeyaml.Yaml;
 
 import javax.annotation.PostConstruct;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -33,58 +33,106 @@ public class MetricsExporter extends ObservabilityExporter {
     public static final String IGNOREZERORESULT = "ignorezeroresult";
     public static final String FALSE = "false";
     public static final String ORACLEDB_METRIC_PREFIX = "oracledb_";
-    Map<String, Gauge> gaugeMap = new HashMap<>();
-    Map<String, CollectorRegistry> dnsToCollectorRegistryMap = new HashMap<>();
 
+    //This map is used for multi-datasource scraping, both when using dns target string and config
+    Map<String, CollectorRegistryWithGaugeMap> dnsToCollectorRegistryMap = new HashMap<>();
 
-
+    CollectorRegistryWithGaugeMap defaultRegistry = new CollectorRegistryWithGaugeMap();
     /**
      * The endpoint that prometheus will scrape
+     *
      * @return Prometheus metric
      */
     @GetMapping(value = "/metrics", produces = "text/plain")
     public String metrics() throws Exception {
-        processMetrics(DATA_SOURCE_NAME, CollectorRegistry.defaultRegistry);
+        processMetrics(DATA_SOURCE_NAME, defaultRegistry, false);
         return getMetricsString(CollectorRegistry.defaultRegistry);
     }
+
     @GetMapping(value = "/scrape", produces = "text/plain")
     public String scrape(@RequestParam("target") String target) throws Exception {
-        CollectorRegistry collectorRegistry = dnsToCollectorRegistryMap.get(target);
+        CollectorRegistryWithGaugeMap collectorRegistry = dnsToCollectorRegistryMap.get(target);
         if (collectorRegistry == null) {
-            collectorRegistry = new CollectorRegistry();
+            collectorRegistry = new CollectorRegistryWithGaugeMap();
             dnsToCollectorRegistryMap.put(target, collectorRegistry);
         }
-        processMetrics(target, dnsToCollectorRegistryMap.get(target));
+        processMetrics(target, dnsToCollectorRegistryMap.get(target), false);
+        return getMetricsString(collectorRegistry);
+    }
+
+    @GetMapping(value = "/scrapeByName", produces = "text/plain")
+    public String scrapeByConfigName(@RequestParam("name") String name) throws Exception {
+        CollectorRegistryWithGaugeMap collectorRegistry = dnsToCollectorRegistryMap.get(name);
+        if (collectorRegistry == null) {
+            collectorRegistry = new CollectorRegistryWithGaugeMap();
+            dnsToCollectorRegistryMap.put(name, collectorRegistry);
+        }
+        processMetrics(name, dnsToCollectorRegistryMap.get(name), true);
         return getMetricsString(collectorRegistry);
     }
 
     @PostConstruct
     public void init() throws Exception {
-        processMetrics(DATA_SOURCE_NAME, CollectorRegistry.defaultRegistry);
+        boolean isGlobalDataSourceSpecified = DATA_SOURCE_NAME != null && !DATA_SOURCE_NAME.trim().equals("");
+        boolean isMultiDataSourceConfigSpecified = MULTI_DATASOURCE_CONFIG != null || !MULTI_DATASOURCE_CONFIG.trim().equals("");
+        if (!isMultiDataSourceConfigSpecified && !isGlobalDataSourceSpecified)
+            throw new Exception(
+                    "Neither global datasource (DATA_SOURCE_NAME) nor multi-datasource (MULTI_DATASOURCE_CONFIG) " +
+                            "specified. One or both are required.");
+        if (isMultiDataSourceConfigSpecified) parseMultiDataSourceConfig();
+        if (isGlobalDataSourceSpecified) processMetrics(DATA_SOURCE_NAME, defaultRegistry, false);
     }
 
-    private void processMetrics(String datasourceName, CollectorRegistry registry) throws IOException, SQLException {
+    //Currently this is only supported for metrics and so is called from here
+    //If/when it is supported by other exporters it should be moved to common/Observability exporter
+    //Failure to find file, if specified, results in exit
+    public void parseMultiDataSourceConfig() throws FileNotFoundException {
+        File file = new File(MULTI_DATASOURCE_CONFIG);
+        InputStream inputStream = new FileInputStream(file);
+        Yaml yaml = new Yaml();
+        Map<String, Map<String, String>> config = yaml.load(inputStream);
+        for (Map.Entry<String, Map<String, String>> entry : config.entrySet()) {
+            DataSourceConfig dataSourceConfigForMap = new DataSourceConfig();
+            String dataSourceName = entry.getKey();
+            Map<String, String> dataSourceConfig = entry.getValue();
+            dataSourceConfigForMap.setDataSourceName(dataSourceName); //the key is also part of the config for convenience
+            dataSourceConfigForMap.setServiceName(dataSourceConfig.get(SERVICE_NAME_STRING));
+            dataSourceConfigForMap.setUserName(dataSourceConfig.get(USER_NAME_STRING));
+            dataSourceConfigForMap.setPassword(dataSourceConfig.get(PASSWORD_STRING));
+            dataSourceConfigForMap.setTNS_ADMIN(dataSourceConfig.get(TNS_ADMIN_STRING));
+            dataSourceConfigForMap.setPasswordOCID(dataSourceConfig.get(PASSWORD_OCID_STRING));
+            dataSourceConfigForMap.setOciRegion(dataSourceConfig.get(OCI_CONFIG_FILE_STRING));
+            dataSourceConfigForMap.setOciRegion(dataSourceConfig.get(OCI_REGION_STRING));
+            dataSourceConfigForMap.setOciProfile(dataSourceConfig.get(OCI_PROFILE_STRING));
+            LOGGER.info("adding dataSource from config:" + dataSourceName);
+            dataSourceNameToDataSourceConfigMap.put(dataSourceName, dataSourceConfigForMap);
+        }
+    }
+
+    private void processMetrics(String datasourceName, CollectorRegistryWithGaugeMap registry, boolean isScrapeByName) throws IOException, SQLException {
+        if (DEFAULT_METRICS == null || DEFAULT_METRICS.trim().equals(""))
+            throw new FileNotFoundException("DEFAULT_METRICS file location must be specified");
         File tomlfile = new File(DEFAULT_METRICS);
         TomlMapper mapper = new TomlMapper();
         JsonNode jsonNode = mapper.readerFor(MetricsExporterConfigEntry.class).readTree(new FileInputStream(tomlfile));
         JsonNode metric = jsonNode.get("metric");
-        if(metric == null || metric.isEmpty()) {
+        if (metric == null || metric.isEmpty()) {
             LOGGER.info("No logs records configured");
             return;
         }
         Iterator<JsonNode> metrics = metric.iterator();
         int isConnectionSuccessful = 0;
-        try(Connection connection = getPoolDataSource(datasourceName).getConnection()) {
+        try (Connection connection = getPoolDataSource(datasourceName, isScrapeByName).getConnection()) {
             isConnectionSuccessful = 1;
             while (metrics.hasNext()) {
                 processMetric(registry, connection, metrics);
             }
-        } finally {
-            Gauge gauge = gaugeMap.get(ORACLEDB_METRIC_PREFIX + UP);
+        } finally { //always set the db health/up metric - if a connection is unobtainable the metric is set to down
+            Gauge gauge = registry.gaugeMap.get(ORACLEDB_METRIC_PREFIX + UP);
             if (gauge == null) {
                 Gauge upgauge = Gauge.build().name(ORACLEDB_METRIC_PREFIX + UP).help("Whether the Oracle database server is up.").register(registry);
                 upgauge.set(isConnectionSuccessful);
-                gaugeMap.put(ORACLEDB_METRIC_PREFIX + UP, upgauge);
+                registry.gaugeMap.put(ORACLEDB_METRIC_PREFIX + UP, upgauge);
             } else gauge.set(isConnectionSuccessful);
         }
     }
@@ -100,15 +148,15 @@ public class MetricsExporter extends ObservabilityExporter {
      * Request          string
      * IgnoreZeroResult bool
      */
-    private void processMetric(CollectorRegistry registry, Connection connection, Iterator<JsonNode> metric) {
+    private void processMetric(CollectorRegistryWithGaugeMap registry, Connection connection, Iterator<JsonNode> metric) {
         JsonNode next = metric.next();
         String context = next.get(CONTEXT).asText(); // eg context = "teq"
-        String metricsType = next.get(METRICSTYPE) == null ? "" :next.get(METRICSTYPE).asText();
+        String metricsType = next.get(METRICSTYPE) == null ? "" : next.get(METRICSTYPE).asText();
         JsonNode metricsdescNode = next.get(METRICSDESC);
         // eg metricsdesc = { enqueued_msgs = "Total enqueued messages.", dequeued_msgs = "Total dequeued messages.", remained_msgs = "Total remained messages."}
         Iterator<Map.Entry<String, JsonNode>> metricsdescIterator = metricsdescNode.fields();
         Map<String, String> metricsDescMap = new HashMap<>();
-        while(metricsdescIterator.hasNext()) {
+        while (metricsdescIterator.hasNext()) {
             Map.Entry<String, JsonNode> metricsdesc = metricsdescIterator.next();
             metricsDescMap.put(metricsdesc.getKey(), metricsdesc.getValue().asText());
         }
@@ -127,75 +175,84 @@ public class MetricsExporter extends ObservabilityExporter {
         String ignorezeroresult = next.get(IGNOREZERORESULT) == null ? FALSE : next.get(IGNOREZERORESULT).asText(); //todo, currently defaults to true
         ResultSet resultSet;
         try {
-             resultSet = connection.prepareStatement(request).executeQuery();
-             while (resultSet.next()) {
-                 translateQueryToPrometheusMetric(registry, context,  metricsDescMap, labelNames, resultSet);
-             }
-        } catch(SQLException e) { //this can be due to table not existing etc.
+            resultSet = connection.prepareStatement(request).executeQuery();
+            while (resultSet.next()) {
+                translateQueryToPrometheusMetric(registry, context, metricsDescMap, labelNames, resultSet);
+            }
+        } catch (SQLException e) { //this can be due to table not existing etc.
             LOGGER.warn("MetricsExporter.processMetric  during:" + request + " exception:" + e);
-            return;
         }
     }
 
-    private void translateQueryToPrometheusMetric(CollectorRegistry registry, String context, Map<String, String> metricsDescMap,
+    private void translateQueryToPrometheusMetric(CollectorRegistryWithGaugeMap registry, String context, Map<String, String> metricsDescMap,
                                                   String[] labelNames,
                                                   ResultSet resultSet) throws SQLException {
         String[] labelValues = new String[labelNames.length];
-        Map<String, Long> sqlQueryResults =
+        Map<String, Object> sqlQueryResults =
                 extractGaugesAndLabelValues(registry, context, metricsDescMap, labelNames, resultSet, labelValues, resultSet.getMetaData().getColumnCount());
-        setLabelValues(context, labelNames, labelValues, sqlQueryResults.entrySet().iterator());
+        if(sqlQueryResults == null || sqlQueryResults.entrySet() == null || sqlQueryResults.entrySet().isEmpty()) {
+            LOGGER.error("Description for column is missing");
+        }
+        setLabelValues(registry, context, labelNames, labelValues, sqlQueryResults.entrySet().iterator());
     }
 
     /**
      * Creates Gauges and gets label values
      */
-    private Map<String, Long> extractGaugesAndLabelValues(CollectorRegistry registry,
-            String context, Map<String, String> metricsDescMap, String[] labelNames, ResultSet resultSet,
-            String[] labelValues, int columnCount) throws SQLException {
-        Map<String, Long> sqlQueryResults = new HashMap<>();
+    private Map<String, Object> extractGaugesAndLabelValues(CollectorRegistryWithGaugeMap registry,
+                                                          String context, Map<String, String> metricsDescMap, String[] labelNames, ResultSet resultSet,
+                                                          String[] labelValues, int columnCount) throws SQLException {
+        Map<String, Object> sqlQueryResults = new HashMap<>();
         String columnName;
         String columnTypeName;
         for (int i = 0; i < columnCount; i++) { //for each column...
             columnName = resultSet.getMetaData().getColumnName(i + 1).toLowerCase();
             columnTypeName = resultSet.getMetaData().getColumnTypeName(i + 1);
-            if (columnTypeName.equals("VARCHAR2"))  //.  typename is 2/NUMBER or 12/VARCHAR2
-                ;
-            else
+            if (columnTypeName.equals("VARCHAR2") || columnTypeName.equals("CHAR"))  //.  typename is 2/NUMBER or 12/VARCHAR2
+                sqlQueryResults.put(resultSet.getMetaData().getColumnName(i + 1), resultSet.getString(i + 1));
+            else {
+                LOGGER.debug("columnTypeName:" + columnTypeName);
                 sqlQueryResults.put(resultSet.getMetaData().getColumnName(i + 1), resultSet.getLong(i + 1));
+            }
             String gaugeName = ORACLEDB_METRIC_PREFIX + context + "_" + columnName;
             LOGGER.debug("---gaugeName:" + gaugeName);
-            Gauge gauge = gaugeMap.get(gaugeName);
+            Gauge gauge = registry.gaugeMap.get(gaugeName);
             if (gauge == null) {
-                if(metricsDescMap.containsKey(columnName)) {
+                if (metricsDescMap.containsKey(columnName)) {
                     if (labelNames.length > 0) {
                         gauge = Gauge.build().name(gaugeName.toLowerCase()).help(metricsDescMap.get(columnName)).labelNames(labelNames).register(registry);
-                    } else gauge = Gauge.build().name(gaugeName.toLowerCase()).help(metricsDescMap.get(columnName)).register(registry);
-                    gaugeMap.put(gaugeName, gauge);
+                    } else
+                        gauge = Gauge.build().name(gaugeName.toLowerCase()).help(metricsDescMap.get(columnName)).register(registry);
+                    registry.gaugeMap.put(gaugeName, gauge);
                 }
             }
-            for (int ii = 0; ii< labelNames.length; ii++) {
-                if(labelNames[ii].equals(columnName)) labelValues[ii] = resultSet.getString(i+1);
+            for (int ii = 0; ii < labelNames.length; ii++) {
+                if (labelNames[ii].equals(columnName)) labelValues[ii] = resultSet.getString(i + 1);
             }
         }
         return sqlQueryResults;
     }
 
-    private void setLabelValues(String context, String[] labelNames, String[] labelValues, Iterator<Map.Entry<String, Long>> sqlQueryRestulsEntryIterator) {
-        while(sqlQueryRestulsEntryIterator.hasNext()) { //for each column
-            Map.Entry<String, Long> sqlQueryResultsEntry =   sqlQueryRestulsEntryIterator.next();
+    private void setLabelValues(CollectorRegistryWithGaugeMap registry, String context, String[] labelNames, String[] labelValues,
+                                Iterator<Map.Entry<String, Object>> sqlQueryRestulsEntryIterator) {
+        while (sqlQueryRestulsEntryIterator.hasNext()) { //for each column
+            Map.Entry<String, Object> sqlQueryResultsEntry = sqlQueryRestulsEntryIterator.next();
             boolean isLabel = false;
-            for (int ii = 0; ii< labelNames.length; ii++) {
-                if(labelNames[ii].equals(sqlQueryResultsEntry.getKey())) isLabel =true;  // continue
+            for (String labelName : labelNames) {
+                if (labelName.equals(sqlQueryResultsEntry.getKey())) isLabel = true;  // continue
             }
-            if(!isLabel) {
-                int valueToSet = (int) Math.rint(sqlQueryResultsEntry.getValue().intValue());
-                if(labelValues.length >0 )
+            if (!isLabel) {
+                Object valueToSet = sqlQueryResultsEntry.getValue();
+                if (labelValues.length > 0)
                     try {
-                        gaugeMap.get(ORACLEDB_METRIC_PREFIX + context + "_" + sqlQueryResultsEntry.getKey().toLowerCase()).labels(labelValues).set(valueToSet);
+                        if(valueToSet instanceof Integer) registry.gaugeMap.get(ORACLEDB_METRIC_PREFIX + context + "_" +
+                                sqlQueryResultsEntry.getKey().toLowerCase()).labels(labelValues).set(Math.rint((Integer)valueToSet));
                     } catch (Exception ex) { //todo filter to avoid unnecessary exception handling
                         LOGGER.debug("OracleDBMetricsExporter.translateQueryToPrometheusMetric Exc:" + ex);
                     }
-                else gaugeMap.get(ORACLEDB_METRIC_PREFIX + context + "_" + sqlQueryResultsEntry.getKey().toLowerCase()).set(valueToSet);
+                else
+                    registry.gaugeMap.get(ORACLEDB_METRIC_PREFIX + context + "_" +
+                            sqlQueryResultsEntry.getKey().toLowerCase()).labels(labelValues).set(Integer.parseInt("" + valueToSet));
             }
         }
     }
@@ -221,7 +278,13 @@ public class MetricsExporter extends ObservabilityExporter {
                     .append(typeString(metricFamilySamples.type))
                     .append('\n');
 
-            for (Collector.MetricFamilySamples.Sample sample: metricFamilySamples.samples) {
+//            result.append("# DEBUG ")
+//                    .append("metricFamilySamples.samples.size()")
+//                    .append(' ')
+//                    .append(metricFamilySamples.samples.size())
+//                    .append('\n');
+
+            for (Collector.MetricFamilySamples.Sample sample : metricFamilySamples.samples) {
                 result.append(sample.name);
                 if (!sample.labelNames.isEmpty()) {
                     result.append('{');
