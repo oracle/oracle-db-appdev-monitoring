@@ -4,3 +4,9 @@ labels = ["inst_id", "status", "type"]
 metricsdesc = { value = "Gauge metric with count of sessions by status and type." }
 request = "select inst_id, status, type, count(*) as value from gv$session group by status, type, inst_id"
 ignorezeroresult = true
+
+[[metric]]
+context = "context_with_labels"
+labels = [ "label_1", "label_2" ]
+request = "SELECT 1 as value_1, 2 as value_2, 'First label' as label_1, 'Second label' as label_2 FROM DUAL"
+metricsdesc = { value_1 = "Simple example returning always 1.", value_2 = "Same but returning always 2." }

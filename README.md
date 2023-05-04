@@ -98,6 +98,30 @@ OAuth2 https://spring.io/guides/tutorials/spring-boot-oauth2/
 
 The reader is referred to this material to configure security and other aspects as appropriate.
 
+## Support for Multiple Databases
+
+This feature can be used in two ways:
+
+1. By accessing the `/scrape` endpoint and passing a `target` parameter that is the full dsn value. 
+   For example: `http://localhost:9161/scrape?target`
+2. By accessing the `/scrape` endpoint and passing a `name` parameter that is the name of the datasource 
+   as defined in the yaml file located at the environment variable `MULTI_DATASOURCE_CONFIG`
+    The yaml file takes the following form and an example can be found under examples/multidatasource_config.yaml :
+```    
+    dataSourceName :
+       serviceName :
+       userName :
+       password :
+       TNS_ADMIN :
+       # if present, OCI Vault is used for password rather than "password" attribute
+       passwordOCID :
+       # the following is applicable only if OCI config file is used rather than instance principals authentication (generally only the case in development)
+       ociConfigFile :
+       ociRegion :
+       ociProfile :
+```   
+The feature is currently only applicable to metrics, not tracing or logging.
+The feature currently uses the same global `DEFAULT_METRICS` config for every datasource.
 
 [Metrics Exporter]: Metrics.md
 [Log Exporter]: Logs.md

@@ -86,6 +86,7 @@ public final class TracingExporter extends ObservabilityExporter implements Runn
             traceInterval = Integer.getInteger(TRACE_INTERVAL);
         else traceInterval = traceIntervalDefault;
         LOGGER.debug("TracingExporter traceInterval:" + traceInterval);
+        //todo move to common/ObservabilityExporter location and log something friendly if it does not exist and exit, ie fast fail startup
         File tomlfile = new File(DEFAULT_METRICS);
         TomlMapper mapper = new TomlMapper();
         JsonNode jsonNode;
