@@ -74,7 +74,7 @@ public class MetricsExporter extends ObservabilityExporter {
     @PostConstruct
     public void init() throws Exception {
         boolean isGlobalDataSourceSpecified = DATA_SOURCE_NAME != null && !DATA_SOURCE_NAME.trim().equals("");
-        boolean isMultiDataSourceConfigSpecified = MULTI_DATASOURCE_CONFIG != null || !MULTI_DATASOURCE_CONFIG.trim().equals("");
+        boolean isMultiDataSourceConfigSpecified = MULTI_DATASOURCE_CONFIG != null && !MULTI_DATASOURCE_CONFIG.trim().equals("");
         if (!isMultiDataSourceConfigSpecified && !isGlobalDataSourceSpecified)
             throw new Exception(
                     "Neither global datasource (DATA_SOURCE_NAME) nor multi-datasource (MULTI_DATASOURCE_CONFIG) " +
