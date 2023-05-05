@@ -80,10 +80,6 @@ public class ObservabilityExporter {
         } else {
             if(dataSourceNameToDataSourceMap.containsKey(dataSourceName) && dataSourceNameToDataSourceMap.get(dataSourceName) != null)
                 return dataSourceNameToDataSourceMap.get(dataSourceName);
-
-            System.out.println("putting dataSourceName:" + dataSourceName + " isScrapeByName:" + isScrapeByName +
-                    " ObservabilityExporter.dataSourceNameToDataSourceConfigMap.get(dataSourceName):"+
-                    ObservabilityExporter.dataSourceNameToDataSourceConfigMap.get(dataSourceName));
             PoolDataSource poolDataSource = isScrapeByName?
                 getDataSource(ObservabilityExporter.dataSourceNameToDataSourceConfigMap.get(dataSourceName))
                 :getDataSource(dataSourceName);
@@ -115,7 +111,6 @@ public class ObservabilityExporter {
     private PoolDataSource getPoolDataSource(
             String dataSourceName, String user, String pw, String serviceName, String tnsAdmin,
             String vaultSecretOcid, String ociConfigFile, String ociProfile, String ociRegion, boolean isScrapeByName) throws SQLException {
-        System.out.println("getPoolDataSource dataSourceName = " + dataSourceName + ", user = " + user + ", pw = " + pw + ", serviceName = " + serviceName + ", vaultSecretOcid = " + vaultSecretOcid + ", ociConfigFile = " + ociConfigFile + ", ociProfile = " + ociProfile + ", ociRegion = " + ociRegion + ", isScrapeByName = " + isScrapeByName);
         PoolDataSource poolDataSource = PoolDataSourceFactory.getPoolDataSource();
         poolDataSource.setConnectionFactoryClassName("oracle.jdbc.pool.OracleDataSource");
         String url = "jdbc:oracle:thin:@" + serviceName + "?TNS_ADMIN=" + tnsAdmin;
