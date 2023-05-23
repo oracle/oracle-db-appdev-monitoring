@@ -1,15 +1,8 @@
-github.com/oracle/oracle-db-appdev-monitoring
+github.com/oracle/oracle-db-appdev-monitoring/oracle-db-monitoring-exporter
 -------- Copyrights
 
 
 ----------------------- Dependencies Grouped by License ------------
--------- Dependency
-spring-boot-starter-web
--------- Copyrights
-org.springframework.boot:spring-boot-starter-web:2.7.0 - https://spring.io/projects/spring-boot
--------- Notices
-Apache License, Version 2.0)
-
 -------- Dependency
 github.com/matttproud/golang_protobuf_extensions
 -------- Copyrights
