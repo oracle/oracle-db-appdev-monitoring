@@ -1,0 +1,76 @@
+#
+# docker-compose.yml Version 1.0
+#
+# Copyright (c) 2021 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl/
+#
+#
+
+version: '3.1'
+services:
+  oracledb:
+    image: oracledb_monitor_oracledb:1.0
+    container_name: 'oracledb'
+    environment:
+      ORACLE_SID: ORCLCDB
+      ORACLE_PWD: DOCKER_SECRET@oracle.pwd
+    secrets:
+      - oracle.pwd
+    ports:
+      - '1521:1521'
+      - '8080:8080'
+    tty: true
+
+  exporter:
+    image: oracledb_monitor_exporter:1.0
+    container_name: 'exporter'
+    environment:
+      DATA_SOURCE_NAME: auth.data.source.name
+    secrets:
+      - auth.data.source.name
+      - auth.username
+      - auth.password
+    depends_on:
+      - oracledb
+    ports:
+      - '9161:9161'
+
+
+  prometheus:
+    image: oracledb_monitor_prometheus:1.0
+    container_name: 'prometheus'
+    secrets:
+      - prom.auth.pwd
+      - auth.username
+      - auth.password
+    depends_on:
+      - exporter
+    ports:
+      - '9090:9090'
+      - '9093:9093'
+    volumes:
+      - ./docker_vol/prom_app_vol:/etc/prometheus/prometheus_vol
+    tty: true
+
+
+  grafana:
+    image: oracledb_monitor_grafana:1.0
+    container_name: 'grafana'
+    depends_on:
+      - prometheus
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./docker_vol/graf_app_vol:/var/lib/grafana/grafana_vol
+
+secrets:
+  auth.data.source.name:
+    external: true
+  oracle.pwd:
+    external: true
+  auth.username:
+    external: true
+  auth.password:
+    external: true
+  prom.auth.pwd:
+    external: true

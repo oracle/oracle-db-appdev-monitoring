@@ -1,0 +1,493 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": 4,
+  "links": [],
+  "panels": [
+    {
+      "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": null,
+            "filterable": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "%Time-out"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "from": "0",
+                    "id": 1,
+                    "text": "0",
+                    "to": "0.005",
+                    "type": 2
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 2,
+      "interval": null,
+      "maxDataPoints": null,
+      "options": {
+        "frameIndex": 1,
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Value #read_data"
+          }
+        ]
+      },
+      "pluginVersion": "7.5.5",
+      "targets": [
+        {
+          "exemplar": false,
+          "expr": "oracledb_io_function_read_data_l + oracledb_io_function_read_data_s",
+          "format": "table",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "read_data"
+        },
+        {
+          "exemplar": true,
+          "expr": "(oracledb_io_function_read_req_l + oracledb_io_function_read_req_s) / oracledb_io_function_time",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "refId": "read_req_per_sec"
+        },
+        {
+          "exemplar": true,
+          "expr": "(oracledb_io_function_read_data_l + oracledb_io_function_read_data_s) / oracledb_io_function_time",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "read_data_per_sec"
+        },
+        {
+          "exemplar": true,
+          "expr": "(oracledb_io_function_write_data_l + oracledb_io_function_write_data_s)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "write_data"
+        },
+        {
+          "exemplar": true,
+          "expr": "(oracledb_io_function_write_req_l + oracledb_io_function_write_req_s) / oracledb_io_function_time",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "write_req_per_sec"
+        },
+        {
+          "exemplar": true,
+          "expr": "(oracledb_io_function_write_data_l + oracledb_io_function_write_data_s) / oracledb_io_function_time",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "write_data_per_sec"
+        },
+        {
+          "exemplar": true,
+          "expr": "oracledb_io_function_number_of_waits",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "wait_count"
+        },
+        {
+          "exemplar": true,
+          "expr": "oracledb_io_function_time / oracledb_io_function_number_of_waits",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "avg_wait_time"
+        }
+      ],
+      "title": "IOStat by Function summary",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "function_name",
+                "Value #read_data",
+                "Value #read_req_per_sec",
+                "Value #read_data_per_sec",
+                "Value #write_data",
+                "Value #write_req_per_sec",
+                "Value #write_data_per_sec",
+                "Value #wait_count",
+                "Value #avg_wait_time",
+                "Value #total_read_data"
+              ]
+            }
+          }
+        },
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "Value #avg_wait_time": 8,
+              "Value #read_data": 1,
+              "Value #read_data_per_sec": 3,
+              "Value #read_req_per_sec": 2,
+              "Value #wait_count": 7,
+              "Value #write_data": 4,
+              "Value #write_data_per_sec": 6,
+              "Value #write_req_per_sec": 5,
+              "function_name": 0
+            },
+            "renameByName": {
+              "Value #%cpu": "%CPU",
+              "Value #%db_time": "%DB time",
+              "Value #%io": "%IO",
+              "Value #%time-out": "%Time-out",
+              "Value #%total": "%Total",
+              "Value #avg_wait_time": "Avg Wait Time (s)",
+              "Value #elapsed_time": "Elapsed Time(s)",
+              "Value #elapsed_time / Value #executions": "Elapsed Time per Exec (s)",
+              "Value #executions": "Executions",
+              "Value #total_wait_time": "Total Wait Time (s)",
+              "Value #waits": "Waits",
+              "module": "Module",
+              "sql_id": "SQL ID",
+              "wait_class_name": "Wait Class"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "Total Wait Time (s)"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": null,
+            "filterable": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "%Time-out"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "from": "0",
+                    "id": 1,
+                    "text": "0",
+                    "to": "0.005",
+                    "type": 2
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "id": 3,
+      "interval": null,
+      "maxDataPoints": null,
+      "options": {
+        "frameIndex": 1,
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Value #read_data"
+          }
+        ]
+      },
+      "pluginVersion": "7.5.5",
+      "targets": [
+        {
+          "exemplar": false,
+          "expr": "oracledb_io_filetype_read_data_l + oracledb_io_filetype_read_data_s",
+          "format": "table",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "read_data"
+        },
+        {
+          "exemplar": true,
+          "expr": "(oracledb_io_filetype_read_req_l + oracledb_io_filetype_read_req_s) / (oracledb_io_filetype_read_stime_l + oracledb_io_filetype_read_stime_s)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "",
+          "refId": "read_req_per_sec"
+        },
+        {
+          "exemplar": true,
+          "expr": "(oracledb_io_filetype_read_data_l + oracledb_io_filetype_read_data_s) / (oracledb_io_filetype_read_stime_l + oracledb_io_filetype_read_stime_s)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "read_data_per_sec"
+        },
+        {
+          "exemplar": true,
+          "expr": "(oracledb_io_filetype_write_data_l + oracledb_io_filetype_write_data_s)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "write_data"
+        },
+        {
+          "exemplar": true,
+          "expr": "(oracledb_io_filetype_write_req_l + oracledb_io_filetype_write_req_l) / (oracledb_io_filetype_write_stime_l + oracledb_io_filetype_write_stime_s)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "write_req_per_sec"
+        },
+        {
+          "exemplar": true,
+          "expr": "(oracledb_io_filetype_write_data_l + oracledb_io_filetype_write_data_s) / (oracledb_io_filetype_write_stime_l + oracledb_io_filetype_write_stime_s)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "write_data_per_sec"
+        },
+        {
+          "exemplar": true,
+          "expr": "(oracledb_io_filetype_read_stime_l + oracledb_io_filetype_read_stime_s)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "read_service_time"
+        },
+        {
+          "exemplar": true,
+          "expr": "(oracledb_io_filetype_write_stime_l + oracledb_io_filetype_write_stime_s)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "write_service_time"
+        }
+      ],
+      "title": "IOStat by Filetype summary",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "filetype_name",
+                "Value #read_data",
+                "Value #read_req_per_sec",
+                "Value #read_data_per_sec",
+                "Value #write_data",
+                "Value #write_req_per_sec",
+                "Value #write_data_per_sec"
+              ]
+            }
+          }
+        },
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "mode": "reduceRow",
+            "reduce": {
+              "include": [
+                "Value #read_data",
+                "Value #write_data"
+              ],
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Total": true
+            },
+            "indexByName": {
+              "Value #read_data": 1,
+              "filetype_name": 0
+            },
+            "renameByName": {
+              "Total": "total_data",
+              "Value #%cpu": "%CPU",
+              "Value #%db_time": "%DB time",
+              "Value #%io": "%IO",
+              "Value #%time-out": "%Time-out",
+              "Value #%total": "%Total",
+              "Value #avg_wait_time": "Avg Wait Time (s)",
+              "Value #elapsed_time": "Elapsed Time(s)",
+              "Value #elapsed_time / Value #executions": "Elapsed Time per Exec (s)",
+              "Value #executions": "Executions",
+              "Value #total_wait_time": "Total Wait Time (s)",
+              "Value #waits": "Waits",
+              "module": "Module",
+              "sql_id": "SQL ID",
+              "wait_class_name": "Wait Class"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "total"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "table"
+    }
+  ],
+  "schemaVersion": 27,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Oracle App-Specific -- I/O Level - v1.1",
+  "uid": "T_w0nsZ7z",
+  "version": 6
+}

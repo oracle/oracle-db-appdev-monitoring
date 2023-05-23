@@ -1,7 +1,0 @@
-.DS_Store
-*.ora*
-wallet_setup.sh
-.env
-*.crt
-*.key
-.vscode
