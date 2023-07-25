@@ -1,0 +1,9 @@
+oraclelinux
+alpline
+.*
+tests
+*-example.toml
+.golangci.yml
+*.md
+*.pc
+dist
