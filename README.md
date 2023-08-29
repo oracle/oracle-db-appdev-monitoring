@@ -945,3 +945,19 @@ needed_disk_space = retention_time_seconds * ingested_samples_per_second * bytes
 ```
 
 Roughly, Oracle Database Monitor System has 100 samples every 1 minute, meaning 1.67 samples per second on average. You could base on your retention time to determine the capacity of the server.
+
+## Contributing
+
+This project welcomes contributions from the community. Before submitting a pull request, please [review our contribution guide](./CONTRIBUTING.md)
+
+## Security
+
+Please consult the [security guide](./SECURITY.md) for our responsible security vulnerability disclosure process
+
+## License
+
+Copyright (c) 2021, 2023 Oracle and/or its affiliates.
+
+Released under the Universal Permissive License v1.0 as shown at
+<https://oss.oracle.com/licenses/upl/>.
+
