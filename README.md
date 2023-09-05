@@ -1,21 +1,61 @@
-# Oracle DB Exporter
+# Unified Observability for Oracle Database 
 
-[![Build Status](https://travis-ci.org/iamseth/oracledb_exporter.svg)](https://travis-ci.org/iamseth/oracledb_exporter)
-[![GoDoc](https://godoc.org/github.com/iamseth/oracledb_exporter?status.svg)](http://godoc.org/github.com/iamseth/oracledb_exporter)
-[![Report card](https://goreportcard.com/badge/github.com/iamseth/oracledb_exporter)](https://goreportcard.com/badge/github.com/iamseth/oracledb_exporter)
+This project aims to provide observability for the Oracle Database so that users can understand performance and diagnose issues easily across applications and database.  Over time, this project will provide not just metrics, but also logging and tracing support, and integration into popular frameworks like Spring Boot.  The project aims to deliver functionality to support both cloud and on-premises databases, including those running in Kubernetes and containers.
 
-##### Table of Contents
+In the first production release, v1.0, this project provides a [Prometheus](https://prometheus.io/) exporter for Oracle Database that is based in part on a Prometheus exporter created by [iamseth](https://github.com/iamseth/oracledb_exporter) with various changes to comply with various Oracle standards and policies. 
 
-[Description](#description)  
+Customers with an active support agreement for Oracle Database may open a Service Request in My Oracle Support for support with any issues using this exporter.  Community support is available through GitHub issues, etc., for other users. 
+
+Contributions are welcome - please see [contributing](CONTRIBUTING.md).
+
+
+### Table of Contents
+
+[Roadmap](#roadmap)
+[Standard metrics](#standard-metrics)  
 [Installation](#installation)  
 [Running](#running)  
 [Grafana](#grafana)  
 [Troubleshooting](#troubleshooting)  
 [Operating principles](operating-principles.md)
 
-# Description
+# Roadmap
 
-A [Prometheus](https://prometheus.io/) exporter for Oracle modeled after the MySQL exporter. I'm not a DBA or seasoned Go developer so PRs definitely welcomed.
+## Version 1.0
+
+The first production release, v1.0, includes the following features: 
+
+- A number of [standard metrics](#standard-metrics) are exposed,
+- Users can define [custom metrics](#custom-metrics),
+- Oracle regularly reviews third-party licenses and scans the code and images, including transitive/recursive dependencies for issues,
+- Connection to Oracle can be a basic connection or use an Oracle Wallet and TLS - connection to Oracle Autonomous Database is supported,
+- Metrics for Oracle Transactional Event Queues are also supported,
+- A Grafana dashboard is provided for Transacational Event Queues, and
+- A pre-built container image is provided, based on Oracle Linux, and optimized for size and security.
+
+Note that this exporter uses a different Oracle Database driver which in turn uses code directly written by Oracle to access the database.  This driver does require an Oracle client.  In this initial release, the client is bundled into the container image, however we intend to make that optional in order to minimize the image size. 
+
+The interfaces for this version have been kept as close as possible to those of earlier alpha releases in this repository to assist with migration.  However, it should be expected that there may be breaking changes in future releases.
+
+## Plans
+
+We always welcome input on features you would like to see supported.  Please open an issue in this repository with your suggestions. 
+
+Currently, we plan to address the following key features:
+
+- Implement multiple database support - allow the exporter to publish metrics for multiple database instances,
+- Implement vault support - allow the exporter to obtain database connection information from a secure vault,
+- Implement connection storm protection - prevent the exporter from repeatedly connecting when the credentials fail, to prevent a storm of connections causing accounts to be locked across a large number of databases,
+- Provide the option to have the Oracle client outside of the container image, e.g., on a shared volume,
+- Implement the ability to update the configuration dynamically, i.e., without a restart,
+- Implement support for exporting logs, including audit logs for example, from the database,
+- Implement support for tracing within the database, e.g., using an execution context ID provide by an external caller,
+- Provide additional pre-built Grafana dashboards,
+- Integration with Spring Observability, e.g., Micrometer,
+- Provide additional documentation and samples, and
+- Integrate with the Oracle Database Operator for Kubernetes.
+
+# Standard metrics
 
 The following metrics are exposed currently.
 
