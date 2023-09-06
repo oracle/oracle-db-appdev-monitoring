@@ -99,11 +99,7 @@ There are a number of ways to run the exporter.  In this section you will find i
 
 You can run the exporter in a local container using a conatiner image from [Oracle Container Registry](https://container-registry.oracle.com).  The container image is available in the "observability-exporter" repository in the "Database" category.  No authentication or license presentment/acceptance are required to pull this image from the registry.
 
-To run the exporter in a container and expose the port, use this command:
-
-```bash
-docker run -it --rm -p 9161:9161 container-registry.oracle.com/database/observability-exporter:1.0.0
-```
+### Oracle Database 
 
 If you need an Oracle Database to test the exporter, you can use this command to start up an instance of [Oracle Database 23c Free](https://www.oracle.com/database/free/) which also requires no authentication or license presentment/acceptance to pull the image.
 
@@ -132,6 +128,55 @@ docker inspect free23c | grep IPA
             "IPAddress": "172.17.0.2",
                     "IPAMConfig": null,
                     "IPAddress": "172.17.0.2",
+```
+
+### Exporter 
+
+You need to give the exporter the connection details for the Oracle Database that you want it to run against.  You can use a simple connection, or a wallet. 
+
+#### Simple connection
+
+For a simple connection, you will provide the details using these variables: 
+
+- `DB_USERNAME` is the database username, e.g., `pdbadmin`
+- `DB_PASSWORD` is the password for that user, e.g., `Welcome12345`
+- `DB_CONNECT_STRING` is the connection string, e.g., `free23c:1521/freepdb`
+
+To run the exporter in a container and expose the port, use a command like this, with the appropriate values for the environment variables:
+
+```bash
+docker run -it --rm \
+    -e DB_USERNAME=pdbadmin \
+    -e DB_PASSWORD=Welcome12345 \
+    -e DB_CONNECT_STRING=free23c:1521/freepdb \
+    -p 9161:9161 \
+    container-registry.oracle.com/database/observability-exporter:1.0.0
+```
+
+#### Using a wallet
+
+For a wallet connection, you must first set up the wallet.  If you are using Oracle Autonomous Database, for example, you can download the wallet from the Oracle Cloud Infrastructure (OCI) console.  
+
+1. Unzip the wallet into a new directory, e.g., called `wallet`.
+1. Edit the `sqlnet.ora` file and set the `DIRECTORY` to `/wallet`.  This is the path inside the exporter container where you will provide the wallet.
+1. Take a note of the TNS name from the `tnsnames.ora` that will be used to connect to the database, e.g., `devdb_tp`.
+
+Now, you provide the connection details using these variables: 
+
+- `DB_USERNAME` is the database username, e.g., `pdbadmin`
+- `DB_PASSWORD` is the password for that user, e.g., `Welcome12345`
+- `DB_CONNECT_STRING` is the connection string, e.g., `devdb_tp?TNS_ADMIN=/wallet`
+
+To run the exporter in a container and expose the port, use a command like this, with the appropriate values for the environment variables, and mounting your `wallet` directory to provide access to the wallet:
+
+```bash
+docker run -it --rm \
+    -e DB_USERNAME=pdbadmin \
+    -e DB_PASSWORD=Welcome12345 \
+    -e DB_CONNECT_STRING=devdb_tp \
+    -v ./wallet:/wallet \
+    -p 9161:9161 \
+    container-registry.oracle.com/database/observability-exporter:1.0.0
 ```
 
 
