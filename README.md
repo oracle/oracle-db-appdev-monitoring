@@ -87,52 +87,63 @@ The following metrics are exposed currently.
 
 # Installation
 
-## Docker
+## Docker, Podman, etc.
 
-You can run via Docker using an existing image. Since version 0.4, the images are available on the github registry.
+You can run the exporter in a local container using a conatiner image from [Oracle Container Registry](https://container-registry.oracle.com).  The container image is available in the "observability-exporter" repository in the "Database" category.  No authentication or license presentment/acceptance are required to pull this image from the registry.
 
-Here an example to retrieve the version 0.5.0:
-
-```bash
-docker pull ghcr.io/iamseth/oracledb_exporter:0.5.0
-```
-
-And here a command to run it and forward the port:
+To run the exporter in a container and expose the port, use this command:
 
 ```bash
-docker run -it --rm -p 9161:9161 ghcr.io/iamseth/oracledb_exporter:0.5.0
+docker run -it --rm -p 9161:9161 container-registry.oracle.com/database/observability-exporter:1.0.0
 ```
 
-If you don't already have an Oracle server, you can run one locally in a container and then link the exporter to it.
+If you need an Oracle Database to test the exporter, you can use this command to start up an instance of [Oracle Database 23c Free](https://www.oracle.com/database/free/) which also requires no authentication or license presentment/acceptance to pull the image.
 
 ```bash
-docker run -d --name oracle -p 1521:1521 wnameless/oracle-xe-11g-r2:18.04-apex
-docker run -d --name oracledb_exporter --link=oracle -p 9161:9161 -e DATA_SOURCE_NAME=oracle://system:oracle@oracle:1521/xe ghcr.io/iamseth/oracledb_exporter:0.5.0
+docker run --name free23c -d -p 1521:1521 -e ORACLE_PWD=Welcome12345 container-registry.oracle.com/database/free:latest
 ```
 
-Since 0.2.1, the exporter image exist with Alpine flavor. Watch out for their use. It is for the moment a test.
+This will pull the image and start up the database with a listener on port 1521. It will also create a pluggable database (a database container) called "FREEPDB1" and will set the admin passwords to the password you specified on this command.
+
+You can tail the logs to see when the database is ready to use:
 
 ```bash
-docker run -d --name oracledb_exporter --link=oracle -p 9161:9161 -e DATA_SOURCE_NAME=oracle://system:oracle@oracle/xe iamseth/oracledb_exporter:alpine
+docker logs -f free23c
+
+(look for this message...)
+#########################
+DATABASE IS READY TO USE!
+#########################
 ```
 
-### Different Docker Images
+To obtain the IP address of the container, which you will need to connect to the database, use this command.  Note: depending on your platform and container runtime, you may be able to access the database at "localhost":
 
-Different Linux Distros:
+```bash
+docker inspect free23c | grep IPA
+            "SecondaryIPAddresses": null,
+            "IPAddress": "172.17.0.2",
+                    "IPAMConfig": null,
+                    "IPAddress": "172.17.0.2",
+```
 
-- `x.y.z` - Ubuntu Linux image
-- `x.y.z-oraclelinux` - Oracle Enterprise Linux image
-- `x.y.z-Alpine` - Alpine Linux image
 
-Forked Version:
-All the above docker images have a duplicate image tag ending in
-`_legacy-tablespace`. These versions use the older/deprecated tablespace
-utilization calculation based on the aggregate sum of file sizes in a given
-tablespace. The newer mechanism takes into account block sizes, extents, and
-fragmentation aligning with the same metrics reported from the Oracle Enterprise
-Manager. See https://github.com/iamseth/oracledb_exporter/issues/153 for
-details. The versions above should have a more useful tablespace utilization
-calculation going forward.
+## Test/demo environment with Docker Compose
+
+If you would like to set up a test environment with the exporter, you can use the provided "Docker Compose" file in this repository which will start an Oracle Database instance, the exporter, Prometheus and Grafana.
+
+```bash
+cd docker-compose
+docker-compose up -d
+```
+
+The containers will take a short time to start.  The first time, the Oracle container might take a few minutes to start while it creates the database instance, but this is a one-time operation, and subequent restarts will be much faster (a few seconds). 
+
+Once the containers are all running, you can access the services using these URLs:
+
+- [Exporter](http://localhost:9161/metrics)
+- [Prometheus](http://localhost:9000) - try a query for "oracle".
+- [Grafana](http://localhost:3000) - username is "admin" and password is "grafana".  Try creating a dashboard using one of the metrics from the exporter (use the Prometheus datasource and choose a metric with "oracle" in the name).
+
 
 ## Binary Release
 
