@@ -87,6 +87,14 @@ The following metrics are exposed currently.
 
 # Installation
 
+There are a number of ways to run the exporter.  In this section you will find information on running the exporter:
+
+- In a container runtime like [Docker, Podman, etc](#docker-podman-etc)
+- In a test/demo environment using [Docker Compose](#testdemo-environment-with-docker-compose)
+- In [Kubernetes](#kubernetes)
+- As a [standalone binary](#standalone-binary)
+
+
 ## Docker, Podman, etc.
 
 You can run the exporter in a local container using a conatiner image from [Oracle Container Registry](https://container-registry.oracle.com).  The container image is available in the "observability-exporter" repository in the "Database" category.  No authentication or license presentment/acceptance are required to pull this image from the registry.
@@ -144,6 +152,16 @@ Once the containers are all running, you can access the services using these URL
 - [Prometheus](http://localhost:9000) - try a query for "oracle".
 - [Grafana](http://localhost:3000) - username is "admin" and password is "grafana".  Try creating a dashboard using one of the metrics from the exporter (use the Prometheus datasource and choose a metric with "oracle" in the name).
 
+## Kubernetes
+
+write me
+
+## Standalone binary
+
+write me
+
+
+# END
 
 ## Binary Release
 
