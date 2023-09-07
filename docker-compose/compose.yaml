@@ -33,8 +33,7 @@ services:
      - ORACLE_PWD=Welcome12345
 
   exporter:
-    #image: container-registry.oracle.com/database/observability-exporter:1.0.0
-    image: oracle/observability-exporter:0.99.6-oraclelinux
+    image: container-registry.oracle.com/database/observability-exporter:1.0.0
     container_name: exporter
     ports:
       - 9161:9161
