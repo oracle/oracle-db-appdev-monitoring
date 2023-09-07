@@ -19,7 +19,6 @@ Contributions are welcome - please see [contributing](CONTRIBUTING.md).
    - [Test/demo environment using Docker Compose](#testdemo-environment-with-docker-compose)
    - [Kubernetes](#kubernetes)
    - [Standalone binary](#standalone-binary)
-- [Usage](#usage)
 - [Custom metrics](#custom-metrics)
 - [Grafana dashboards](#grafana-dashboards)
 - [Developer notes](#developer-notes)
@@ -124,7 +123,11 @@ You can run the exporter in a local container using a conatiner image from [Orac
 If you need an Oracle Database to test the exporter, you can use this command to start up an instance of [Oracle Database 23c Free](https://www.oracle.com/database/free/) which also requires no authentication or license presentment/acceptance to pull the image.
 
 ```bash
-docker run --name free23c -d -p 1521:1521 -e ORACLE_PWD=Welcome12345 container-registry.oracle.com/database/free:latest
+docker run --name free23c \
+    -d \
+    -p 1521:1521 \
+    -e ORACLE_PWD=Welcome12345 \
+    container-registry.oracle.com/database/free:latest
 ```
 
 This will pull the image and start up the database with a listener on port 1521. It will also create a pluggable database (a database container) called "FREEPDB1" and will set the admin passwords to the password you specified on this command.
@@ -144,10 +147,10 @@ To obtain the IP address of the container, which you will need to connect to the
 
 ```bash
 docker inspect free23c | grep IPA
-            "SecondaryIPAddresses": null,
+    "SecondaryIPAddresses": null,
+    "IPAddress": "172.17.0.2",
+            "IPAMConfig": null,
             "IPAddress": "172.17.0.2",
-                    "IPAMConfig": null,
-                    "IPAddress": "172.17.0.2",
 ```
 
 ### Exporter 
@@ -327,10 +330,7 @@ Pre-compiled versions for Linux 64 bit can be found under [releases](https://git
 In order to run, you'll need the [Oracle Instant Client Basic](http://www.oracle.com/technetwork/database/features/instant-client/index-097480.html)
 for your operating system. Only the basic version is required for execution.
 
-
-# Usage
-
-This section lists the command line arguments (flags) that can be passed to the exporter.
+The following command line arguments (flags) can be passed to the exporter:
 
 ```bash
 Usage of oracledb_exporter:
