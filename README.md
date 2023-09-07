@@ -328,7 +328,7 @@ In order to run, you'll need the [Oracle Instant Client Basic](http://www.oracle
 for your operating system. Only the basic version is required for execution.
 
 
-## Usage
+# Usage
 
 This section lists the command line arguments (flags) that can be passed to the exporter.
 
@@ -448,7 +448,7 @@ oracledb_test_value_2 2
 
 You can find [here](./custom-metrics-example/custom-metrics.toml) a working example of custom metrics for slow queries, big queries and top 100 tables.
 
-# Customize metrics in a docker image
+## Customize metrics in a docker image
 
 If you run the exporter as a docker image and want to customize the metrics, you can use the following example:
 
