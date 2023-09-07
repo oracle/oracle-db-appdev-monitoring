@@ -2,7 +2,7 @@
 
 This project aims to provide observability for the Oracle Database so that users can understand performance and diagnose issues easily across applications and database.  Over time, this project will provide not just metrics, but also logging and tracing support, and integration into popular frameworks like Spring Boot.  The project aims to deliver functionality to support both cloud and on-premises databases, including those running in Kubernetes and containers.
 
-In the first production release, v1.0, this project provides a [Prometheus](https://prometheus.io/) exporter for Oracle Database that is based in part on a Prometheus exporter created by [iamseth](https://github.com/iamseth/oracledb_exporter) with various changes to comply with various Oracle standards and policies. 
+In the first production release, v1.0, this project provides a [Prometheus](https://prometheus.io/) exporter for Oracle Database that is based in part on a Prometheus exporter created by [Seth Miller](https://github.com/iamseth/oracledb_exporter) with various changes to comply with various Oracle standards and policies. 
 
 Customers with an active support agreement for Oracle Database may open a Service Request in My Oracle Support for support with any issues using this exporter.  Community support is available through GitHub issues, etc., for other users. 
 
@@ -322,45 +322,15 @@ See [Grafana dashboards](#grafana-dashboards) below.
 
 ## Standalone binary
 
-write me
-
-
-# END
-
-## Binary Release
-
-Pre-compiled versions for Linux 64 bit and Mac OSX 64 bit can be found under [releases](https://github.com/iamseth/oracledb_exporter/releases).
+Pre-compiled versions for Linux 64 bit can be found under [releases](https://github.com/oracle/oracle-db-appdev-monitoring/releases).
 
 In order to run, you'll need the [Oracle Instant Client Basic](http://www.oracle.com/technetwork/database/features/instant-client/index-097480.html)
 for your operating system. Only the basic version is required for execution.
 
-# Running
-Ensure that the environment variable DATA_SOURCE_NAME is set correctly before starting.
-DATA_SOURCE_NAME should be in Oracle Database connection string format:  
-
-```conn
-    oracle://user:pass@server/service_name[?OPTION1=VALUE1[&OPTIONn=VALUEn]...]
-```
-
-For Example:
-
-```bash
-# export Oracle location:
-export DATA_SOURCE_NAME=oracle://system:password@oracle-sid
-# or using a complete url:
-export DATA_SOURCE_NAME=oracle://user:password@myhost:1521/service
-# 19c client for primary/standby configuration
-export DATA_SOURCE_NAME=oracle://user:password@primaryhost:1521,standbyhost:1521/service
-# 19c client for primary/standby configuration with options
-export DATA_SOURCE_NAME=oracle://user:password@primaryhost:1521,standbyhost:1521/service?connect_timeout=5&transport_connect_timeout=3&retry_count=3
-# 19c client for ASM instance connection (requires SYSDBA)
-export DATA_SOURCE_NAME=oracle://user:password@primaryhost:1521,standbyhost:1521/+ASM?as=sysdba
-# Then run the exporter
-/path/to/binary/oracledb_exporter --log.level error --web.listen-address 0.0.0.0:9161
-```
-
 
 ## Usage
+
+This section lists the command line arguments (flags) that can be passed to the exporter.
 
 ```bash
 Usage of oracledb_exporter:
@@ -496,73 +466,45 @@ Some sample Grafana dashboard definitions are provided [in this directory](/graf
 
 An example Grafana dashboard is available [here](https://grafana.com/grafana/dashboards/3333-oracledb/).
 
+
 # Developer notes
 
-## Docker build
+The exporter itself is fairly simple. The initialization is done as follows:
 
-To build Ubuntu and Alpine image, run the following command:
+- Parse flags options
+- Load the default toml file (`default-metrics.toml`) and store each metric in a `Metric` struct
+- Load the custom toml file (if a custom toml file is given)
+- Create an `Exporter` object
+- Register exporter in prometheus library
+- Launching a web server to handle incoming requests
 
-    make docker
+These operations are mainly done in the `main` function.
 
-You can also build only Ubuntu image:
+After this initialization phase, the exporter will wait for the arrival of a request.
 
-    make ubuntu-image
+Each time, it will iterate over the content of the `metricsToScrape` structure (in the function scrape `func (e * Export) scrape (ch chan <- prometheus.Metric)`).
 
-Or Alpine:
+For each element (of `Metric` type), a call to the `ScrapeMetric` function will be made which will itself make a call to the `ScrapeGenericValues` function.
 
-    make alpine-image
+The `ScrapeGenericValues` function will read the information from the `Metric` structure and, depending on the parameters, will generate the metrics to return. In particular, it will use the `GeneratePrometheusMetrics` function which will make SQL calls to the database.
+
+
+## Docker/container build
+
+To build a container image, run the following command:
+
+```bash
+make docker
+```
+
 
 ## Building Binaries
 
 Run build:
 
-```sh
-    make go-build
+```bash
+make go-build
 ```
 
-will output binaries and archive inside the `dist` folder for the building operating system.
+This will create binaries and archives inside the `dist` folder for the building operating system.
 
-## Import into your Golang Application
-
-The `oracledb_exporter` can also be imported into your Go based applications. The [Grafana Agent](https://github.com/grafana/agent/) uses this pattern to implement the [OracleDB integration](https://grafana.com/docs/grafana-cloud/data-configuration/integrations/integration-reference/integration-oracledb/). Feel free to modify the code to fit your application's use case.
-
-Here is a small snippet of an example usage of the exporter in code:
-
-```go
- promLogConfig := &promlog.Config{}
- // create your own config
- logger := promlog.New(promLogConfig)
-
- // replace with your connection string
- connectionString := "oracle://username:password@localhost:1521/orcl.localnet"
- oeExporter, err := oe.NewExporter(logger, &oe.Config{
-  DSN:          connectionString,
-  MaxIdleConns: 0,
-  MaxOpenConns: 10,
-  QueryTimeout: 5,
- })
-
- if err != nil {
-  panic(err)
- }
-
- metricChan := make(chan prometheus.Metric, len(oeExporter.DefaultMetrics().Metric))
- oeExporter.Collect(metricChan)
-
- // alternatively its possible to run scrapes on an interval
- // and Collect() calls will only return updated data once
- // that intervaled scrape is run
- // please note this is a blocking call so feel free to run
- // in a separate goroutine
- // oeExporter.RunScheduledScrapes(context.Background(), time.Minute)
-
- for r := range metricChan {
-  // Write to the client of your choice
-  // or spin up a promhttp.Server to serve these metrics
-  r.Write(&dto.Metric{})
- }
-
-```
-
-
-TODO - move operating principals stuff in here
