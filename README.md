@@ -90,7 +90,7 @@ The following metrics are exposed currently.
 
 # Database permissions required
 
-For the built-in default metrics, the database user that the exporter uses to connect to the Oracle Database instance must have the `SYS` privilege and/or `SELECT` permission on the following tables.
+For the built-in default metrics, the database user that the exporter uses to connect to the Oracle Database instance must have the `SELECT_CATALOG_ROLE` privilege and/or `SELECT` permission on the following tables.
 
 - dba_tablespace_usage_metrics
 - dba_tablespaces
