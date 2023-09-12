@@ -451,10 +451,8 @@ You can find [here](./custom-metrics-example/custom-metrics.toml) a working exam
 If you run the exporter as a docker image and want to customize the metrics, you can use the following example:
 
 ```Dockerfile
-FROM iamseth/oracledb_exporter:latest
-
+FROM container-registry.oracle.com/database/observability-exporter:1.0.0
 COPY custom-metrics.toml /
-
 ENTRYPOINT ["/oracledb_exporter", "--custom.metrics", "/custom-metrics.toml"]
 ```
 
