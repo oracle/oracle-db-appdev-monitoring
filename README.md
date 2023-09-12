@@ -2,9 +2,7 @@
 
 This project aims to provide observability for the Oracle Database so that users can understand performance and diagnose issues easily across applications and database.  Over time, this project will provide not just metrics, but also logging and tracing support, and integration into popular frameworks like Spring Boot.  The project aims to deliver functionality to support both cloud and on-premises databases, including those running in Kubernetes and containers.
 
-In the first production release, v1.0, this project provides a [Prometheus](https://prometheus.io/) exporter for Oracle Database that is based in part on a Prometheus exporter created by [Seth Miller](https://github.com/iamseth/oracledb_exporter) with various changes to comply with various Oracle standards and policies. 
-
-Customers with an active support agreement for Oracle Database may open a Service Request in My Oracle Support for support with any issues using this exporter.  Community support is available through GitHub issues, etc., for other users. 
+In the first production release, v1.0, this project provides a [Prometheus](https://prometheus.io/) exporter for Oracle Database that is based in part on a Prometheus exporter created by [Seth Miller](https://github.com/iamseth/oracledb_exporter) with changes to comply with various Oracle standards and policies. 
 
 Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 
