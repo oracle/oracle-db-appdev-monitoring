@@ -356,18 +356,16 @@ Usage of oracledb_exporter:
 
 # Custom metrics
 
-> NOTE: Do not put a `;` at the end of your SQL queries as this will **NOT** work.
-
-This exporter does not have the metrics you want? You can provide new one using TOML file. To specify this file to the
+The exporter allows definition of arbitrary custom metrics in a TOML file. To specify this file to the
 exporter, you can:
 
-- Use `--custom.metrics` flag followed by the TOML file
-- Export CUSTOM_METRICS variable environment (`export CUSTOM_METRICS=my-custom-metrics.toml`)
+- Use `--custom.metrics` flag followed by the name of the TOML file, or
+- Export `CUSTOM_METRICS` variable environment (`export CUSTOM_METRICS=my-custom-metrics.toml`)
 
 This file must contain the following elements:
 
-- One or several metric section (`[[metric]]`)
-- For each section a context, a request and a map between a field of your request and a comment.
+- One or several metric sections (`[[metric]]`)
+- For each section: a context, a request and a map between the field(s) in the request and comment(s).
 
 Here's a simple example:
 
@@ -377,6 +375,8 @@ context = "test"
 request = "SELECT 1 as value_1, 2 as value_2 FROM DUAL"
 metricsdesc = { value_1 = "Simple example returning always 1.", value_2 = "Same but returning always 2." }
 ```
+
+> NOTE: Do not add a semicolon (`;`) at the end of the SQL queries.
 
 This file produce the following entries in the exporter:
 
@@ -389,7 +389,7 @@ oracledb_test_value_1 1
 oracledb_test_value_2 2
 ```
 
-You can also provide labels using labels field. Here's an example providing two metrics, with and without labels:
+You can also provide labels using `labels` field. Here's an example providing two metrics, with and without labels:
 
 ```
 [[metric]]
@@ -404,7 +404,7 @@ request = "SELECT 1 as value_1, 2 as value_2, 'First label' as label_1, 'Second 
 metricsdesc = { value_1 = "Simple example returning always 1.", value_2 = "Same but returning always 2." }
 ```
 
-This TOML file produce the following result:
+This TOML file produces the following result:
 
 ```
 # HELP oracledb_context_no_label_value_1 Simple example returning always 1.
@@ -444,11 +444,12 @@ oracledb_test_value_1 1
 oracledb_test_value_2 2
 ```
 
-You can find [here](./custom-metrics-example/custom-metrics.toml) a working example of custom metrics for slow queries, big queries and top 100 tables.
+You can find [working examples](./custom-metrics-example/custom-metrics.toml) of custom metrics for slow queries, big queries and top 100 tables.
+An exmaple of [custom metrics for Transacational Event Queues](./custom-metrics-example/txeventq-metrics.toml) is also provided.
 
-## Customize metrics in a docker image
+## Customize metrics in a container image
 
-If you run the exporter as a docker image and want to customize the metrics, you can use the following example:
+If you run the exporter as a container image and want to include your custom metrics in the image itself, you can use the following example `Dockerfile` to create a new image:
 
 ```Dockerfile
 FROM container-registry.oracle.com/database/observability-exporter:1.0.0
