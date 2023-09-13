@@ -458,9 +458,11 @@ ENTRYPOINT ["/oracledb_exporter", "--custom.metrics", "/custom-metrics.toml"]
 
 # Grafana dashboards
 
-Some sample Grafana dashboard definitions are provided [in this directory](/grafana).
+A sample Grafana dashboard definition is provided [in this directory](/docker-compose/grafana/dashboards).  You can import this into your Grafana instance, and set it to use the Prometheus datasource that you have defined for the Prometheus instance that is collecting metrics from the exporter.
 
-An example Grafana dashboard is available [here](https://grafana.com/grafana/dashboards/3333-oracledb/).
+The dashboard shows some basic information, as shown below:
+
+![](doc/oracledb-dashboard.png)
 
 
 # Developer notes
