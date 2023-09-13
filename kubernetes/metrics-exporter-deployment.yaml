@@ -1,0 +1,67 @@
+## Copyright (c) 2021, 2023, Oracle and/or its affiliates.
+## Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl/
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metrics-exporter
+  namespace: exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metrics-exporter
+  template:
+    metadata:
+      labels:
+        app: metrics-exporter
+    spec:
+      containers:
+      - name: metrics-exporter
+        image: container-registry.oracle.com/database/observability-exporter:1.0.0
+        imagePullPolicy: Always
+        env:
+          # uncomment and customize the next item if you want to provide custom metrics definitions
+          #- name: CUSTOM_METRICS
+          #  value: /oracle/observability/txeventq-metrics.toml
+          - name: TNS_ADMIN
+            value: "/oracle/tns_admin"
+          - name: DB_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: db-secret
+                key: username
+                optional: false
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: db-secret
+                key: password
+                optional: false
+          # update the connect string below for your database - can be simple format, or use a tns name as shown:
+          - name: DB_CONNECT_STRING
+            value: "DEVDB_TP?TNS_ADMIN=$(TNS_ADMIN)"
+        volumeMounts:
+          - name: tns-admin
+            mountPath: /oracle/tns_admin
+          # uncomment and customize the next item if you want to provide custom metrics definitions
+          #- name: config-volume
+          #  mountPath: /oracle/observability/txeventq-metrics.toml
+          #  subPath: txeventq-metrics.toml
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"  
+        ports:
+        - containerPort: 8080
+      restartPolicy: Always
+      volumes:
+        - name: tns-admin
+          configMap:
+            name: db-metrics-tns-admin
+        # uncomment and customize the next item if you want to provide custom metrics definitions
+        #- name: config-volume
+        #  configMap:
+        #    name: db-metrics-txeventq-exporter-config

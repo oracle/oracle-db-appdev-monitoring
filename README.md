@@ -1,10 +1,66 @@
-# Unified App Dev Monitoring with Oracle Database
+# Unified Observability for Oracle Database 
 
-This distribution contains scripts and code for exporting metrics and logs from the Oracle Database, to provide converged app-dev monitoring for data-centric applications. Metrics from the application layer, Kubernetes, and Oracle Database will be combined to provide unified observability to developers. The project uses Prometheus for metrics and Loki for logs, and uses Grafana as the single pane-of-glass dashboard.
+This project aims to provide observability for the Oracle Database so that users can understand performance and diagnose issues easily across applications and database.  Over time, this project will provide not just metrics, but also logging and tracing support, and integration into popular frameworks like Spring Boot.  The project aims to deliver functionality to support both cloud and on-premises databases, including those running in Kubernetes and containers.
 
-v1 (preview) - contains export of key database metrics to Prometheus and suggested Grafana dashboard
+In the first production release, v1.0, this project provides a [Prometheus](https://prometheus.io/) exporter for Oracle Database that is based in part on a Prometheus exporter created by [Seth Miller](https://github.com/iamseth/oracledb_exporter) with changes to comply with various Oracle standards and policies. 
 
-The following metrics are exposed currently by default.
+Contributions are welcome - please see [contributing](CONTRIBUTING.md).
+
+
+### Table of Contents
+
+- [Roadmap](#roadmap)
+- [Standard metrics](#standard-metrics)
+- [Database permissions required](#database-permissions-required)
+- [Installation](#installation)
+   - [Docker, podman, etc.](#docker-podman-etc)
+   - [Test/demo environment using Docker Compose](#testdemo-environment-with-docker-compose)
+   - [Kubernetes](#kubernetes)
+   - [Standalone binary](#standalone-binary)
+- [Custom metrics](#custom-metrics)
+- [Grafana dashboards](#grafana-dashboards)
+- [Developer notes](#developer-notes)
+
+
+# Roadmap
+
+## Version 1.0
+
+The first production release, v1.0, includes the following features: 
+
+- A number of [standard metrics](#standard-metrics) are exposed,
+- Users can define [custom metrics](#custom-metrics),
+- Oracle regularly reviews third-party licenses and scans the code and images, including transitive/recursive dependencies for issues,
+- Connection to Oracle can be a basic connection or use an Oracle Wallet and TLS - connection to Oracle Autonomous Database is supported,
+- Metrics for Oracle Transactional Event Queues are also supported,
+- A Grafana dashboard is provided for Transacational Event Queues, and
+- A pre-built container image is provided, based on Oracle Linux, and optimized for size and security.
+
+Note that this exporter uses a different Oracle Database driver which in turn uses code directly written by Oracle to access the database.  This driver does require an Oracle client.  In this initial release, the client is bundled into the container image, however we intend to make that optional in order to minimize the image size. 
+
+The interfaces for this version have been kept as close as possible to those of earlier alpha releases in this repository to assist with migration.  However, it should be expected that there may be breaking changes in future releases.
+
+## Plans
+
+We always welcome input on features you would like to see supported.  Please open an issue in this repository with your suggestions. 
+
+Currently, we plan to address the following key features:
+
+- Implement multiple database support - allow the exporter to publish metrics for multiple database instances,
+- Implement vault support - allow the exporter to obtain database connection information from a secure vault,
+- Implement connection storm protection - prevent the exporter from repeatedly connecting when the credentials fail, to prevent a storm of connections causing accounts to be locked across a large number of databases,
+- Provide the option to have the Oracle client outside of the container image, e.g., on a shared volume,
+- Implement the ability to update the configuration dynamically, i.e., without a restart,
+- Implement support for exporting logs, including audit logs for example, from the database,
+- Implement support for tracing within the database, e.g., using an execution context ID provide by an external caller,
+- Provide additional pre-built Grafana dashboards,
+- Integration with Spring Observability, e.g., Micrometer,
+- Provide additional documentation and samples, and
+- Integrate with the Oracle Database Operator for Kubernetes.
+
+# Standard metrics
+
+The following metrics are exposed currently.
 
 - oracledb_exporter_last_scrape_duration_seconds
 - oracledb_exporter_last_scrape_error
@@ -32,708 +88,299 @@ The following metrics are exposed currently by default.
 - oracledb_resource_current_utilization
 - oracledb_resource_limit_value
 
-## Table of Contents
+# Database permissions required
 
-- [Unified App Dev Monitoring with Oracle Database](#unified-app-dev-monitoring-with-oracle-database)
-  - [Table of Contents](#table-of-contents)
-  - [Directory Structure](#directory-structure)
-  - [Prerequisite Components Setup with Docker Swarm](#prerequisite-components-setup-with-docker-swarm)
-    - [Dockerfile and Images for Docker Swarm](#dockerfile-and-images-for-docker-swarm)
-      - [Oracle Database Docker Image Building](#oracle-database-docker-image-building)
-      - [Oracle Database Exporter Docker Image Building](#oracle-database-exporter-docker-image-building)
-      - [Prometheus Docker Image Building](#prometheus-docker-image-building)
-      - [Grafana Docker Image Building](#grafana-docker-image-building)
-    - [Docker Compose with Docker Swarm](#docker-compose-with-docker-swarm)
-      - [Oracle Database Part in Compose File](#oracle-database-part-in-compose-file)
-      - [Exporter Part in Compose File](#exporter-part-in-compose-file)
-      - [Docker Volume in Compose File](#docker-volume-in-compose-file)
-      - [Prometheus Part in Compose File](#prometheus-part-in-compose-file)
-      - [Grafana Part in Compose File](#grafana-part-in-compose-file)
-  - [Monitor Startup and Components Modification](#monitor-startup-and-components-modification)
-    - [Startup and Run](#startup-and-run)
-      - [i. Start the Monitor](#i-start-the-monitor)
-      - [ii. View Logging](#ii-view-logging)
-      - [iii. Stop/Remove the Monitor Program](#iii-stopremove-the-monitor-program)
-    - [Exporter Metrics modification and refresh](#exporter-metrics-modification-and-refresh)
-    - [Prometheus storage/alert rule modification and refresh](#prometheus-storagealert-rule-modification-and-refresh)
-    - [Grafana Setup and Refresh](#grafana-setup-and-refresh)
-  - [Oracle Database Monitoring Exporter](#oracle-database-monitoring-exporter)
-    - [Description](#description)
-    - [Installation](#installation)
-    - [Running](#running)
-    - [Usage](#usage)
-      - [Default metrics](#default-metrics)
-      - [Custom metrics](#custom-metrics)
-      - [Customize metrics in a docker image](#customize-metrics-in-a-docker-image)
-      - [Using a multiple host data source name](#using-a-multiple-host-data-source-name)
-      - [Files & Folder](#files--folder)
-      - [Environment Variables](#environment-variables)
-      - [TLS connection to database](#tls-connection-to-database)
-    - [FAQ/Troubleshooting](#faqtroubleshooting)
-      - [Unable to convert current value to float (metric=par,metri...in.go:285](#unable-to-convert-current-value-to-float-metricparmetriingo285)
-      - [Error scraping for wait_time](#error-scraping-for-wait_time)
-      - [An Oracle instance generates trace files](#an-oracle-instance-generates-trace-files)
-  - [Data Storage](#data-storage)
+For the built-in default metrics, the database user that the exporter uses to connect to the Oracle Database instance must have the `SELECT_CATALOG_ROLE` privilege and/or `SELECT` permission on the following tables.
 
-## Directory Structure
+- dba_tablespace_usage_metrics
+- dba_tablespaces
+- v$system_wait_class
+- v$asm_diskgroup_stat
+- v$datafile
+- v$sysstat
+- v$process
+- v$waitclassmetric
+- v$session
+- v$resource_limit
 
-```text
-.
-├── Makefile                          
-├── docker-compose.yml                # aggregate all services
-├── README.md                         # this!
-│                               
-├── docker_vol/                       
-│   ├── graf_app_vol/        
-│   │   ├── dashboard_concurrency.json
-│   │   ├── dashboard_io.json      
-│   │   ├── dashboard_query.json
-│   │   └── dashboard_sys.json
-│   │
-│   └── prom_app_vol/                        
-│       ├── myrules.yml               # rules of prometheus metrics and alerts
-│       ├── config.yml                # connection configuration
-│       └── web.yml                   # authentication configuration
-│
-│
-├── oracledb/                         # local Oracle Database(19c) container
-│   ├── Dockerfile
-│   └── oracledb_entrypoint.sh        # docker secret setup scripts
-│
-│
-├── oracle-db-monitoring-exporter/    # customized basic exporter program
-│
-│
-├── exporter/                         # query and format metrics
-│   ├── Dockerfile
-│   ├── auth_config.yml               # http auth config of the exporter        
-│   └── default-metrics.toml          # queries to collect metrics
-│
-│
-├── prometheus/                       # time-series metrics storage
-│   ├── Dockerfile              
-│   └── prom_entrypoint.sh            # docker secret setup scripts
-│
-│
-└── grafana/                          # monitor dashboard
-    ├── Dockerfile              
-    ├── dashboards/              
-    │   └── all.yml                   # config of dashboard
-    │
-    └── datasources
-        └── all.yml                   # specify prometheus as the datasource
+# Installation
+
+There are a number of ways to run the exporter.  In this section you will find information on running the exporter:
+
+- In a container runtime like [Docker, Podman, etc](#docker-podman-etc)
+- In a test/demo environment using [Docker Compose](#testdemo-environment-with-docker-compose)
+- In [Kubernetes](#kubernetes)
+- As a [standalone binary](#standalone-binary)
+
+## Docker, Podman, etc.
+
+You can run the exporter in a local container using a conatiner image from [Oracle Container Registry](https://container-registry.oracle.com).  The container image is available in the "observability-exporter" repository in the "Database" category.  No authentication or license presentment/acceptance are required to pull this image from the registry.
+
+### Oracle Database 
+
+If you need an Oracle Database to test the exporter, you can use this command to start up an instance of [Oracle Database 23c Free](https://www.oracle.com/database/free/) which also requires no authentication or license presentment/acceptance to pull the image.
+
+```bash
+docker run --name free23c \
+    -d \
+    -p 1521:1521 \
+    -e ORACLE_PWD=Welcome12345 \
+    container-registry.oracle.com/database/free:latest
 ```
 
----
+This will pull the image and start up the database with a listener on port 1521. It will also create a pluggable database (a database container) called "FREEPDB1" and will set the admin passwords to the password you specified on this command.
 
-## Prerequisite Components Setup with Docker Swarm  
+You can tail the logs to see when the database is ready to use:
 
-### Dockerfile and Images for Docker Swarm
+```bash
+docker logs -f free23c
 
-In order to protect user's sensitive config info and data, a Docker Secret is used which requires Docker Swarm mode.
-
-```sh
-docker swarm init
-# use `docker info` to check status of swarm mode
+(look for this message...)
+#########################
+DATABASE IS READY TO USE!
+#########################
 ```
 
-> For more details about docker swarm, please visit [docker swarm init official documentation](https://docs.docker.com/engine/reference/commandline/swarm_init/).
+To obtain the IP address of the container, which you will need to connect to the database, use this command.  Note: depending on your platform and container runtime, you may be able to access the database at "localhost":
 
-Each component in [Docker Swarm](https://docs.docker.com/engine/swarm/) mode is a [Docker Service](https://docs.docker.com/engine/reference/commandline/service/). A group of docker services is called [Docker Stack](https://docs.docker.com/engine/reference/commandline/stack/).
-
-Hence, we are going to use following command to start the monitor.
-
-``` sh
-docker stack deploy --compose-file {yaml_compose_file} {stack_name}
+```bash
+docker inspect free23c | grep IPA
+    "SecondaryIPAddresses": null,
+    "IPAddress": "172.17.0.2",
+            "IPAMConfig": null,
+            "IPAddress": "172.17.0.2",
 ```
 
-This is different from `docker-compose` which can build the image during setup as Docker Swarm requires a pre-built image for each service(container).
+### Exporter 
 
-#### Oracle Database Docker Image Building
+You need to give the exporter the connection details for the Oracle Database that you want it to run against.  You can use a simple connection, or a wallet. 
 
-- Files involved
-  - `./oracledb/Dockerfile`
-  - `./oracledb/oracledb_entrypoint.sh`
+#### Simple connection
 
-```sh
-cd exporter
-docker build --tag {oracledb_image_name} .        
-# or
-docker build --tag {oracledb_image_name}:{image_tag} .
-# examples
-docker build --tag oracledb_monitor_oracledb .
-docker build --tag oracledb_monitor_oracledb:1.0 .
+For a simple connection, you will provide the details using these variables: 
+
+- `DB_USERNAME` is the database username, e.g., `pdbadmin`
+- `DB_PASSWORD` is the password for that user, e.g., `Welcome12345`
+- `DB_CONNECT_STRING` is the connection string, e.g., `free23c:1521/freepdb`
+
+To run the exporter in a container and expose the port, use a command like this, with the appropriate values for the environment variables:
+
+```bash
+docker run -it --rm \
+    -e DB_USERNAME=pdbadmin \
+    -e DB_PASSWORD=Welcome12345 \
+    -e DB_CONNECT_STRING=free23c:1521/freepdb \
+    -p 9161:9161 \
+    container-registry.oracle.com/database/observability-exporter:1.0.0
 ```
 
-> For more details about docker build, please visit the [official documentation](https://docs.docker.com/engine/reference/commandline/build/)
+#### Using a wallet
 
-#### Oracle Database Exporter Docker Image Building
+For a wallet connection, you must first set up the wallet.  If you are using Oracle Autonomous Database, for example, you can download the wallet from the Oracle Cloud Infrastructure (OCI) console.  
 
-An additional http authentication feature is provided to enhance connection security, therefore, it is necessary to build a basic exporter image from `oracle-db-monitoring-exporter` and then a customized image with configuration files.
+1. Unzip the wallet into a new directory, e.g., called `wallet`.
+1. Edit the `sqlnet.ora` file and set the `DIRECTORY` to `/wallet`.  This is the path inside the exporter container where you will provide the wallet.
+1. Take a note of the TNS name from the `tnsnames.ora` that will be used to connect to the database, e.g., `devdb_tp`.
 
-- Files involved:
-  - `./oracle-db-monitoring-exporter/*`
-  - `./exporter/Dockerfile`
-  - `./exporter/auth_config.yml`
-  - `./exporter/default-metrics.toml`
-  - `./exporter/localhost.cert` (you need to create your own version)
-  - `./exporter/localhost.key` (you need to create your own version)
+Now, you provide the connection details using these variables: 
 
-a. Base Image
+- `DB_USERNAME` is the database username, e.g., `pdbadmin`
+- `DB_PASSWORD` is the password for that user, e.g., `Welcome12345`
+- `DB_CONNECT_STRING` is the connection string, e.g., `devdb_tp?TNS_ADMIN=/wallet`
 
-This is a required step.
+To run the exporter in a container and expose the port, use a command like this, with the appropriate values for the environment variables, and mounting your `wallet` directory as `/wallet` in the container to provide access to the wallet:
 
-```sh
-# Base Image
-
-cd oracle-db-monitoring-exporter
-make oraclelinux-image
-# This will build three base images and we are going to use either 
-# "oracle-db-monitoring-exporter:0.3.0-oraclelinux" or "oracle-db-monitoring-exporter:oraclelinux"
+```bash
+docker run -it --rm \
+    -e DB_USERNAME=pdbadmin \
+    -e DB_PASSWORD=Welcome12345 \
+    -e DB_CONNECT_STRING=devdb_tp \
+    -v ./wallet:/wallet \
+    -p 9161:9161 \
+    container-registry.oracle.com/database/observability-exporter:1.0.0
 ```
 
-b. Before creating the customized image, it is necessary to setup the authentication username and password for the exporter and encrypt it with a docker secret. Then, specify the docker secret names in `exporter/auth_config.yml`
 
-```sh
-echo "{exp_auth_username}" | docker secret create {secret_name} -
-echo "{exp_auth_password}" | docker secret create {secret_name} -
+## Test/demo environment with Docker Compose
 
-# examples
-echo "mntmgr" | docker secret create auth.username -
-echo "P@55w0rd" | docker secret create auth.password -  
+If you would like to set up a test environment with the exporter, you can use the provided "Docker Compose" file in this repository which will start an Oracle Database instance, the exporter, Prometheus and Grafana.
+
+```bash
+cd docker-compose
+docker-compose up -d
 ```
+
+The containers will take a short time to start.  The first time, the Oracle container might take a few minutes to start while it creates the database instance, but this is a one-time operation, and subequent restarts will be much faster (a few seconds). 
+
+Once the containers are all running, you can access the services using these URLs:
+
+- [Exporter](http://localhost:9161/metrics)
+- [Prometheus](http://localhost:9000) - try a query for "oracle".
+- [Grafana](http://localhost:3000) - username is "admin" and password is "grafana".  An Oracle Database dashboard is provisioned and configured to use data from the exporter.
+
+## Kubernetes
+
+To run the exporter in Kubernetes, you need to complete the following steps.  All steps must be completed in the same Kunernetes namespace.  The examples below assume you want to use a namespace called `exporter`, you must change the commands if you wish to use a different namespace.
+
+### Create a secret with credentials for connecting to the Oracle Database
+
+Create a secret with the Oracle database user and password that the exporter should use to connect to the database using this command.  You must specify the correct user and password for your environment.  This example uses `pdbadmin` as the user and `Welcome12345` as the password: 
+
+```bash
+kubectl create secret generic db-secret \
+    --from-literal=username=pdbadmin \
+    --from-literal=password=Welcome12345 \
+    -n exporter
+```
+
+### Create a config map for the wallet (optional)
+
+Create a config map with the wallet (if you are using one) using this command.  Run this command in the `wallet` directory you created earlier.
+
+```bash
+kubectl create cm db-metrics-tns-admin \
+    --from-file=cwallet.sso \
+    --from-file=ewallet.p12 \
+    --from-file=ewallet.pem \
+    --from-file=keystore.jks \
+    --from-file=ojdbc.properties \
+    --from-file=sqlnet.ora \
+    --from-file=tnsnames.ora \
+    --from-file=truststore.jks \
+    -n exporter
+```
+
+### Create a config map for you metrics definition file (optional)
+
+If you have defined any [custom metrics](#custom-metrics), you must create a config map for the metrics definition file.  For example, if you created a configuration file called `txeventq-metrics.toml`, then create the config map with this command: 
+
+```bash
+kubectl create cm db-metrics-txeventq-exporter-config \
+    --from-file=txeventq-metrics.toml \
+    -n exporter
+```
+
+### Deploy the Oracle Database Observability exporter
+
+A sample Kubernetes manifest is provided [here](/kubernetes/metrics-exporter-deployment.yaml).  You must edit this file to set the namespace you wish to use, the database connect string to use, and if you have any custom metrics, you will need to uncomment and customize some sections in this file.
+
+Once you have made the necessary updates, apply the file to your cluster using this command: 
+
+```bash
+kubectl apply -f metrics-exporter-deployment.yaml
+```
+
+You can check the deployment was successful and monitor the exporter startup with this command:
+
+```bash
+kubectl get pods -n exporter -w
+```
+
+You can view the exporter's logs with this command: 
+
+```bash
+kubectl logs -f svc/metrics-exporter -n exporter
+```
+
+### Create a Kubernetes service for the exporter
+
+Create a Kubernetes service to allow access to the exporter pod(s).  A sample Kubernetes manifest is provided [here](/kubernetes/metrics-exporter-service.yaml).  You may need to customize this file to update the namespace. 
+
+Once you have made any necessary udpates, apply the file to your cluster using this command: 
+
+```bash
+kubectl aspply -f metrics-exporter-service.yaml
+```
+
+### Create a Kubernetes service monitor
+
+Create a Kubernetes service monitor to tell Prometheus (for example) to collect metrics from the exporter.  A sample Kubernetes manifest is provided [here](/kubernetes/metrics-service-monitor.yaml).  You may need to customize this file to update the namespace. 
+
+Once you have made any necessary udpates, apply the file to your cluster using this command: 
+
+```bash
+kubectl aspply -f metrics-service-monitor.yaml
+```
+
+### Configure a Prometheus target (optional)
+
+You may need to update your Prometheus configuration to add a target.  If so, you can use this example job definition as a guide:
 
 ```yaml
-# auth_config.yml
-username: auth.username
-password: auth.password
-```
-
-c. Ensure metric queries are finished and saved in `exporter/default-metrics.toml`.
-
-d. Generate ssl key and ssl certificate for https transportation.
-
-```sh
-cd exporter
-openssl req \
-  -x509 \
-  -newkey rsa:4096 \
-  -nodes \
-  -keyout localhost.key \
-  -out localhost.crt
-```
-
-Make sure `localhost.key` and `localhost.crt` are under `./exporter/`
-
-*If you need to change file names of cert and key, don't forget to modify the `Dockerfile`.*
-
-e. Final Customized Image
-
-```sh
-# Customized Image
-
-cd exporter
-docker build --tag {image_name}:{tag_name} .
-# example
-docker build --tag oracledb_monitor_exporter:1.0 .
-```
-
-#### Prometheus Docker Image Building
-
-- Files involved:
-  - `./docker_vol/prom_app_vol/config.yml`
-  - `./docker_vol/prom_app_vol/myrules.yml`
-  - `./docker_vol/prom_app_vol/web.yml`
-  - `./prometheus/Dockerfile`
-  - `./prometheus/prom_entrypoint.sh`
-  - `./prometheus/localhost.cert` (you need to create your own version)
-  - `./prometheus/localhost.key` (you need to create your own version)
-
-a. Generate ssl key and ssl certificate for https transportation.
-
-```sh
-cd exporter
-openssl req \
-  -x509 \
-  -newkey rsa:4096 \
-  -nodes \
-  -keyout localhost.key \
-  -out localhost.crt
-```
-
-Make sure your `localhost.key` and `localhost.crt` are under `./prometheus/`
-
-*If you need to change file names of cert and key, don't forget to modify the `Dockerfile` and `web.yml`.*
-
-b. Build Prometheus image
-
-```sh
-cd prometheus
-docker build --tag {image_name}:{tag_name} .
-# example
-docker build --tag oracledb_monitor_prometheus:1.0 .
-```
-
-c. Setup http authentication username and password for Prometheus in `./docker_vol/prom_app_vol/web.yml` and Docker Secret.
-
-The password required to connect to Prometheus should be hashed with [bcrypt](https://github.com/prometheus/exporter-toolkit/blob/master/docs/web-configuration.md#about-bcrypt). Use `htpasswd` command to hash the password with bcrypt.
-
-```sh
-htpasswd -nBC 10 “” | tr -d ‘:\n’
-```
-
-Copy and paste the result, and create such docker secret. For example, the bcrypt hashing of `test` is `$2b$12$hNf2lSsxfm0.i4a.1kVpSOVyBCfIB51VRjgBUyv6kdnyTlgWj81Ay`.
-
-```sh
-echo "{prom_auth_password}" | docker secret create prom.auth.pwd -
-# example
-echo "\$2b\$12\$hNf2lSsxfm0.i4a.1kVpSOVyBCfIB51VRjgBUyv6kdnyTlgWj81Ay" | docker secret create prom.auth.pwd -
-# don't forget add a '\' before each '$'
-# you can also create a docker secret with a file. visit the documentation.
-```
-
-***Here the secret name is required to be 'prom.auth.pwd'.***
-
-```yaml
-# web.yml
-basic_auth_users:
-  {prom_auth_username}: {docker_secret_name_of_auth_pwd}
-  # example:
-  mntmgr: prom.auth.pwd
-```
-
-#### Grafana Docker Image Building
-
-- Files involved:
-  - `./docker_vol/prom_app_vol/config.yml`
-  - `./docker_vol/prom_app_vol/myrules.yml`
-  - `./docker_vol/prom_app_vol/web.yml`
-  - `./prometheus/Dockerfile`
-  - `./prometheus/prom_entrypoint.sh`
-  - `./prometheus/localhost.cert` (you need to create your own version)
-  - `./prometheus/localhost.key` (you need to create your own version)
-
-a. Generate ssl key and ssl certificate for https transportation.
-
-```sh
-cd exporter
-openssl req \
-  -x509 \
-  -newkey rsa:4096 \
-  -nodes \
-  -keyout localhost.key \
-  -out localhost.crt
-```
-
-Make sure your `localhost.key` and `localhost.crt` are under `./grafana/`
-
-*If you need to change file names of cert and key, don't forget to modify the `Dockerfile` and `grafana.ini`.*
-
-b. For Grafana, you can setup the connection to Prometheus in `./grafana/datasources/all.yml`, setup config of dashboards in `./grafana/dashboards/all.yml`, while all of the provision dashboards are in `./docker_vol/graf_app_vol/*.json`.
-
-You should setup connection and configuration of Grafana before building the image, but you can modify dashboard raw codes after startup.
-
-```sh
-cd grafana
-docker build --tag {image_name}:{tag_name} .
-# example
-docker build --tag oracledb_monitor_grafana:1.0 .
-```
-
-### Docker Compose with Docker Swarm
-
-To enable the usage of compose file in docker swarm command line, we need the version of `docker-compose.yml` to be at least 3.1.
-
-```yaml
-# docker-compose.yml
-version: 3.1          # We have it by default. Don't delete it in your customization.
-```
-
-There is a default `docker-compose.yml`, but it is still necessary to setup docker secret in your environment.
-
-#### Oracle Database Part in Compose File
-
-```yaml
-services:
-  oracledb:
-    image: {db_image_name:image_tab}              # oracledb_monitor_oracledb:1.0
-    container_name: 'oracledb'
-    environment:
-      ORACLE_SID: ORCLCDB
-      ORACLE_PWD: DOCKER_SECRET@{pwd_secret_name} # DOCKER_SECRET@oracle.pwd
-    secrets:
-      - {pwd_secret_name}                         # oracle.pwd
-    ports:
-      - '1521:1521'
-      - '8080:8080'
-    tty: true
-
-secrets:
-  {pwd_secret_name}:                             # oracle.pwd:
-    external: true
-```
-
-You need to create your password to DBA with Docker Secret.
-
-```sh
-echo "{sysdba_pwd}" | docker secret create {secret_name} -
-# example
-echo "P@55w0rd" | docker secret create oracle.pwd -  
-```
-
-> For more details about docker secret in compose file, please visit the [official documentation](https://docs.docker.com/engine/swarm/secrets/#use-secrets-in-compose).
-
-#### Exporter Part in Compose File
-
-```yaml
-services:
-  exporter:
-    image: {exporter_image_name:image_tab}       # oracledb_monitor_exporter:1.0
-    container_name: 'exporter'
-    environment:
-      DATA_SOURCE_NAME: {dsn_secret_name}        # data.source.name
-    secrets:
-      - {dsn_secret_name}        # data.source.name
-      - {exp_auth_username}  # auth.username
-      - {exp_auth_password}   # auth.password
-    depends_on:
-      - oracledb
-    ports:
-      - '9161:9161'
-
-secrets:
-  {dsn_secret_name}:                # data.source.name
-    external: true
-  {exp_auth_username}:          # auth.username
-    external: true
-  {exp_auth_password}:           # auth.password
-    external: true
-```
-
-`{exp_auth_username}` and `{exp_auth_password}` are the ones we've setup in the [previous step](#oracle-database-exporter-docker-image-building).
-
-You need to setup your database connection string, auth username and password of the exporter with Docker Secret.
-
-For the Data Connection String, we strongly recommend not using sysdba, and instead creating your own common cdb user.
-
-```sh
-# After the creation and initialization of your Oracle Database
-# in the shell of your database system
-# for container, to login to shell
-docker exec -it --user oracle {container_id} /bin/bash
-
-sqlplus sys/{sysdba_pwd} as sysdba
-```
-
-```sql
-DROP USER c##mntmgr CASCADE;    -- a prefix of c## is required
-CREATE USER c##mntmgr IDENTIFIED BY test CONTAINER=ALL;
-GRANT CREATE SESSION TO c##mntmgr;
-GRANT select_catalog_role TO c##mntmgr;
-GRANT select any dictionary TO c##mntmgr;
-```
-
-So the DSN of `c##mntmgr` to your Oracle Database is `c##mntmgr:test@oracledb/ORCLCDB`. Encrypt it with Docker Secret.
-
-```sh
-echo "c##mntmgr:test@oracledb/ORCLCDB" | docker secret create data.source.name -
-```
-
-> For more details about Oracle Easy Connect Naming, please visit [official documentation](https://docs.oracle.com/en/database/oracle/oracle-database/18/ntcli/specifying-a-connection-by-using-the-easy-connect-naming-method.html#GUID-1035ABB3-5ADE-4697-A5F8-28F9F79A7504)*
-
-#### Docker Volume in Compose File
-
-Before Prometheus and Grafana Part, we need to set the docker volume.
-
-To use configuration files and dashboard of Prometheus and Grafana in `./docker_vol`, please setup volumes to Prometheus and Grafana containers.
-
-```yaml
-services:
-  prometheus:
-    volumes:
-      - {directory_to_prom_app_vol}:/etc/prometheus/prometheus_vol
-      # for example
-      # ?/docker_vol/prom_app_vol:/etc/prometheus/prometheus_vol
-```
-
-#### Prometheus Part in Compose File
-
-```yaml
-# docker-compose.yml
-prometheus:
-  image: oracledb_monitor_prometheus:1.0
-  container_name: 'prometheus'
-  secrets:
-    - prom.auth.pwd
-    - auth.username  # exporter auth username
-    - auth.password  # exporter auth password
-  depends_on:
-    - exporter
-  ports:
-    - '9090:9090'
-    - '9093:9093'
-  volumes:
-    - ./docker_vol/prom_app_vol:/etc/prometheus/prometheus_vol
-  tty: true
-
-secrets:
-  prom.auth.pwd:
-    external: true
-```
-
-```yaml
-# config.yml in ./docker_vol/prom_app_vol/
-# this file is for exporter connection
-global:
-  scrape_interval:     30s
-  scrape_timeout:      30s
-  evaluation_interval: 30s
-
-scrape_configs:
-  - job_name: 'TEQ Monitor'
+  - job_name: 'oracle-exporter'
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
     static_configs:
-      - targets: ['exporter:9161']
-    basic_auth:
-      username: auth.username      # docker secret name of exporter auth username
-      password: auth.password      # docker secret name of exporter auth password
-
-rule_files:
-  - "/etc/prometheus/prometheus_vol/myrules.yml"    # your prom rules
+    - targets: 
+      - metrics-exporter.exporter.svc.cluster.local:9161
 ```
 
-#### Grafana Part in Compose File
+### Import Grafana dashboard definition(s) (optional)
 
-```yaml
-# docker-compose.yml
-grafana:
-    image: oracledb-monitor_graf
-    container_name: 'grafana'
-    depends_on:
-      - prometheus
-    ports:
-      - '3000:3000'
-    volumes:
-      - ./docker_vol/graf_app_vol:/var/lib/grafana/grafana_vol
-```
+See [Grafana dashboards](#grafana-dashboards) below.
 
----
 
-## Monitor Startup and Components Modification
+## Standalone binary
 
-Setup all [configurations prerequisites](#prerequisite-link).
+Pre-compiled versions for Linux 64 bit can be found under [releases](https://github.com/oracle/oracle-db-appdev-monitoring/releases).
 
-### Startup and Run
+In order to run, you'll need the [Oracle Instant Client Basic](http://www.oracle.com/technetwork/database/features/instant-client/index-097480.html)
+for your operating system. Only the basic version is required for execution.
 
-#### i. Start the Monitor
-
-```sh
-docker stack deploy --compose-file docker-compose.yml {stack_name}
-
-# for example
-docker stack deploy --compose-file docker-compose.yml oracledb-monitor
-
-# or run `make deploy`
-# check Makefile to edit your own commands
-```
-
-The first time you build and start the Oracle Database container, it will take about 15 to 20 minutes for Oracle Database to get ready. Create your general user when it done.
-
-Then, go to the [Grafana Dashboard](https://localhost:3000). By default, username: admin, password: admin
-
-> If using Chrome, it may show "Your connection is not private" and "NET::ERR_CERT_INVALID", and prevent you from visiting the Grafana board. Please use other browser. You will meet the same problem during visiting local [Prometheus Dashboard](https://localhost:9090) and [exporter metrics](https://localhost:9161/metrics) with https protocol. This problem is due to that we are using self-signed certificates which Chrome does not recognize.
-
-***To enable your Grafana to connect to your Prometheus database, when you login to Grafana dashboard, go to `Configuration` -> `Data Sources` -> `Prometheus`(data connection). Then A) enable the `Basic auth`, `Skip TLS Verify` and `With CA Cert` under `Auth` section, B) type in the Prometheus auth username and password you just setup, and then finally C) save and test.***
-
-You can also visit the [Prometheus Dashboard](https://localhost:9090) and [exporter metrics](https://localhost:9161/metrics) to track.
-
-#### ii. View Logging
-
-```sh
-# display all docker services
-docker service ls
-# show logs of one service
-docker service logs --follow {docker_service_name} --raw
-# for example
-docker service logs --follow oracledb-monitor_oracledb --raw
-docker service logs --follow oracledb-monitor_exporter --raw
-
-# or run `make log-oracledb`
-# check Makefile to edit your own commands
-```
-
-> For more details about docker service logging, please visit the [official documentation](https://docs.docker.com/engine/reference/commandline/service_logs/)
-
-#### iii. Stop/Remove the Monitor Program
-
-```sh
-docker stack rm {stack_name}
-# example
-docker stack rm oracledb-monitor
-
-# or run `make down`
-# This will both stop and remove all four services in this docker stack.
-```
-
-*Be careful when you run this, since it will clean all local files in the containers (files in volumes won't be deleted), so make sure you've backup/relocated necessary files before running this.*
-
-### Exporter Metrics modification and refresh
-
-You can modify or add metrics by editing `exporter\default-metrics.toml`
-
-After updating it, it is necessary to rebuild the image and redeploy the exporter service.
-*Be careful when you rebuild the image and redeploy the service, since it will remove the old container and start a new one, so make sure you've backup/relocated necessary files.*
-
-```sh
-# if no updates were made to the image and only changes docker-compose of exporter service were made,
-# there is no need to re-build the image, simply run:
-docker stack deploy --compose-file docker-compose.yml oracledb-monitor
-
-# if metric files were modified
-# rebuild and restart the exporter service with a new image
-cd {Dockerfile_path}
-docker build --tag {image_title_tag} .
-docker service update {service_name} --image {image_title_tag}
-# for example
-docker build --tag oracledb_monitor_exporter:1.1 .
-docker service update oracledb-monitor_exporter --image oracledb_monitor_exporter:1.1
-
-# if you change your compose file, just re-run the deploy command
-# it will restart the service you changed
-docker stack deploy --compose-file docker-compose.yml oracledb-monitor
-
-# get service name
-docker service ls
-```
-
-> For more details about docker service, please visit the [Official Documentation](https://docs.docker.com/engine/reference/commandline/service/)
-> For more details about exporter and metrics editing/configuring, please check [Oracle Database Monitoring Exporter](#db-mnt-exporter) part.
-
-### Prometheus storage/alert rule modification and refresh
-
-Prometheus configuration can be modified in `docker_vol\prom_app_vol\config.yml`, and add recording and alerting rules can be modified in `docker_vol\prom_app_vol\myrules.yml`.
-
-After updating either of them, it is necessary to enter the container and restart the Prometheus process.
-
-```sh
-# get container name
-docker ps
-
-# enter bash shell of the container
-docker exec -it --user root {container_name/container_id} /bin/bash
-# for example
-docker exec -it --user root oracledb-monitor_prometheus /bin/bash
-
-# restart the prometheus process without killing it
-kill -HUP 1
-```
-
-> For more details about Prometheus config and rule files, please visit [Prometheus Configuration](https://prometheus.io/docs/prometheus/latest/configuration/configuration/)
-
-### Grafana Setup and Refresh
-
-You can add or modify Grafana panels and add dashboards on the [Grafana webpage](https://localhost:3000). However, although you can save cache, you can not save the dashboard to the source file. Instead, you can go to Setting of the dashboard and copy the JSON Model to replace the original json file(`docker_vol\graf_app_vol\{dashboard}.json`).
-
-> For more details about provision and config of Grafana, please visit [Grafana Lab](https://grafana.com/docs/grafana/latest/administration/provisioning/).
-
-## Oracle Database Monitoring Exporter
-
-### Description
-
-A [Prometheus](https://prometheus.io/) exporter for Oracle Database.
-
-### Installation
-
-We currently only support `oraclelinux` container version.
+The following command line arguments (flags) can be passed to the exporter:
 
 ```bash
-cd oracle-db-monitoring-exporter
-make oraclelinux-image
-```
-
-### Running
-
-Ensure  the environment variable DATA_SOURCE_NAME is set correctly before starting.
-DATA_SOURCE_NAME should be in Oracle EZCONNECT format:  
- <https://docs.oracle.com/en/database/oracle/oracle-database/19/netag/configuring-naming-methods.html#GUID-B0437826-43C1-49EC-A94D-B650B6A4A6EE>  
-19c Oracle Client supports enhanced EZCONNECT, you are able to failover to standby DB or gather some heavy metrics from active standby DB and specify some additional parameters. Within 19c client you are able to connect 12c primary/standby DB too :)
-
-For Example:
-
-```bash
-# export Oracle location:
-export DATA_SOURCE_NAME=system/password@oracle-sid
-# or using a complete url:
-export DATA_SOURCE_NAME=user/password@//myhost:1521/service
-# 19c client for primary/standby configuration
-export DATA_SOURCE_NAME=user/password@//primaryhost:1521,standbyhost:1521/service
-# 19c client for primary/standby configuration with options
-export DATA_SOURCE_NAME=user/password@//primaryhost:1521,standbyhost:1521/service?connect_timeout=5&transport_connect_timeout=3&retry_count=3
-# 19c client for ASM instance connection (requires SYSDBA)
-export DATA_SOURCE_NAME=user/password@//primaryhost:1521,standbyhost:1521/+ASM?as=sysdba
-# Then run the exporter
-/path/to/binary/oracle-db-monitoring-exporter --log.level error --web.listen-address 0.0.0.0:9161
-```
-
-### Usage
-
-```bash
-Usage of oracle-db-monitoring-exporter:
+Usage of oracledb_exporter:
   --log.format value
-        If set use a syslog logger or JSON logging. Example: logger:syslog?appname=bob&local=7 or logger:stdout?json=true. Defaults to stderr.
+       	If set use a syslog logger or JSON logging. Example: logger:syslog?appname=bob&local=7 or logger:stdout?json=true. Defaults to stderr.
   --log.level value
-        Only log messages with the given severity or above. Valid levels: [debug, info, warn, error, fatal].
+       	Only log messages with the given severity or above. Valid levels: [debug, info, warn, error, fatal].
   --custom.metrics string
         File that may contain various custom metrics in a TOML file.
   --default.metrics string
         Default TOML file metrics.
+  --web.systemd-socket
+        Use systemd socket activation listeners instead of port listeners (Linux only).
   --web.listen-address string
-        Address to listen on for web interface and telemetry. (default ":9161")
+       	Address to listen on for web interface and telemetry. (default ":9161")
   --web.telemetry-path string
-        Path under which to expose metrics. (default "/metrics")
+       	Path under which to expose metrics. (default "/metrics")
   --database.maxIdleConns string
         Number of maximum idle connections in the connection pool. (default "0")
   --database.maxOpenConns string
         Number of maximum open connections in the connection pool. (default "10")
-  --web.secured-metrics  boolean
-        Expose metrics using https server. (default "false")
-  --web.ssl-server-cert string
-        Path to the PEM encoded certificate file.
-  --web.ssl-server-key string
-        Path to the PEM encoded key file.
+  --web.config.file
+        Path to configuration file that can enable TLS or authentication.
 ```
 
-#### Default metrics
+# Custom metrics
 
-This exporter comes with a set of default metrics defined in **default-metrics.toml**. You can modify this file or
-provide a different one using ``default.metrics`` option.
-
-#### Custom metrics
-
-> NOTE: Do not put a `;` at the end of your SQL queries as this will **NOT** work.
-
-This exporter does not have the metrics you want? You can provide new one using TOML file. To specify this file to the
+The exporter allows definition of arbitrary custom metrics in a TOML file. To specify this file to the
 exporter, you can:
 
-- Use ``--custom.metrics`` flag followed by the TOML file
-- Export CUSTOM_METRICS variable environment (``export CUSTOM_METRICS=my-custom-metrics.toml``)
+- Use `--custom.metrics` flag followed by the name of the TOML file, or
+- Export `CUSTOM_METRICS` variable environment (`export CUSTOM_METRICS=my-custom-metrics.toml`)
 
 This file must contain the following elements:
 
-- One or several metric section (``[[metric]]``)
-- For each section a context, a request and a map between a field of your request and a comment.
+- One or several metric sections (`[[metric]]`)
+- For each section: a context, a request and a map between the field(s) in the request and comment(s).
 
 Here's a simple example:
 
-```toml
+```
 [[metric]]
 context = "test"
 request = "SELECT 1 as value_1, 2 as value_2 FROM DUAL"
 metricsdesc = { value_1 = "Simple example returning always 1.", value_2 = "Same but returning always 2." }
 ```
 
+> NOTE: Do not add a semicolon (`;`) at the end of the SQL queries.
+
 This file produce the following entries in the exporter:
 
-```text
+```
 # HELP oracledb_test_value_1 Simple example returning always 1.
 # TYPE oracledb_test_value_1 gauge
 oracledb_test_value_1 1
@@ -742,9 +389,9 @@ oracledb_test_value_1 1
 oracledb_test_value_2 2
 ```
 
-You can also provide labels using labels field. Here's an example providing two metrics, with and without labels:
+You can also provide labels using `labels` field. Here's an example providing two metrics, with and without labels:
 
-```toml
+```
 [[metric]]
 context = "context_no_label"
 request = "SELECT 1 as value_1, 2 as value_2 FROM DUAL"
@@ -757,9 +404,9 @@ request = "SELECT 1 as value_1, 2 as value_2, 'First label' as label_1, 'Second 
 metricsdesc = { value_1 = "Simple example returning always 1.", value_2 = "Same but returning always 2." }
 ```
 
-This TOML file produce the following result:
+This TOML file produces the following result:
 
-```text
+```
 # HELP oracledb_context_no_label_value_1 Simple example returning always 1.
 # TYPE oracledb_context_no_label_value_1 gauge
 oracledb_context_no_label_value_1 1
@@ -776,7 +423,7 @@ oracledb_context_with_labels_value_2{label_1="First label",label_2="Second label
 
 Last, you can set metric type using **metricstype** field.
 
-```toml
+```
 [[metric]]
 context = "context_with_labels"
 labels = [ "label_1", "label_2" ]
@@ -788,7 +435,7 @@ metricstype = { value_1 = "counter" }
 
 This TOML file will produce the following result:
 
-```text
+```
 # HELP oracledb_test_value_1 Simple test example returning always 1 as counter.
 # TYPE oracledb_test_value_1 counter
 oracledb_test_value_1 1
@@ -797,151 +444,66 @@ oracledb_test_value_1 1
 oracledb_test_value_2 2
 ```
 
-You can find [here](./custom-metrics-example/custom-metrics.toml) a working example of custom metrics for slow queries, big queries and top 100 tables.
+You can find [working examples](./custom-metrics-example/custom-metrics.toml) of custom metrics for slow queries, big queries and top 100 tables.
+An exmaple of [custom metrics for Transacational Event Queues](./custom-metrics-example/txeventq-metrics.toml) is also provided.
 
-#### Customize metrics in a docker image
+## Customize metrics in a container image
 
-If you run the exporter as a docker image and want to customize the metrics, you can use the following example:
+If you run the exporter as a container image and want to include your custom metrics in the image itself, you can use the following example `Dockerfile` to create a new image:
 
 ```Dockerfile
-FROM oracle-db-monitoring-exporter:oraclelinux
-
+FROM container-registry.oracle.com/database/observability-exporter:1.0.0
 COPY custom-metrics.toml /
-
 ENTRYPOINT ["/oracledb_exporter", "--custom.metrics", "/custom-metrics.toml"]
 ```
 
-#### Using a multiple host data source name
+# Grafana dashboards
 
-> NOTE: This has been tested with v0.2.6a and will most probably work on versions above.
-> NOTE: While `user/password@//database1.example.com:1521,database3.example.com:1521/DBPRIM` works with SQLPlus, it doesn't seem to work with `oracledb-exporter` v0.2.6a.
+A sample Grafana dashboard definition is provided [in this directory](/docker-compose/grafana/dashboards).  You can import this into your Grafana instance, and set it to use the Prometheus datasource that you have defined for the Prometheus instance that is collecting metrics from the exporter.
 
-In some cases, one might want to scrape metrics from the currently available database when having a active-passive replication setup.
+The dashboard shows some basic information, as shown below:
 
-This will try to connect to any available database to scrape for the metrics. With some replication options, the secondary database is not available when replicating. This allows the scraper to automatically fall back in case of the primary one failing.
+![](doc/oracledb-dashboard.png)
 
-This example allows to achieve this:
 
-#### Files & Folder
+# Developer notes
 
-- tns_admin folder: `/path/to/tns_admin`
-- tnsnames.ora file: `/path/to/tns_admin/tnsnames.ora`
+The exporter itself is fairly simple. The initialization is done as follows:
 
-Example of a tnsnames.ora file:
+- Parse flags options
+- Load the default toml file (`default-metrics.toml`) and store each metric in a `Metric` struct
+- Load the custom toml file (if a custom toml file is given)
+- Create an `Exporter` object
+- Register exporter in prometheus library
+- Launching a web server to handle incoming requests
 
-```ora
-database =
-(DESCRIPTION =
-  (ADDRESS_LIST =
-    (ADDRESS = (PROTOCOL = TCP)(HOST = database1.example.com)(PORT = 1521))
-    (ADDRESS = (PROTOCOL = TCP)(HOST = database2.example.com)(PORT = 1521))
-  )
-  (CONNECT_DATA =
-    (SERVICE_NAME = DBPRIM)
-  )
-)
-```
+These operations are mainly done in the `main` function.
 
-#### Environment Variables
+After this initialization phase, the exporter will wait for the arrival of a request.
 
-- `TNS_ENTRY`: Name of the entry to use (`database` in the example file above)
-- `TNS_ADMIN`: Path you choose for the tns admin folder (`/path/to/tns_admin` in the example file above)
-- `DATA_SOURCE_NAME`: Datasource pointing to the `TNS_ENTRY` (`user/password@database` in the example file above)
+Each time, it will iterate over the content of the `metricsToScrape` structure (in the function scrape `func (e * Export) scrape (ch chan <- prometheus.Metric)`).
 
-#### TLS connection to database
+For each element (of `Metric` type), a call to the `ScrapeMetric` function will be made which will itself make a call to the `ScrapeGenericValues` function.
 
-First, set the following variables:
+The `ScrapeGenericValues` function will read the information from the `Metric` structure and, depending on the parameters, will generate the metrics to return. In particular, it will use the `GeneratePrometheusMetrics` function which will make SQL calls to the database.
+
+
+## Docker/container build
+
+To build a container image, run the following command:
 
 ```bash
-export WALLET_PATH=/wallet/path/to/use
-export TNS_ENTRY=tns_entry
-export DB_USERNAME=db_username
-export TNS_ADMIN=/tns/admin/path/to/use
+make docker
 ```
 
-Create the wallet and set the credential:
+
+## Building Binaries
+
+Run build:
 
 ```bash
-mkstore -wrl $WALLET_PATH -create
-mkstore -wrl $WALLET_PATH -createCredential $TNS_ENTRY $DB_USERNAME
+make go-build
 ```
 
-Then, update sqlnet.ora:
+This will create binaries and archives inside the `dist` folder for the building operating system.
 
-```bash
-echo "
-WALLET_LOCATION = (SOURCE = (METHOD = FILE) (METHOD_DATA = (DIRECTORY = $WALLET_PATH )))
-SQLNET.WALLET_OVERRIDE = TRUE
-SSL_CLIENT_AUTHENTICATION = FALSE
-" >> $TNS_ADMIN/sqlnet.ora
-```
-
-To use the wallet, use the wallet_location parameter. You may need to disable ssl verification with the
-ssl_server_dn_match parameter.
-
-Here a complete example of string connection:
-
-```text
-DATA_SOURCE_NAME=username/password@tcps://dbhost:port/service?
-ssl_server_dn_match=false&wallet_location=wallet_path
-```
-
-### FAQ/Troubleshooting
-
-#### Unable to convert current value to float (metric=par,metri...in.go:285
-
-Oracle is trying to send a value that we cannot convert to float. This could be anything like 'UNLIMITED' or 'UNDEFINED' or 'WHATEVER'.
-
-In this case, you must handle this problem by testing it in the SQL request. Here an example available in default metrics:
-
-```toml
-[[metric]]
-context = "resource"
-labels = [ "resource_name" ]
-metricsdesc = { current_utilization= "Generic counter metric from v$resource_limit view in Oracle (current value).", limit_value="Generic counter metric from v$resource_limit view in Oracle (UNLIMITED: -1)." }
-request="SELECT resource_name,current_utilization,CASE WHEN TRIM(limit_value) LIKE 'UNLIMITED' THEN '-1' ELSE TRIM(limit_value) END as limit_value FROM v$resource_limit"
-```
-
-If the value of limit_value is 'UNLIMITED', the request send back the value -1.
-
-You can increase the log level (`--log.level debug`) in order to get the statement generating this error.
-
-#### Error scraping for wait_time
-
-If you experience an error `Error scraping for wait_time: sql: Scan error on column index 1: converting driver.Value type string (",01") to a float64: invalid syntax source="main.go:144"` you may need to set the NLS_LANG variable.
-
-```bash
-export NLS_LANG=AMERICAN_AMERICA.WE8ISO8859P1
-export DATA_SOURCE_NAME=system/oracle@myhost
-/path/to/binary --log.level error --web.listen-address 9161
-```
-
-If using Docker, set the same variable using the -e flag.
-
-#### An Oracle instance generates trace files
-
-An Oracle instance will generally generate a number of trace files alongside its alert log file. One trace file per scraping event. The trace file contains the following lines
-
-```text
-...
-*** MODULE NAME:(prometheus_oracle_exporter-amd64@hostname)
-...
-kgxgncin: clsssinit: CLSS init failed with status 3
-kgxgncin: clsssinit: return status 3 (0 SKGXN not av) from CLSS
-```
-
-The root cause is Oracle's reaction of querying ASM-related views without ASM used. The current workaround proposed is to setup a regular task to cleanup these trace files from the filesystem, as example
-
-```bash
-find $ORACLE_BASE/diag/rdbms -name '*.tr[cm]' -mtime +14 -delete
-```
-
-## Data Storage
-
-By default the retention of Prometheus is configured to 15 days. On average, Prometheus uses only around 1-2 bytes per sample. Thus, to plan the capacity of a Prometheus server, you can use the rough formula:
-
-```text
-needed_disk_space = retention_time_seconds * ingested_samples_per_second * bytes_per_sample
-```
-
-Roughly, Oracle Database Monitor System has 100 samples every 1 minute, meaning 1.67 samples per second on average. You could base on your retention time to determine the capacity of the server.
