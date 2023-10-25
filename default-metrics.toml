@@ -33,13 +33,11 @@ context = "wait_time"
 metricsdesc = { value="Generic counter metric from v$waitclassmetric view in Oracle." }
 fieldtoappend= "wait_class"
 request = '''
-SELECT
-  n.wait_class as WAIT_CLASS,
-  round(m.time_waited/m.INTSIZE_CSEC,3) as VALUE
-FROM
-  v$waitclassmetric  m, v$system_wait_class n
-WHERE
-  m.wait_class_id=n.wait_class_id AND n.wait_class != 'Idle'
+SELECT wait_class as WAIT_CLASS, sum(time_waited) as VALUE
+FROM gv$active_session_history 
+where wait_class is not null 
+and sample_time > sysdate - interval '1' hour
+GROUP BY wait_class;
 '''
 
 [[metric]]
