@@ -24,6 +24,7 @@ import (
 	// _ "net/http/pprof"
 
 	"github.com/oracle/oracle-db-appdev-monitoring/collector"
+	"github.com/oracle/oracle-db-appdev-monitoring/vault"
 )
 
 var (
@@ -49,6 +50,12 @@ func main() {
 	user := os.Getenv("DB_USERNAME")
 	password := os.Getenv("DB_PASSWORD")
 	connectString := os.Getenv("DB_CONNECT_STRING")
+
+	vaultName, useVault := os.LookupEnv("vault_id")
+	if useVault {
+		level.Info(logger).Log("msg", "vault_id env var is present so using OCI Vault", "vault_name", vaultName)
+		password = vault.GetVaultSecret(vaultName, os.Getenv("vault_secret_name"))
+	}
 
 	config := &collector.Config{
 		User:               user,
