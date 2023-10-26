@@ -275,7 +275,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		return
 	}
 
-	level.Debug(e.logger).Log("Successfully pinged Oracle database: ", maskDsn(e.connectString))
+	level.Debug(e.logger).Log("msg", "Successfully pinged Oracle database: "+maskDsn(e.connectString))
 	e.up.Set(1)
 
 	if e.checkIfMetricsChanged() {
@@ -291,15 +291,15 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		go func() {
 			defer wg.Done()
 
-			level.Debug(e.logger).Log("About to scrape metric: ")
-			level.Debug(e.logger).Log("- Metric MetricsDesc: ", metric.MetricsDesc)
-			level.Debug(e.logger).Log("- Metric Context: ", metric.Context)
-			level.Debug(e.logger).Log("- Metric MetricsType: ", metric.MetricsType)
-			level.Debug(e.logger).Log("- Metric MetricsBuckets: ", metric.MetricsBuckets, "(Ignored unless Histogram type)")
-			level.Debug(e.logger).Log("- Metric Labels: ", metric.Labels)
-			level.Debug(e.logger).Log("- Metric FieldToAppend: ", metric.FieldToAppend)
-			level.Debug(e.logger).Log("- Metric IgnoreZeroResult: ", metric.IgnoreZeroResult)
-			level.Debug(e.logger).Log("- Metric Request: ", metric.Request)
+			level.Debug(e.logger).Log("msg", "About to scrape metric",
+				"Context", metric.Context,
+				"MetricsDesc", fmt.Sprint(metric.MetricsDesc),
+				"MetricsType", fmt.Sprint(metric.MetricsType),
+				"MetricsBuckets", fmt.Sprint(metric.MetricsBuckets), // ignored unless histogram
+				"Labels", fmt.Sprint(metric.Labels),
+				"FieldToAppend", metric.FieldToAppend,
+				"IgnoreZeroResult", metric.IgnoreZeroResult,
+				"Request", metric.Request)
 
 			if len(metric.Request) == 0 {
 				level.Error(e.logger).Log("Error scraping for ", metric.MetricsDesc, ". Did you forget to define request in your toml file?")
@@ -323,10 +323,17 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 
 			scrapeStart := time.Now()
 			if err = e.ScrapeMetric(e.db, ch, metric); err != nil {
-				level.Error(e.logger).Log("Error scraping for", metric.Context, "_", metric.MetricsDesc, time.Since(scrapeStart), ":", err)
+				level.Error(e.logger).Log("msg", "Error scraping metric",
+					"Context", metric.Context,
+					"MetricsDesc", fmt.Sprint(metric.MetricsDesc),
+					"time", time.Since(scrapeStart),
+					"error", err)
 				e.scrapeErrors.WithLabelValues(metric.Context).Inc()
 			} else {
-				level.Debug(e.logger).Log("Successfully scraped metric: ", metric.Context, metric.MetricsDesc, time.Since(scrapeStart))
+				level.Debug(e.logger).Log("msg", "Successfully scraped metric",
+					"Context", metric.Context,
+					"MetricDesc", fmt.Sprint(metric.MetricsDesc),
+					"time", time.Since(scrapeStart))
 			}
 		}()
 	}
@@ -334,7 +341,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 }
 
 func (e *Exporter) connect() error {
-	level.Debug(e.logger).Log("Launching connection: ", maskDsn(e.connectString))
+	level.Debug(e.logger).Log("msg", "Launching connection to "+maskDsn(e.connectString))
 
 	var P godror.ConnectionParams
 	P.Username, P.Password, P.ConnectString = e.user, godror.NewPassword(e.password), e.connectString
@@ -344,11 +351,11 @@ func (e *Exporter) connect() error {
 	// 	level.Error(e.logger).Log("Error while connecting to", e.dsn)
 	// 	return err
 	// }
-	level.Debug(e.logger).Log("set max idle connections to ", e.config.MaxIdleConns)
+	level.Debug(e.logger).Log("msg", "set max idle connections to "+strconv.Itoa(e.config.MaxIdleConns))
 	db.SetMaxIdleConns(e.config.MaxIdleConns)
-	level.Debug(e.logger).Log("set max open connections to ", e.config.MaxOpenConns)
+	level.Debug(e.logger).Log("msg", "set max open connections to "+strconv.Itoa(e.config.MaxOpenConns))
 	db.SetMaxOpenConns(e.config.MaxOpenConns)
-	level.Debug(e.logger).Log("Successfully connected to: ", maskDsn(e.connectString))
+	level.Debug(e.logger).Log("msg", "Successfully connected to "+maskDsn(e.connectString))
 	e.db = db
 	return nil
 }
@@ -401,18 +408,18 @@ func (e *Exporter) reloadMetrics() {
 				level.Error(e.logger).Log(err)
 				panic(errors.New("Error while loading " + _customMetrics))
 			} else {
-				level.Info(e.logger).Log("Successfully loaded custom metrics from: " + _customMetrics)
+				level.Info(e.logger).Log("msg", "Successfully loaded custom metrics from "+_customMetrics)
 			}
 			e.metricsToScrape.Metric = append(e.metricsToScrape.Metric, additionalMetrics.Metric...)
 		}
 	} else {
-		level.Debug(e.logger).Log("No custom metrics defined.")
+		level.Debug(e.logger).Log("msg", "No custom metrics defined.")
 	}
 }
 
 // ScrapeMetric is an interface method to call scrapeGenericValues using Metric struct values
 func (e *Exporter) ScrapeMetric(db *sql.DB, ch chan<- prometheus.Metric, metricDefinition Metric) error {
-	level.Debug(e.logger).Log("Calling function ScrapeGenericValues()")
+	level.Debug(e.logger).Log("msg", "Calling function ScrapeGenericValues()")
 	return e.scrapeGenericValues(db, ch, metricDefinition.Context, metricDefinition.Labels,
 		metricDefinition.MetricsDesc, metricDefinition.MetricsType, metricDefinition.MetricsBuckets,
 		metricDefinition.FieldToAppend, metricDefinition.IgnoreZeroResult,
@@ -438,7 +445,8 @@ func (e *Exporter) scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, 
 					",metricHelp=" + metricHelp + ",value=<" + row[metric] + ">)")
 				continue
 			}
-			level.Debug(e.logger).Log("Query result looks like: ", value)
+			level.Debug(e.logger).Log("msg", "Query result",
+				"value", value)
 			// If metric do not use a field content in metric's name
 			if strings.Compare(fieldToAppend, "") == 0 {
 				desc := prometheus.NewDesc(
@@ -512,14 +520,14 @@ func (e *Exporter) scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, 
 		}
 		return nil
 	}
-	level.Debug(e.logger).Log("Calling function GeneratePrometheusMetrics()")
+	level.Debug(e.logger).Log("msg", "Calling function GeneratePrometheusMetrics()")
 	err := e.generatePrometheusMetrics(db, genericParser, request)
-	level.Debug(e.logger).Log("ScrapeGenericValues() - metricsCount: ", metricsCount)
+	level.Debug(e.logger).Log("msg", "ScrapeGenericValues() - metricsCount: "+strconv.Itoa(metricsCount))
 	if err != nil {
 		return err
 	}
 	if !ignoreZeroResult && metricsCount == 0 {
-		return errors.New("No metrics found while parsing")
+		return errors.New("no metrics found while parsing, query returned no rows")
 	}
 	return err
 }
