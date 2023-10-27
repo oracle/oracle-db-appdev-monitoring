@@ -80,7 +80,8 @@ func (e *Exporter) DefaultMetrics() Metrics {
 	var metricsToScrape Metrics
 	if e.config.DefaultMetricsFile != "" {
 		if _, err := toml.DecodeFile(filepath.Clean(e.config.DefaultMetricsFile), &metricsToScrape); err != nil {
-			level.Error(e.logger).Log(fmt.Sprintf("there was an issue while loading specified default metrics file at: "+e.config.DefaultMetricsFile+", proceeding to run with default metrics."), err)
+			level.Error(e.logger).Log("msg", fmt.Sprintf("there was an issue while loading specified default metrics file at: "+e.config.DefaultMetricsFile+", proceeding to run with default metrics."),
+				"error", err)
 		}
 		return metricsToScrape
 	}

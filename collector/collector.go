@@ -261,16 +261,17 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 
 	if err = e.db.Ping(); err != nil {
 		if strings.Contains(err.Error(), "sql: database is closed") {
-			level.Info(e.logger).Log("Reconnecting to DB")
+			level.Info(e.logger).Log("msg", "Reconnecting to DB")
 			err = e.connect()
 			if err != nil {
-				level.Error(e.logger).Log("Error reconnecting to DB", err)
+				level.Error(e.logger).Log("msg", "Error reconnecting to DB", err)
 			}
 		}
 	}
 
 	if err = e.db.Ping(); err != nil {
-		level.Error(e.logger).Log("Error pinging oracle:", err)
+		level.Error(e.logger).Log("msg", "Error pinging oracle:",
+			"error", err)
 		e.up.Set(0)
 		return
 	}
@@ -302,12 +303,12 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 				"Request", metric.Request)
 
 			if len(metric.Request) == 0 {
-				level.Error(e.logger).Log("Error scraping for ", metric.MetricsDesc, ". Did you forget to define request in your toml file?")
+				level.Error(e.logger).Log("msg", "Error scraping for "+fmt.Sprint(metric.MetricsDesc)+". Did you forget to define request in your toml file?")
 				return
 			}
 
 			if len(metric.MetricsDesc) == 0 {
-				level.Error(e.logger).Log("Error scraping for query", metric.Request, ". Did you forget to define metricsdesc  in your toml file?")
+				level.Error(e.logger).Log("msg", "Error scraping for query"+fmt.Sprint(metric.Request)+". Did you forget to define metricsdesc  in your toml file?")
 				return
 			}
 
@@ -315,7 +316,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 				if metricType == "histogram" {
 					_, ok := metric.MetricsBuckets[column]
 					if !ok {
-						level.Error(e.logger).Log("Unable to find MetricsBuckets configuration key for metric. (metric=" + column + ")")
+						level.Error(e.logger).Log("msg", "Unable to find MetricsBuckets configuration key for metric. (metric="+column+")")
 						return
 					}
 				}
@@ -365,15 +366,15 @@ func (e *Exporter) checkIfMetricsChanged() bool {
 		if len(_customMetrics) == 0 {
 			continue
 		}
-		level.Debug(e.logger).Log("Checking modifications in following metrics definition file:", _customMetrics)
+		level.Debug(e.logger).Log("msg", "Checking modifications in following metrics definition file:"+_customMetrics)
 		h := sha256.New()
 		if err := hashFile(h, _customMetrics); err != nil {
-			level.Error(e.logger).Log("Unable to get file hash", err)
+			level.Error(e.logger).Log("msg", "Unable to get file hash", "error", err)
 			return false
 		}
 		// If any of files has been changed reload metrics
 		if !bytes.Equal(hashMap[i], h.Sum(nil)) {
-			level.Info(e.logger).Log(_customMetrics, "has been changed. Reloading metrics...")
+			level.Info(e.logger).Log("msg", _customMetrics+" has been changed. Reloading metrics...")
 			hashMap[i] = h.Sum(nil)
 			return true
 		}
@@ -441,8 +442,8 @@ func (e *Exporter) scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, 
 			value, err := strconv.ParseFloat(strings.TrimSpace(row[metric]), 64)
 			// If not a float, skip current metric
 			if err != nil {
-				level.Error(e.logger).Log("Unable to convert current value to float (metric=" + metric +
-					",metricHelp=" + metricHelp + ",value=<" + row[metric] + ">)")
+				level.Error(e.logger).Log("msg", "Unable to convert current value to float (metric="+metric+
+					",metricHelp="+metricHelp+",value=<"+row[metric]+">)")
 				continue
 			}
 			level.Debug(e.logger).Log("msg", "Query result",
@@ -457,21 +458,21 @@ func (e *Exporter) scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, 
 				if metricsType[strings.ToLower(metric)] == "histogram" {
 					count, err := strconv.ParseUint(strings.TrimSpace(row["count"]), 10, 64)
 					if err != nil {
-						level.Error(e.logger).Log("Unable to convert count value to int (metric=" + metric +
-							",metricHelp=" + metricHelp + ",value=<" + row["count"] + ">)")
+						level.Error(e.logger).Log("msg", "Unable to convert count value to int (metric="+metric+
+							",metricHelp="+metricHelp+",value=<"+row["count"]+">)")
 						continue
 					}
 					buckets := make(map[float64]uint64)
 					for field, le := range metricsBuckets[metric] {
 						lelimit, err := strconv.ParseFloat(strings.TrimSpace(le), 64)
 						if err != nil {
-							level.Error(e.logger).Log("Unable to convert bucket limit value to float (metric=" + metric +
-								",metricHelp=" + metricHelp + ",bucketlimit=<" + le + ">)")
+							level.Error(e.logger).Log("msg", "Unable to convert bucket limit value to float (metric="+metric+
+								",metricHelp="+metricHelp+",bucketlimit=<"+le+">)")
 							continue
 						}
 						counter, err := strconv.ParseUint(strings.TrimSpace(row[field]), 10, 64)
 						if err != nil {
-							level.Error(e.logger).Log("Unable to convert ", field, " value to int (metric="+metric+
+							level.Error(e.logger).Log("msg", "Unable to convert ", field, " value to int (metric="+metric+
 								",metricHelp="+metricHelp+",value=<"+row[field]+">)")
 							continue
 						}
@@ -491,21 +492,21 @@ func (e *Exporter) scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, 
 				if metricsType[strings.ToLower(metric)] == "histogram" {
 					count, err := strconv.ParseUint(strings.TrimSpace(row["count"]), 10, 64)
 					if err != nil {
-						level.Error(e.logger).Log("Unable to convert count value to int (metric=" + metric +
-							",metricHelp=" + metricHelp + ",value=<" + row["count"] + ">)")
+						level.Error(e.logger).Log("msg", "Unable to convert count value to int (metric="+metric+
+							",metricHelp="+metricHelp+",value=<"+row["count"]+">)")
 						continue
 					}
 					buckets := make(map[float64]uint64)
 					for field, le := range metricsBuckets[metric] {
 						lelimit, err := strconv.ParseFloat(strings.TrimSpace(le), 64)
 						if err != nil {
-							level.Error(e.logger).Log("Unable to convert bucket limit value to float (metric=" + metric +
-								",metricHelp=" + metricHelp + ",bucketlimit=<" + le + ">)")
+							level.Error(e.logger).Log("msg", "Unable to convert bucket limit value to float (metric="+metric+
+								",metricHelp="+metricHelp+",bucketlimit=<"+le+">)")
 							continue
 						}
 						counter, err := strconv.ParseUint(strings.TrimSpace(row[field]), 10, 64)
 						if err != nil {
-							level.Error(e.logger).Log("Unable to convert ", field, " value to int (metric="+metric+
+							level.Error(e.logger).Log("msg", "Unable to convert ", field, " value to int (metric="+metric+
 								",metricHelp="+metricHelp+",value=<"+row[field]+">)")
 							continue
 						}

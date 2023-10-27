@@ -51,10 +51,10 @@ func main() {
 	password := os.Getenv("DB_PASSWORD")
 	connectString := os.Getenv("DB_CONNECT_STRING")
 
-	vaultName, useVault := os.LookupEnv("vault_id")
+	vaultName, useVault := os.LookupEnv("VAULT_ID")
 	if useVault {
-		level.Info(logger).Log("msg", "vault_id env var is present so using OCI Vault", "vault_name", vaultName)
-		password = vault.GetVaultSecret(vaultName, os.Getenv("vault_secret_name"))
+		level.Info(logger).Log("msg", "VAULT_ID env var is present so using OCI Vault", "vault_name", vaultName)
+		password = vault.GetVaultSecret(vaultName, os.Getenv("VAULT_SECRET_NAME"))
 	}
 
 	config := &collector.Config{
@@ -69,7 +69,7 @@ func main() {
 	}
 	exporter, err := collector.NewExporter(logger, config)
 	if err != nil {
-		level.Error(logger).Log("unable to connect to DB", err)
+		level.Error(logger).Log("msg", "unable to connect to DB", "error", err)
 	}
 
 	if *scrapeInterval != 0 {
@@ -95,7 +95,7 @@ func main() {
 
 	server := &http.Server{}
 	if err := web.ListenAndServe(server, toolkitFlags, logger); err != nil {
-		level.Error(logger).Log("msg", "Listening error", "reason", err)
+		level.Error(logger).Log("msg", "Listening error", "error", err)
 		os.Exit(1)
 	}
 }
