@@ -2,13 +2,14 @@
 
 This project aims to provide observability for the Oracle Database so that users can understand performance and diagnose issues easily across applications and database.  Over time, this project will provide not just metrics, but also logging and tracing support, and integration into popular frameworks like Spring Boot.  The project aims to deliver functionality to support both cloud and on-premises databases, including those running in Kubernetes and containers.
 
-In the first production release, v1.0, this project provides a [Prometheus](https://prometheus.io/) exporter for Oracle Database that is based in part on a Prometheus exporter created by [Seth Miller](https://github.com/iamseth/oracledb_exporter) with changes to comply with various Oracle standards and policies. 
+From the first production release, v1.0, onwards, this project provides a [Prometheus](https://prometheus.io/) exporter for Oracle Database that is based in part on a Prometheus exporter created by [Seth Miller](https://github.com/iamseth/oracledb_exporter) with changes to comply with various Oracle standards and policies. 
 
 Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 
 
 ### Table of Contents
 
+- [Release Notes](#release-notes)
 - [Roadmap](#roadmap)
 - [Standard metrics](#standard-metrics)
 - [Database permissions required](#database-permissions-required)
@@ -17,15 +18,26 @@ Contributions are welcome - please see [contributing](CONTRIBUTING.md).
    - [Test/demo environment using Docker Compose](#testdemo-environment-with-docker-compose)
    - [Kubernetes](#kubernetes)
    - [Standalone binary](#standalone-binary)
+   - [Using OCI Vault](#using-oci-vault)
 - [Custom metrics](#custom-metrics)
 - [Grafana dashboards](#grafana-dashboards)
 - [Monitoring Transactional Event Queues](#monitoring-transactional-event-queues)
 - [Developer notes](#developer-notes)
 
+## Release Notes
 
-## Roadmap
+### Version 1.1, October 27, 2023
 
-### Version 1.0
+This release includes the following changes: 
+
+- The query for the standard metric `wait_class` has been updated so that it will work in both container databases
+  and pluggable databases, including in Oracle Autonomous Database instances.  Note that this query will not return
+  any data unless the database instance is under load.
+- Support for reading the database password from OCI Vault has been added (see [details](#using-oci-vault))
+- Log messages have been improved
+- Some dependencies have been updated
+
+### Version 1.0, September 13, 2023
 
 The first production release, v1.0, includes the following features: 
 
@@ -41,7 +53,7 @@ Note that this exporter uses a different Oracle Database driver which in turn us
 
 The interfaces for this version have been kept as close as possible to those of earlier alpha releases in this repository to assist with migration.  However, it should be expected that there may be breaking changes in future releases.
 
-### Plans
+## Roadmap
 
 We always welcome input on features you would like to see supported.  Please open an issue in this repository with your suggestions. 
 
@@ -354,6 +366,14 @@ Usage of oracledb_exporter:
   --web.config.file
         Path to configuration file that can enable TLS or authentication.
 ```
+
+### Using OCI Vault
+
+The exporter will read the password from a secret stored in OCI Vault if you set these two environment
+variables: 
+
+- `VAULT_ID` should be set to the OCID of the OCI vault that you wish to use
+- `VAULT_SECRET_NAME` should be set to the name of the secret in the OCI vault which contains the database password
 
 ## Custom metrics
 
