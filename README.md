@@ -228,7 +228,7 @@ The containers will take a short time to start.  The first time, the Oracle cont
 Once the containers are all running, you can access the services using these URLs:
 
 - [Exporter](http://localhost:9161/metrics)
-- [Prometheus](http://localhost:9000) - try a query for "oracle".
+- [Prometheus](http://localhost:9090) - try a query for "oracle".
 - [Grafana](http://localhost:3000) - username is "admin" and password is "grafana".  An Oracle Database dashboard is provisioned and configured to use data from the exporter.
 
 ### Kubernetes
