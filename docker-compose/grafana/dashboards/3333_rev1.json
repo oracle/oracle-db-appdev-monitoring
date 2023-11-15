@@ -212,11 +212,11 @@
               "calculatedInterval": "10m",
               "datasourceErrors": {},
               "errors": {},
-              "expr": "oracledb_sessions_active{instance=\"$host\"}",
+              "expr": "oracledb_sessions_value{instance=\"$host\", status=\"ACTIVE\"}",
               "format": "time_series",
               "interval": "$interval",
               "intervalFactor": 1,
-              "legendFormat": "",
+              "legendFormat": "{{type}}",
               "metric": "",
               "refId": "A",
               "step": 60
@@ -225,7 +225,7 @@
           "thresholds": "",
           "title": "active sessions",
           "transparent": false,
-          "type": "singlestat",
+          "type": "stat",
           "valueFontSize": "100%",
           "valueMaps": [],
           "valueName": "current"
