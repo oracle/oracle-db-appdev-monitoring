@@ -1,7 +1,7 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE} AS build
 
-RUN microdnf install golang-1.19.10
+RUN microdnf install golang-1.20.10
 
 WORKDIR /go/src/oracledb_exporter
 COPY . .
