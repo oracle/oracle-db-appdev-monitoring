@@ -347,7 +347,6 @@ func (e *Exporter) connect() error {
 
 	var P godror.ConnectionParams
 	P.Username, P.Password, P.ConnectString = e.user, godror.NewPassword(e.password), e.connectString
-	//P.ConnClass = "POOLED"
 
 	level.Debug(e.logger).Log("msg", "connection properties: "+fmt.Sprint(P))
 
