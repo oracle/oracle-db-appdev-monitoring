@@ -40,8 +40,6 @@ var (
 	maxIdleConns       = kingpin.Flag("database.maxIdleConns", "Number of maximum idle connections in the connection pool. (env: DATABASE_MAXIDLECONNS)").Default(getEnv("DATABASE_MAXIDLECONNS", "0")).Int()
 	maxOpenConns       = kingpin.Flag("database.maxOpenConns", "Number of maximum open connections in the connection pool. (env: DATABASE_MAXOPENCONNS)").Default(getEnv("DATABASE_MAXOPENCONNS", "10")).Int()
 	scrapeInterval     = kingpin.Flag("scrape.interval", "Interval between each scrape. Default is to scrape on collect requests").Default("0s").Duration()
-	freeOSMemInterval  = kingpin.Flag("free.interval", "Interval between attempts to free OS memory.").Default("10m").Duration()
-	restartInterval    = kingpin.Flag("restart.interval", "Interval between process restarts.").Default("60m").Duration()
 	toolkitFlags       = webflag.AddFlags(kingpin.CommandLine, ":9161")
 )
 
@@ -60,6 +58,20 @@ func main() {
 	if useVault {
 		level.Info(logger).Log("msg", "VAULT_ID env var is present so using OCI Vault", "vault_name", vaultName)
 		password = vault.GetVaultSecret(vaultName, os.Getenv("VAULT_SECRET_NAME"))
+	}
+
+	freeOSMemInterval, enableFree := os.LookupEnv("FREE_INTERVAL")
+	if enableFree {
+		level.Info(logger).Log("msg", "FREE_INTERVAL env var is present, so will attempt to release OS memory", "free_interval", freeOSMemInterval)
+	} else {
+		level.Info(logger).Log("msg", "FREE_INTERVAL end var is not present, will not periodically attempt to release memory")
+	}
+
+	restartInterval, enableRestart := os.LookupEnv("RESTART_INTERVAL")
+	if enableRestart {
+		level.Info(logger).Log("msg", "RESTART_INTERVAL env var is present, so will restart my own process periodically", "restart_interval", restartInterval)
+	} else {
+		level.Info(logger).Log("msg", "RESTART_INTERVAL env var is not present, so will not restart myself periodically")
 	}
 
 	config := &collector.Config{
@@ -99,28 +111,41 @@ func main() {
 	})
 
 	// start a ticker to cause rebirth
-	ticker := time.NewTicker(*restartInterval)
-	defer ticker.Stop()
-
-	go func() {
-		<-ticker.C
-		level.Info(logger).Log("msg", "Restarting the process...")
-		executable, _ := os.Executable()
-		execErr := syscall.Exec(executable, os.Args, os.Environ())
-		if execErr != nil {
-			panic(execErr)
+	if enableRestart {
+		duration, err := time.ParseDuration(restartInterval)
+		if err != nil {
+			level.Info(logger).Log("msg", "Could not parse RESTART_INTERVAL, so ignoring it")
 		}
-	}()
+		ticker := time.NewTicker(duration)
+		defer ticker.Stop()
+
+		go func() {
+			<-ticker.C
+			level.Info(logger).Log("msg", "Restarting the process...")
+			executable, _ := os.Executable()
+			execErr := syscall.Exec(executable, os.Args, os.Environ())
+			if execErr != nil {
+				panic(execErr)
+			}
+		}()
+	}
 
 	// start a ticker to free OS memory
-	memTicker := time.NewTicker(*freeOSMemInterval)
-	defer memTicker.Stop()
+	if enableFree {
+		duration, err := time.ParseDuration(freeOSMemInterval)
+		if err != nil {
+			level.Info(logger).Log("msg", "Could not parse FREE_INTERVAL, so ignoring it")
+		}
+		memTicker := time.NewTicker(duration)
+		defer memTicker.Stop()
 
-	go func() {
-		<-memTicker.C
-		level.Debug(logger).Log("msg", "attmpting to free OS memory")
-		debug.FreeOSMemory()
-	}()
+		go func() {
+			<-memTicker.C
+			level.Info(logger).Log("msg", "attempting to free OS memory")
+			debug.FreeOSMemory()
+		}()
+
+	}
 
 	server := &http.Server{}
 	if err := web.ListenAndServe(server, toolkitFlags, logger); err != nil {
