@@ -259,7 +259,6 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		}
 	}(time.Now())
 
-	//level.Debug(e.logger).Log("msg", "first ping")
 	if err = e.db.Ping(); err != nil {
 		level.Debug(e.logger).Log("msg", "error = "+err.Error())
 		if strings.Contains(err.Error(), "sql: database is closed") {
@@ -271,7 +270,6 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		}
 	}
 
-	//level.Debug(e.logger).Log("msg", "second ping")
 	if err = e.db.Ping(); err != nil {
 		level.Error(e.logger).Log("msg", "Error pinging oracle",
 			"error", err)
