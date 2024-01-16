@@ -8,6 +8,9 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"runtime/debug"
+	"syscall"
+	"time"
 
 	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
@@ -37,6 +40,8 @@ var (
 	maxIdleConns       = kingpin.Flag("database.maxIdleConns", "Number of maximum idle connections in the connection pool. (env: DATABASE_MAXIDLECONNS)").Default(getEnv("DATABASE_MAXIDLECONNS", "0")).Int()
 	maxOpenConns       = kingpin.Flag("database.maxOpenConns", "Number of maximum open connections in the connection pool. (env: DATABASE_MAXOPENCONNS)").Default(getEnv("DATABASE_MAXOPENCONNS", "10")).Int()
 	scrapeInterval     = kingpin.Flag("scrape.interval", "Interval between each scrape. Default is to scrape on collect requests").Default("0s").Duration()
+	freeOSMemInterval  = kingpin.Flag("free.interval", "Interval between attempts to free OS memory.").Default("10m").Duration()
+	restartInterval    = kingpin.Flag("restart.interval", "Interval between process restarts.").Default("60m").Duration()
 	toolkitFlags       = webflag.AddFlags(kingpin.CommandLine, ":9161")
 )
 
@@ -92,6 +97,30 @@ func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("<html><head><title>Oracle DB Exporter " + Version + "</title></head><body><h1>Oracle DB Exporter " + Version + "</h1><p><a href='" + *metricPath + "'>Metrics</a></p></body></html>"))
 	})
+
+	// start a ticker to cause rebirth
+	ticker := time.NewTicker(*restartInterval)
+	defer ticker.Stop()
+
+	go func() {
+		<-ticker.C
+		level.Info(logger).Log("msg", "Restarting the process...")
+		executable, _ := os.Executable()
+		execErr := syscall.Exec(executable, os.Args, os.Environ())
+		if execErr != nil {
+			panic(execErr)
+		}
+	}()
+
+	// start a ticker to free OS memory
+	memTicker := time.NewTicker(*freeOSMemInterval)
+	defer memTicker.Stop()
+
+	go func() {
+		<-memTicker.C
+		level.Debug(logger).Log("msg", "attmpting to free OS memory")
+		debug.FreeOSMemory()
+	}()
 
 	server := &http.Server{}
 	if err := web.ListenAndServe(server, toolkitFlags, logger); err != nil {
