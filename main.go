@@ -8,6 +8,9 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"runtime/debug"
+	"syscall"
+	"time"
 
 	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
@@ -57,6 +60,20 @@ func main() {
 		password = vault.GetVaultSecret(vaultName, os.Getenv("VAULT_SECRET_NAME"))
 	}
 
+	freeOSMemInterval, enableFree := os.LookupEnv("FREE_INTERVAL")
+	if enableFree {
+		level.Info(logger).Log("msg", "FREE_INTERVAL env var is present, so will attempt to release OS memory", "free_interval", freeOSMemInterval)
+	} else {
+		level.Info(logger).Log("msg", "FREE_INTERVAL end var is not present, will not periodically attempt to release memory")
+	}
+
+	restartInterval, enableRestart := os.LookupEnv("RESTART_INTERVAL")
+	if enableRestart {
+		level.Info(logger).Log("msg", "RESTART_INTERVAL env var is present, so will restart my own process periodically", "restart_interval", restartInterval)
+	} else {
+		level.Info(logger).Log("msg", "RESTART_INTERVAL env var is not present, so will not restart myself periodically")
+	}
+
 	config := &collector.Config{
 		User:               user,
 		Password:           password,
@@ -92,6 +109,43 @@ func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("<html><head><title>Oracle DB Exporter " + Version + "</title></head><body><h1>Oracle DB Exporter " + Version + "</h1><p><a href='" + *metricPath + "'>Metrics</a></p></body></html>"))
 	})
+
+	// start a ticker to cause rebirth
+	if enableRestart {
+		duration, err := time.ParseDuration(restartInterval)
+		if err != nil {
+			level.Info(logger).Log("msg", "Could not parse RESTART_INTERVAL, so ignoring it")
+		}
+		ticker := time.NewTicker(duration)
+		defer ticker.Stop()
+
+		go func() {
+			<-ticker.C
+			level.Info(logger).Log("msg", "Restarting the process...")
+			executable, _ := os.Executable()
+			execErr := syscall.Exec(executable, os.Args, os.Environ())
+			if execErr != nil {
+				panic(execErr)
+			}
+		}()
+	}
+
+	// start a ticker to free OS memory
+	if enableFree {
+		duration, err := time.ParseDuration(freeOSMemInterval)
+		if err != nil {
+			level.Info(logger).Log("msg", "Could not parse FREE_INTERVAL, so ignoring it")
+		}
+		memTicker := time.NewTicker(duration)
+		defer memTicker.Stop()
+
+		go func() {
+			<-memTicker.C
+			level.Info(logger).Log("msg", "attempting to free OS memory")
+			debug.FreeOSMemory()
+		}()
+
+	}
 
 	server := &http.Server{}
 	if err := web.ListenAndServe(server, toolkitFlags, logger); err != nil {

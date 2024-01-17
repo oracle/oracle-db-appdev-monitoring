@@ -260,6 +260,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	}(time.Now())
 
 	if err = e.db.Ping(); err != nil {
+		level.Debug(e.logger).Log("msg", "error = "+err.Error())
 		if strings.Contains(err.Error(), "sql: database is closed") {
 			level.Info(e.logger).Log("msg", "Reconnecting to DB")
 			err = e.connect()
@@ -270,7 +271,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	}
 
 	if err = e.db.Ping(); err != nil {
-		level.Error(e.logger).Log("msg", "Error pinging oracle:",
+		level.Error(e.logger).Log("msg", "Error pinging oracle",
 			"error", err)
 		e.up.Set(0)
 		return
@@ -347,16 +348,18 @@ func (e *Exporter) connect() error {
 	var P godror.ConnectionParams
 	P.Username, P.Password, P.ConnectString = e.user, godror.NewPassword(e.password), e.connectString
 
+	level.Debug(e.logger).Log("msg", "connection properties: "+fmt.Sprint(P))
+
 	db := sql.OpenDB(godror.NewConnector(P))
 	// if err != nil {
 	// 	level.Error(e.logger).Log("Error while connecting to", e.dsn)
 	// 	return err
 	// }
-	level.Debug(e.logger).Log("msg", "set max idle connections to "+strconv.Itoa(e.config.MaxIdleConns))
-	db.SetMaxIdleConns(e.config.MaxIdleConns)
-	level.Debug(e.logger).Log("msg", "set max open connections to "+strconv.Itoa(e.config.MaxOpenConns))
-	db.SetMaxOpenConns(e.config.MaxOpenConns)
-	level.Debug(e.logger).Log("msg", "Successfully connected to "+maskDsn(e.connectString))
+	level.Debug(e.logger).Log("msg", "disable go connection pooling, to allow use of oracle's instead")
+	db.SetMaxIdleConns(0)
+	db.SetMaxOpenConns(0)
+	db.SetConnMaxLifetime(0)
+	level.Debug(e.logger).Log("msg", "Successfully configured connection to "+maskDsn(e.connectString))
 	e.db = db
 	return nil
 }

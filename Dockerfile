@@ -1,7 +1,13 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE} AS build
 
-RUN microdnf install golang-1.20.10
+RUN microdnf install wget gzip gcc && \
+    wget https://go.dev/dl/go1.21.6.linux-amd64.tar.gz && \
+    rm -rf /usr/local/go && \
+    tar -C /usr/local -xzf go1.21.6.linux-amd64.tar.gz && \
+    rm go1.21.6.linux-amd64.tar.gz
+
+ENV PATH $PATH:/usr/local/go/bin
 
 WORKDIR /go/src/oracledb_exporter
 COPY . .
@@ -10,7 +16,7 @@ RUN go get -d -v
 ARG VERSION
 ENV VERSION ${VERSION:-1.0.0}
 
-RUN GOOS=linux GOARCH=amd64 go build -v -ldflags "-X main.Version=${VERSION} -s -w"
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -v -ldflags "-X main.Version=${VERSION} -s -w"
 
 FROM ${BASE_IMAGE} as exporter
 LABEL org.opencontainers.image.authors="Oracle America, Inc."
