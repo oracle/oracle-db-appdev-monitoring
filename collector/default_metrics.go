@@ -45,17 +45,34 @@ context = "process"
 metricsdesc = { count="Gauge metric with count of processes." }
 request = "SELECT COUNT(*) as count FROM v$process"
 
+
 [[metric]]
 context = "wait_time"
-metricsdesc = { value="Generic counter metric from v$waitclassmetric view in Oracle." }
-fieldtoappend= "wait_class"
+labels = ["wait_class","con_id"]
+metricsdesc = { time_waited_sec_total="counter metric from system_wait_class view in Oracle.", total_waits_total="counter metric from system_wait_class view in Oracle." }
 request = '''
-SELECT wait_class as WAIT_CLASS, sum(time_waited) as VALUE
-FROM gv$active_session_history 
-where wait_class is not null 
-and sample_time > sysdate - interval '1' hour
-GROUP BY wait_class;
+select
+m.wait_class as wait_class,
+round(m.time_waited/100,3) as time_waited_sec_total,
+m.total_waits as total_waits_total,
+con_id
+from
+v$system_wait_class m
+where wait_class <> 'Idle'
 '''
+metricstype = { time_waited_sec_total = "counter", total_waits_total = "counter" }
+
+
+[[metric]]
+request = '''
+select stat_name, value/1000000 as stm_value_sec_total from v$sys_time_model
+'''
+context = "sys_model"
+labels = ["stat_name"]
+metricsdesc = { stm_value_sec_total="counter metric value column from sys_time_model view" }
+metricstype = { stm_value_sec_total = "counter" }
+ignorezeroresult = true
+
 
 [[metric]]
 context = "tablespace"
@@ -83,7 +100,6 @@ func (e *Exporter) DefaultMetrics() Metrics {
 			level.Error(e.logger).Log("msg", fmt.Sprintf("there was an issue while loading specified default metrics file at: "+e.config.DefaultMetricsFile+", proceeding to run with default metrics."),
 				"error", err)
 		}
-		return metricsToScrape
 	}
 
 	if _, err := toml.Decode(defaultMetricsConst, &metricsToScrape); err != nil {
