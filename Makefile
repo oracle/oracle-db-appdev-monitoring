@@ -83,7 +83,7 @@ push-images:
 	@make --no-print-directory push-oraclelinux-image
 	
 docker:
-	docker build --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)" --build-arg BASE_IMAGE=$(ORACLE_LINUX_BASE_IMAGE) . 
+	docker build --no-cache --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)" --build-arg BASE_IMAGE=$(ORACLE_LINUX_BASE_IMAGE) . 
 
 push-oraclelinux-image:
 	docker push $(IMAGE_ID)

@@ -315,7 +315,7 @@ Create a Kubernetes service to allow access to the exporter pod(s).  A sample Ku
 Once you have made any necessary udpates, apply the file to your cluster using this command: 
 
 ```bash
-kubectl aspply -f metrics-exporter-service.yaml
+kubectl apply -f metrics-exporter-service.yaml
 ```
 
 #### Create a Kubernetes service monitor
@@ -325,7 +325,7 @@ Create a Kubernetes service monitor to tell Prometheus (for example) to collect 
 Once you have made any necessary udpates, apply the file to your cluster using this command: 
 
 ```bash
-kubectl aspply -f metrics-service-monitor.yaml
+kubectl apply -f metrics-service-monitor.yaml
 ```
 
 #### Configure a Prometheus target (optional)
