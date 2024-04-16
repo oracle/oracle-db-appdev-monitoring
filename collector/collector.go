@@ -350,14 +350,13 @@ func (e *Exporter) connect() error {
 
 	level.Debug(e.logger).Log("msg", "connection properties: "+fmt.Sprint(P))
 
+	// note that this just configures the connection, it does not acutally connect until later
+	// when we call db.Ping()
 	db := sql.OpenDB(godror.NewConnector(P))
-	// if err != nil {
-	// 	level.Error(e.logger).Log("Error while connecting to", e.dsn)
-	// 	return err
-	// }
-	level.Debug(e.logger).Log("msg", "disable go connection pooling, to allow use of oracle's instead")
-	db.SetMaxIdleConns(0)
-	db.SetMaxOpenConns(0)
+	level.Debug(e.logger).Log("set max idle connections to ", e.config.MaxIdleConns)
+	db.SetMaxIdleConns(e.config.MaxIdleConns)
+	level.Debug(e.logger).Log("set max open connections to ", e.config.MaxOpenConns)
+	db.SetMaxOpenConns(e.config.MaxOpenConns)
 	db.SetConnMaxLifetime(0)
 	level.Debug(e.logger).Log("msg", "Successfully configured connection to "+maskDsn(e.connectString))
 	e.db = db

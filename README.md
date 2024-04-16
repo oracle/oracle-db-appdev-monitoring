@@ -27,6 +27,13 @@ Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 
 ## Release Notes
 
+### Version 1.2.1, April 16, 2024
+
+This release includes the following changes:
+
+- Accept max idle and open connections settings as parameters.
+- Updated some third-party dependencies.
+
 ### Version 1.2.0, January 17, 2024
 
 This release includes the following changes:
@@ -196,7 +203,7 @@ docker run -it --rm \
     -e DB_PASSWORD=Welcome12345 \
     -e DB_CONNECT_STRING=free23c:1521/freepdb \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:1.2.0
+    container-registry.oracle.com/database/observability-exporter:1.2.1
 ```
 
 ##### Using a wallet
@@ -223,7 +230,7 @@ docker run -it --rm \
     -e DB_CONNECT_STRING=devdb_tp \
     -v ./wallet:/wallet \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:1.2.0
+    container-registry.oracle.com/database/observability-exporter:1.2.1
 ```
 
 
@@ -315,7 +322,7 @@ Create a Kubernetes service to allow access to the exporter pod(s).  A sample Ku
 Once you have made any necessary udpates, apply the file to your cluster using this command: 
 
 ```bash
-kubectl aspply -f metrics-exporter-service.yaml
+kubectl apply -f metrics-exporter-service.yaml
 ```
 
 #### Create a Kubernetes service monitor
@@ -325,7 +332,7 @@ Create a Kubernetes service monitor to tell Prometheus (for example) to collect 
 Once you have made any necessary udpates, apply the file to your cluster using this command: 
 
 ```bash
-kubectl aspply -f metrics-service-monitor.yaml
+kubectl apply -f metrics-service-monitor.yaml
 ```
 
 #### Configure a Prometheus target (optional)
@@ -486,7 +493,7 @@ An exmaple of [custom metrics for Transacational Event Queues](./custom-metrics-
 If you run the exporter as a container image and want to include your custom metrics in the image itself, you can use the following example `Dockerfile` to create a new image:
 
 ```Dockerfile
-FROM container-registry.oracle.com/database/observability-exporter:1.2.0
+FROM container-registry.oracle.com/database/observability-exporter:1.2.1
 COPY custom-metrics.toml /
 ENTRYPOINT ["/oracledb_exporter", "--custom.metrics", "/custom-metrics.toml"]
 ```
