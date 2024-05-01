@@ -9,7 +9,7 @@ require (
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/go-kit/log v0.2.1
 	github.com/godror/godror v0.41.1
-	github.com/oracle/oci-go-sdk/v65 v65.60.0
+	github.com/oracle/oci-go-sdk/v65 v65.65.0
 	github.com/prometheus/client_golang v1.19.0
 	github.com/prometheus/common v0.49.0
 	github.com/prometheus/exporter-toolkit v0.11.0
@@ -25,7 +25,6 @@ require (
 	github.com/gofrs/flock v0.8.1 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
-	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f // indirect
 	github.com/prometheus/client_model v0.6.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
