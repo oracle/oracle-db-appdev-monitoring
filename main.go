@@ -14,6 +14,7 @@ import (
 
 	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
+	cversion "github.com/prometheus/client_golang/prometheus/collectors/version"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/exporter-toolkit/web"
@@ -96,9 +97,9 @@ func main() {
 	}
 
 	prometheus.MustRegister(exporter)
-	prometheus.MustRegister(version.NewCollector("oracledb_exporter"))
+	prometheus.MustRegister(cversion.NewCollector("oracledb_exporter"))
 
-	level.Info(logger).Log("msg", "Starting oracledb_exporter", "version", version.Info())
+	level.Info(logger).Log("msg", "Starting oracledb_exporter", "version", Version)
 	level.Info(logger).Log("msg", "Build context", "build", version.BuildContext())
 	level.Info(logger).Log("msg", "Collect from: ", "metricPath", *metricPath)
 
