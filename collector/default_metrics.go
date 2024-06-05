@@ -51,14 +51,17 @@ request = "SELECT COUNT(*) as count FROM v$process"
 
 [[metric]]
 context = "wait_time"
-metricsdesc = { value="Generic counter metric from v$waitclassmetric view in Oracle." }
+labels = ["wait_class","con_id"]
+metricsdesc = { time_waited_sec_total="counter metric from system_wait_class view in Oracle." }
+metricstype = { time_waited_sec_total = "counter" }
 fieldtoappend= "wait_class"
 request = '''
-SELECT wait_class as WAIT_CLASS, sum(time_waited) as VALUE
-FROM gv$active_session_history 
-where wait_class is not null 
-and sample_time > sysdate - interval '1' hour
-GROUP BY wait_class
+select
+  wait_class,
+  round(time_waited/100,3) time_waited_sec_total,
+  con_id
+from v$system_wait_class
+where wait_class <> 'Idle'
 '''
 ignorezeroresult = true
 

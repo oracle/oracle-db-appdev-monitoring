@@ -134,8 +134,7 @@
         "targets": [
           {
             "datasource": {
-              "type": "prometheus",
-              "uid": "PBFA97CFB590B2093"
+              "type": "prometheus"
             },
             "editorMode": "builder",
             "exemplar": false,
@@ -200,8 +199,7 @@
         "targets": [
           {
             "datasource": {
-              "type": "prometheus",
-              "uid": "PBFA97CFB590B2093"
+              "type": "prometheus"
             },
             "editorMode": "builder",
             "exemplar": false,
@@ -267,8 +265,7 @@
         "targets": [
           {
             "datasource": {
-              "type": "prometheus",
-              "uid": "PBFA97CFB590B2093"
+              "type": "prometheus"
             },
             "editorMode": "builder",
             "exemplar": false,
@@ -333,8 +330,7 @@
         "targets": [
           {
             "datasource": {
-              "type": "prometheus",
-              "uid": "PBFA97CFB590B2093"
+              "type": "prometheus"
             },
             "editorMode": "builder",
             "expr": "oracledb_sessions_value{status=\"ACTIVE\"}",
@@ -396,8 +392,7 @@
         "targets": [
           {
             "datasource": {
-              "type": "prometheus",
-              "uid": "PBFA97CFB590B2093"
+              "type": "prometheus"
             },
             "editorMode": "builder",
             "expr": "oracledb_activity_user_commits",
@@ -459,8 +454,7 @@
         "targets": [
           {
             "datasource": {
-              "type": "prometheus",
-              "uid": "PBFA97CFB590B2093"
+              "type": "prometheus"
             },
             "editorMode": "builder",
             "expr": "oracledb_activity_execute_count",
@@ -526,8 +520,7 @@
         "targets": [
           {
             "datasource": {
-              "type": "prometheus",
-              "uid": "PBFA97CFB590B2093"
+              "type": "prometheus"
             },
             "editorMode": "code",
             "exemplar": false,
@@ -701,8 +694,7 @@
         "targets": [
           {
             "datasource": {
-              "type": "prometheus",
-              "uid": "PBFA97CFB590B2093"
+              "type": "prometheus"
             },
             "editorMode": "builder",
             "exemplar": false,
@@ -723,7 +715,7 @@
           "h": 1,
           "w": 24,
           "x": 0,
-          "y": 7
+          "y": 18
         },
         "id": 8,
         "panels": [],
@@ -791,7 +783,7 @@
           "h": 9,
           "w": 24,
           "x": 0,
-          "y": 8
+          "y": 19
         },
         "id": 9,
         "options": {
@@ -811,8 +803,7 @@
         "targets": [
           {
             "datasource": {
-              "type": "prometheus",
-              "uid": "PBFA97CFB590B2093"
+              "type": "prometheus"
             },
             "editorMode": "code",
             "exemplar": false,
@@ -861,7 +852,7 @@
           "h": 1,
           "w": 24,
           "x": 0,
-          "y": 17
+          "y": 7
         },
         "id": 4,
         "panels": [],
@@ -869,7 +860,10 @@
         "type": "row"
       },
       {
-        "datasource": "Prometheus",
+        "datasource": {
+          "type": "prometheus"
+        },
+        "description": "",
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -882,13 +876,14 @@
               "axisPlacement": "auto",
               "barAlignment": 0,
               "drawStyle": "line",
-              "fillOpacity": 19,
+              "fillOpacity": 72,
               "gradientMode": "none",
               "hideFrom": {
                 "legend": false,
                 "tooltip": false,
                 "viz": false
               },
+              "insertNulls": false,
               "lineInterpolation": "linear",
               "lineWidth": 1,
               "pointSize": 5,
@@ -896,10 +891,10 @@
                 "type": "linear"
               },
               "showPoints": "auto",
-              "spanNulls": false,
+              "spanNulls": true,
               "stacking": {
                 "group": "A",
-                "mode": "none"
+                "mode": "normal"
               },
               "thresholdsStyle": {
                 "mode": "off"
@@ -919,23 +914,23 @@
                 }
               ]
             },
-            "unit": "µs"
+            "unit": "s"
           },
           "overrides": []
         },
         "gridPos": {
-          "h": 8,
-          "w": 12,
+          "h": 10,
+          "w": 24,
           "x": 0,
-          "y": 18
+          "y": 8
         },
-        "id": 14,
+        "id": 21,
         "options": {
           "legend": {
             "calcs": [],
             "displayMode": "list",
             "placement": "bottom",
-            "showLegend": false
+            "showLegend": true
           },
           "tooltip": {
             "mode": "single",
@@ -945,473 +940,192 @@
         "targets": [
           {
             "datasource": {
-              "type": "prometheus",
-              "uid": "PBFA97CFB590B2093"
+              "type": "prometheus"
             },
-            "editorMode": "builder",
-            "expr": "oracledb_wait_time_concurrency",
-            "interval": "$interval",
-            "legendFormat": "",
+            "disableTextWrap": false,
+            "editorMode": "code",
+            "expr": "oracledb_wait_time_administrative",
+            "format": "time_series",
+            "fullMetaSearch": false,
+            "includeNullMetadata": true,
+            "instant": false,
+            "legendFormat": "{{__name__}}",
             "range": true,
-            "refId": "A"
-          }
-        ],
-        "title": "Wait time - Concurrency",
-        "type": "timeseries"
-      },
-      {
-        "datasource": "Prometheus",
-        "description": "",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisCenteredZero": false,
-              "axisColorMode": "text",
-              "axisLabel": "",
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 20,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "auto",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            },
-            "unit": "µs"
+            "refId": "A",
+            "useBackend": false
           },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 12,
-          "y": 18
-        },
-        "id": 15,
-        "options": {
-          "legend": {
-            "calcs": [],
-            "displayMode": "list",
-            "placement": "bottom",
-            "showLegend": false
-          },
-          "tooltip": {
-            "mode": "single",
-            "sort": "none"
-          }
-        },
-        "targets": [
           {
             "datasource": {
-              "type": "prometheus",
-              "uid": "PBFA97CFB590B2093"
+              "type": "prometheus"
             },
-            "editorMode": "builder",
-            "expr": "oracledb_wait_time_commit",
-            "interval": "$interval",
-            "legendFormat": "",
-            "range": true,
-            "refId": "A"
-          }
-        ],
-        "title": "Wait time - Commit",
-        "type": "timeseries"
-      },
-      {
-        "datasource": "Prometheus",
-        "description": "",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisCenteredZero": false,
-              "axisColorMode": "text",
-              "axisLabel": "",
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 20,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "auto",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green"
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            },
-            "unit": "µs"
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 0,
-          "y": 26
-        },
-        "id": 16,
-        "options": {
-          "legend": {
-            "calcs": [],
-            "displayMode": "list",
-            "placement": "bottom",
-            "showLegend": false
-          },
-          "tooltip": {
-            "mode": "single",
-            "sort": "none"
-          }
-        },
-        "targets": [
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "PBFA97CFB590B2093"
-            },
-            "editorMode": "builder",
-            "expr": "oracledb_wait_time_system_io",
-            "interval": "$interval",
-            "legendFormat": "",
-            "range": true,
-            "refId": "A"
-          }
-        ],
-        "title": "Wait time - System I/O",
-        "type": "timeseries"
-      },
-      {
-        "datasource": "Prometheus",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisCenteredZero": false,
-              "axisColorMode": "text",
-              "axisLabel": "",
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 20,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "auto",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green"
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            },
-            "unit": "µs"
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 12,
-          "y": 26
-        },
-        "id": 17,
-        "options": {
-          "legend": {
-            "calcs": [],
-            "displayMode": "list",
-            "placement": "bottom",
-            "showLegend": false
-          },
-          "tooltip": {
-            "mode": "single",
-            "sort": "none"
-          }
-        },
-        "targets": [
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "PBFA97CFB590B2093"
-            },
-            "editorMode": "builder",
-            "expr": "oracledb_wait_time_user_io",
-            "interval": "$interval",
-            "legendFormat": "",
-            "range": true,
-            "refId": "A"
-          }
-        ],
-        "title": "Wait time - User I/O",
-        "type": "timeseries"
-      },
-      {
-        "datasource": "Prometheus",
-        "description": "",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisCenteredZero": false,
-              "axisColorMode": "text",
-              "axisLabel": "",
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 20,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "auto",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green"
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            },
-            "unit": "µs"
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 0,
-          "y": 34
-        },
-        "id": 18,
-        "options": {
-          "legend": {
-            "calcs": [],
-            "displayMode": "list",
-            "placement": "bottom",
-            "showLegend": false
-          },
-          "tooltip": {
-            "mode": "single",
-            "sort": "none"
-          }
-        },
-        "targets": [
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "PBFA97CFB590B2093"
-            },
+            "disableTextWrap": false,
             "editorMode": "builder",
             "expr": "oracledb_wait_time_application",
-            "interval": "$interval",
-            "legendFormat": "",
+            "fullMetaSearch": false,
+            "hide": false,
+            "includeNullMetadata": true,
+            "instant": false,
+            "legendFormat": "{{__name__}}",
             "range": true,
-            "refId": "A"
-          }
-        ],
-        "title": "Wait time - Application",
-        "type": "timeseries"
-      },
-      {
-        "datasource": "Prometheus",
-        "description": "",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisCenteredZero": false,
-              "axisColorMode": "text",
-              "axisLabel": "",
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 20,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "auto",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green"
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            },
-            "unit": "µs"
+            "refId": "B",
+            "useBackend": false
           },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 12,
-          "y": 34
-        },
-        "id": 19,
-        "options": {
-          "legend": {
-            "calcs": [],
-            "displayMode": "list",
-            "placement": "bottom",
-            "showLegend": false
-          },
-          "tooltip": {
-            "mode": "single",
-            "sort": "none"
-          }
-        },
-        "targets": [
           {
             "datasource": {
-              "type": "prometheus",
-              "uid": "PBFA97CFB590B2093"
+              "type": "prometheus"
             },
+            "disableTextWrap": false,
+            "editorMode": "builder",
+            "expr": "oracledb_wait_time_cluster",
+            "fullMetaSearch": false,
+            "hide": false,
+            "includeNullMetadata": true,
+            "instant": false,
+            "legendFormat": "{{__name__}}",
+            "range": true,
+            "refId": "C",
+            "useBackend": false
+          },
+          {
+            "datasource": {
+              "type": "prometheus"
+            },
+            "disableTextWrap": false,
+            "editorMode": "builder",
+            "expr": "oracledb_wait_time_commit",
+            "fullMetaSearch": false,
+            "hide": false,
+            "includeNullMetadata": true,
+            "instant": false,
+            "legendFormat": "{{__name__}}",
+            "range": true,
+            "refId": "D",
+            "useBackend": false
+          },
+          {
+            "datasource": {
+              "type": "prometheus"
+            },
+            "disableTextWrap": false,
+            "editorMode": "builder",
+            "expr": "oracledb_wait_time_concurrency",
+            "fullMetaSearch": false,
+            "hide": false,
+            "includeNullMetadata": true,
+            "instant": false,
+            "legendFormat": "{{__name__}}",
+            "range": true,
+            "refId": "E",
+            "useBackend": false
+          },
+          {
+            "datasource": {
+              "type": "prometheus"
+            },
+            "disableTextWrap": false,
+            "editorMode": "builder",
+            "expr": "oracledb_wait_time_configuration",
+            "fullMetaSearch": false,
+            "hide": false,
+            "includeNullMetadata": true,
+            "instant": false,
+            "legendFormat": "{{__name__}}",
+            "range": true,
+            "refId": "F",
+            "useBackend": false
+          },
+          {
+            "datasource": {
+              "type": "prometheus"
+            },
+            "disableTextWrap": false,
             "editorMode": "builder",
             "expr": "oracledb_wait_time_network",
-            "interval": "$interval",
-            "legendFormat": "",
+            "fullMetaSearch": false,
+            "hide": false,
+            "includeNullMetadata": true,
+            "instant": false,
+            "legendFormat": "{{__name__}}",
             "range": true,
-            "refId": "A"
+            "refId": "G",
+            "useBackend": false
+          },
+          {
+            "datasource": {
+              "type": "prometheus"
+            },
+            "disableTextWrap": false,
+            "editorMode": "builder",
+            "expr": "oracledb_wait_time_other",
+            "fullMetaSearch": false,
+            "hide": false,
+            "includeNullMetadata": true,
+            "instant": false,
+            "legendFormat": "{{__name__}}",
+            "range": true,
+            "refId": "H",
+            "useBackend": false
+          },
+          {
+            "datasource": {
+              "type": "prometheus"
+            },
+            "disableTextWrap": false,
+            "editorMode": "builder",
+            "expr": "oracledb_wait_time_scheduler",
+            "fullMetaSearch": false,
+            "hide": false,
+            "includeNullMetadata": true,
+            "instant": false,
+            "legendFormat": "{{__name__}}",
+            "range": true,
+            "refId": "I",
+            "useBackend": false
+          },
+          {
+            "datasource": {
+              "type": "prometheus"
+            },
+            "disableTextWrap": false,
+            "editorMode": "builder",
+            "expr": "oracledb_wait_time_user_io",
+            "fullMetaSearch": false,
+            "hide": false,
+            "includeNullMetadata": true,
+            "instant": false,
+            "legendFormat": "{{__name__}}",
+            "range": true,
+            "refId": "J",
+            "useBackend": false
+          },
+          {
+            "datasource": {
+              "type": "prometheus"
+            },
+            "disableTextWrap": false,
+            "editorMode": "builder",
+            "expr": "oracledb_wait_time_system_io",
+            "format": "time_series",
+            "fullMetaSearch": false,
+            "hide": false,
+            "includeNullMetadata": true,
+            "instant": false,
+            "legendFormat": "{{__name__}}",
+            "range": true,
+            "refId": "K",
+            "useBackend": false
           }
         ],
-        "title": "Wait time - Network",
+        "title": "Database Wait Times",
+        "transformations": [
+          {
+            "id": "renameByRegex",
+            "options": {
+              "regex": "oracledb_wait_time_(.*).*",
+              "renamePattern": "$1"
+            }
+          }
+        ],
         "type": "timeseries"
       }
     ],
