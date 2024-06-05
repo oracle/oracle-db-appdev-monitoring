@@ -110,7 +110,7 @@
           "overrides": []
         },
         "gridPos": {
-          "h": 6,
+          "h": 3,
           "w": 4,
           "x": 0,
           "y": 1
@@ -554,6 +554,102 @@
           }
         ],
         "type": "table"
+      },
+      {
+        "datasource": {
+          "type": "prometheus"
+        },
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [
+              {
+                "options": {
+                  "0": {
+                    "index": 0,
+                    "text": "NON-MT"
+                  },
+                  "1": {
+                    "index": 1,
+                    "text": "CDB"
+                  }
+                },
+                "type": "value"
+              },
+              {
+                "options": {
+                  "from": 2,
+                  "result": {
+                    "index": 2,
+                    "text": "PDB"
+                  },
+                  "to": 99999
+                },
+                "type": "range"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 3,
+          "w": 4,
+          "x": 0,
+          "y": 4
+        },
+        "id": 20,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "textMode": "auto"
+        },
+        "pluginVersion": "10.1.1",
+        "targets": [
+          {
+            "datasource": {
+              "type": "prometheus"
+            },
+            "disableTextWrap": false,
+            "editorMode": "builder",
+            "exemplar": false,
+            "expr": "oracledb_dbtype",
+            "format": "table",
+            "fullMetaSearch": false,
+            "includeNullMetadata": true,
+            "instant": true,
+            "legendFormat": "__auto",
+            "range": false,
+            "refId": "A",
+            "useBackend": false
+          }
+        ],
+        "title": "Database Type",
+        "type": "stat"
       },
       {
         "datasource": "Prometheus",

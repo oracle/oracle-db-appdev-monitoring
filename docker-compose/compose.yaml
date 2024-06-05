@@ -50,7 +50,7 @@ services:
     environment:
       - DB_USERNAME=system
       - DB_PASSWORD=Welcome12345
-      - DB_CONNECT_STRING=free23c:1521/free
+      - DB_CONNECT_STRING=free23c:1521/freepdb1
       - CUSTOM_METRICS=/exporter/txeventq-metrics.toml
     volumes:
       - ./exporter:/exporter

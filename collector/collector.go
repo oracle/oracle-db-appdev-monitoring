@@ -40,6 +40,8 @@ type Exporter struct {
 	scrapeErrors    *prometheus.CounterVec
 	scrapeResults   []prometheus.Metric
 	up              prometheus.Gauge
+	dbtype          int
+	dbtypeGauge     prometheus.Gauge
 	db              *sql.DB
 	logger          log.Logger
 }
@@ -137,6 +139,11 @@ func NewExporter(logger log.Logger, cfg *Config) (*Exporter, error) {
 			Name:      "up",
 			Help:      "Whether the Oracle database server is up.",
 		}),
+		dbtypeGauge: prometheus.NewGauge(prometheus.GaugeOpts{
+			Namespace: namespace,
+			Name:      "dbtype",
+			Help:      "Type of database the exporter is connected to (CDB or PDB).",
+		}),
 		logger: logger,
 		config: cfg,
 	}
@@ -196,6 +203,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	ch <- e.error
 	e.scrapeErrors.Collect(ch)
 	ch <- e.up
+	ch <- e.dbtypeGauge
 }
 
 // RunScheduledScrapes is only relevant for users of this package that want to set the scrape on a timer
@@ -276,6 +284,8 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		e.up.Set(0)
 		return
 	}
+
+	e.dbtypeGauge.Set(float64(e.dbtype))
 
 	level.Debug(e.logger).Log("msg", "Successfully pinged Oracle database: "+maskDsn(e.connectString))
 	e.up.Set(1)
@@ -364,6 +374,14 @@ func (e *Exporter) connect() error {
 	db.SetConnMaxLifetime(0)
 	level.Debug(e.logger).Log("msg", "Successfully configured connection to "+maskDsn(e.connectString))
 	e.db = db
+
+	var result int
+	if err := db.QueryRow("select sys_context('USERENV', 'CON_ID') from dual").Scan(&result); err != nil {
+		level.Info(e.logger).Log("MARK", "dbtype err ="+string(err.Error()))
+	}
+	level.Info(e.logger).Log("MARK", "dbtype = "+string(result))
+	e.dbtype = result
+
 	return nil
 }
 
