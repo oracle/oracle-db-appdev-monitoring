@@ -32,7 +32,6 @@ Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 This release includes the following changes:
 
 - x
-- Updated container image base operating system to Oracle Linux 9.
 - Update Go toolchain to 1.22.4.
 - Updated some third-party dependencies.
 

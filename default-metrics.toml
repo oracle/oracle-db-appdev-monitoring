@@ -60,3 +60,33 @@ FROM  dba_tablespace_usage_metrics dtum, dba_tablespaces dt
 WHERE dtum.tablespace_name = dt.tablespace_name
 ORDER by tablespace
 '''
+
+[[metric]]
+context = "db_system"
+labels = [ "name" ]
+metricsdesc = { value = "Database system resources metric" }
+request = '''
+select name, value 
+from v$parameter 
+where name in ('cpu_count', 'sga_max_size', 'pga_aggregate_limit')
+'''
+
+[[metric]]
+context = "db_platform"
+labels = [ "platform_name" ]
+metricsdesc = { value = "Database platform" }
+request = '''
+SELECT platform_name, 1 as value FROM v$database
+'''
+
+[[metric]]
+context = "top_sql"
+labels = [ "sql_id", "sql_text" ]
+metricsdesc = { elapsed = "SQL statement elapsed time running" }
+request = '''
+select * from (
+select sql_id, elapsed_time / 1000000 as elapsed, SUBSTRB(REPLACE(sql_text,'',' '),1,55) as sql_text
+from   V$SQLSTATS
+order by elapsed_time desc
+) where ROWNUM <= 15
+'''
