@@ -1222,7 +1222,8 @@
     "type": "timepicker"
   },
   "timezone": "browser",
-  "title": "Oracledb",
+  "title": "Oracle Database",
+  "uid": "oracle_database",
   "version": 18,
   "description": "Oracle dashboard monitors db status, active sessions, user commits, wait times and more."
 }

@@ -2,10 +2,10 @@ ARG BASE_IMAGE
 FROM ${BASE_IMAGE} AS build
 
 RUN microdnf install wget gzip gcc && \
-    wget https://go.dev/dl/go1.21.6.linux-amd64.tar.gz && \
+    wget https://go.dev/dl/go1.22.4.linux-amd64.tar.gz && \
     rm -rf /usr/local/go && \
-    tar -C /usr/local -xzf go1.21.6.linux-amd64.tar.gz && \
-    rm go1.21.6.linux-amd64.tar.gz
+    tar -C /usr/local -xzf go1.22.4.linux-amd64.tar.gz && \
+    rm go1.22.4.linux-amd64.tar.gz
 
 ENV PATH $PATH:/usr/local/go/bin
 
