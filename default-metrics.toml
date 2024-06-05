@@ -12,6 +12,7 @@ request = '''
 SELECT resource_name, current_utilization, CASE WHEN TRIM(limit_value) LIKE 'UNLIMITED' THEN '-1' ELSE TRIM(limit_value) END as limit_value 
 FROM v$resource_limit
 '''
+ignorezeroresult = true
 
 [[metric]]
 context = "asm_diskgroup"
@@ -90,3 +91,4 @@ from   V$SQLSTATS
 order by elapsed_time desc
 ) where ROWNUM <= 15
 '''
+ignorezeroresult = true

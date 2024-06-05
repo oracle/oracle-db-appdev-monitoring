@@ -325,11 +325,15 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 
 			scrapeStart := time.Now()
 			if err = e.ScrapeMetric(e.db, ch, metric); err != nil {
-				level.Error(e.logger).Log("msg", "Error scraping metric",
-					"Context", metric.Context,
-					"MetricsDesc", fmt.Sprint(metric.MetricsDesc),
-					"time", time.Since(scrapeStart),
-					"error", err)
+				if !metric.IgnoreZeroResult {
+					// do not print repetitive error messages for metrics
+					// with ignoreZeroResult set to true
+					level.Error(e.logger).Log("msg", "Error scraping metric",
+						"Context", metric.Context,
+						"MetricsDesc", fmt.Sprint(metric.MetricsDesc),
+						"time", time.Since(scrapeStart),
+						"error", err)
+				}
 				e.scrapeErrors.WithLabelValues(metric.Context).Inc()
 			} else {
 				level.Debug(e.logger).Log("msg", "Successfully scraped metric",

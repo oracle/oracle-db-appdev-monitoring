@@ -25,7 +25,11 @@ request = "SELECT status, type, COUNT(*) as value FROM v$session GROUP BY status
 context = "resource"
 labels = [ "resource_name" ]
 metricsdesc = { current_utilization= "Generic counter metric from v$resource_limit view in Oracle (current value).", limit_value="Generic counter metric from v$resource_limit view in Oracle (UNLIMITED: -1)." }
-request="SELECT resource_name,current_utilization,CASE WHEN TRIM(limit_value) LIKE 'UNLIMITED' THEN '-1' ELSE TRIM(limit_value) END as limit_value FROM v$resource_limit"
+request = '''
+SELECT resource_name, current_utilization, CASE WHEN TRIM(limit_value) LIKE 'UNLIMITED' THEN '-1' ELSE TRIM(limit_value) END as limit_value 
+FROM v$resource_limit
+'''
+ignorezeroresult = true
 
 [[metric]]
 context = "asm_diskgroup"
@@ -54,8 +58,9 @@ SELECT wait_class as WAIT_CLASS, sum(time_waited) as VALUE
 FROM gv$active_session_history 
 where wait_class is not null 
 and sample_time > sysdate - interval '1' hour
-GROUP BY wait_class;
+GROUP BY wait_class
 '''
+ignorezeroresult = true
 
 [[metric]]
 context = "tablespace"
@@ -103,6 +108,7 @@ from   V$SQLSTATS
 order by elapsed_time desc
 ) where ROWNUM <= 15
 '''
+ignorezeroresult = true
 `
 
 // DefaultMetrics is a somewhat hacky way to load the default metrics
