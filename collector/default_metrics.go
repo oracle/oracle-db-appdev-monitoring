@@ -112,6 +112,17 @@ order by elapsed_time desc
 ) where ROWNUM <= 15
 '''
 ignorezeroresult = true
+
+[[metric]]
+context = "cache_hit_ratio"
+labels = [ "cache_hit_type" ]
+metricsdesc = { value = "Cache Hit Ratio" }
+request = '''
+select metric_name cache_hit_type, value
+from v$sysmetric
+where group_id=2 and metric_id in (2000,2050,2112,2110)
+'''
+ignorezeroresult = true
 `
 
 // DefaultMetrics is a somewhat hacky way to load the default metrics
