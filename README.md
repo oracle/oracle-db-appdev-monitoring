@@ -34,9 +34,11 @@ This release includes the following changes:
 
 - Alert logs can be exported for collection by a log reader like Promtail or FluentBit.
 - x
+- Provide ability to connect as SYSDBA
 - New default metric is added to report the type of database connected to (CDB or PDB).
 - New default metrics are added for cache hit ratios.
 - The sample dashboard is updated to include new metrics.
+- Fixed a bug which prevented periodic freeing of memory.
 - Update Go toolchain to 1.22.4.
 - Updated some third-party dependencies.
 
@@ -402,6 +404,7 @@ For a simple connection, you will provide the details using these variables:
 - `DB_USERNAME` is the database username, e.g., `pdbadmin`
 - `DB_PASSWORD` is the password for that user, e.g., `Welcome12345`
 - `DB_CONNECT_STRING` is the connection string, e.g., `free23c:1521/freepdb`
+- `DB_ROLE` (Optional) can be set to `SYSDBA` or `SYSOPER` if you want to connect with one of those roles, however Oracle recommends that you connect with the lowest possible privileges and roles necessary for the exporter to run.
 
 To run the exporter in a container and expose the port, use a command like this, with the appropriate values for the environment variables:
 

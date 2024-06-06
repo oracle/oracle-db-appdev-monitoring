@@ -57,6 +57,7 @@ func main() {
 	user := os.Getenv("DB_USERNAME")
 	password := os.Getenv("DB_PASSWORD")
 	connectString := os.Getenv("DB_CONNECT_STRING")
+	dbrole := os.Getenv("DB_ROLE")
 
 	vaultName, useVault := os.LookupEnv("VAULT_ID")
 	if useVault {
@@ -82,6 +83,7 @@ func main() {
 		User:               user,
 		Password:           password,
 		ConnectString:      connectString,
+		DbRole:             dbrole,
 		MaxOpenConns:       *maxOpenConns,
 		MaxIdleConns:       *maxIdleConns,
 		CustomMetrics:      *customMetrics,

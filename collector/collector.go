@@ -51,6 +51,7 @@ type Config struct {
 	User               string
 	Password           string
 	ConnectString      string
+	DbRole             string
 	MaxIdleConns       int
 	MaxOpenConns       int
 	CustomMetrics      string
@@ -362,6 +363,14 @@ func (e *Exporter) connect() error {
 	var P godror.ConnectionParams
 	P.Username, P.Password, P.ConnectString = e.user, godror.NewPassword(e.password), e.connectString
 
+	if strings.ToUpper(e.config.DbRole) == "SYSDBA" {
+		P.IsSysDBA = true
+	}
+
+	if strings.ToUpper(e.config.DbRole) == "SYSOPER" {
+		P.IsSysOper = true
+	}
+
 	level.Debug(e.logger).Log("msg", "connection properties: "+fmt.Sprint(P))
 
 	// note that this just configures the connection, it does not acutally connect until later
@@ -375,11 +384,24 @@ func (e *Exporter) connect() error {
 	level.Debug(e.logger).Log("msg", "Successfully configured connection to "+maskDsn(e.connectString))
 	e.db = db
 
+	if _, err := db.Exec(`
+			begin
+	       		dbms_application_info.set_client_info('oracledb_exporter');
+			end;`); err != nil {
+		level.Info(e.logger).Log("MARK", "db err ="+string(err.Error()))
+	}
+
 	var result int
 	if err := db.QueryRow("select sys_context('USERENV', 'CON_ID') from dual").Scan(&result); err != nil {
 		level.Info(e.logger).Log("MARK", "dbtype err ="+string(err.Error()))
 	}
 	e.dbtype = result
+
+	var sysdba string
+	if err := db.QueryRow("select sys_context('USERENV', 'ISDBA') from dual").Scan(&sysdba); err != nil {
+		level.Info(e.logger).Log("msg", "got error checking my database role")
+	}
+	level.Info(e.logger).Log("msg", "Connected as SYSDBA? "+sysdba)
 
 	return nil
 }
