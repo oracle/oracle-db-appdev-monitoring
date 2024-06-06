@@ -32,13 +32,15 @@ Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 
 This release includes the following changes:
 
-- Alert logs can be exported for collection by a log reader like Promtail or FluentBit.
-- x
-- Provide ability to connect as SYSDBA
+- Alert logs can be exported for collection by a log reader like Promtail or FluentBit. Default
+  output to `/log/alert.log` in JSON format.
+- Provide ability to connect as SYSDBA or SYSOPER by setting DB_ROLE.
 - New default metric is added to report the type of database connected to (CDB or PDB).
 - New default metrics are added for cache hit ratios.
+- Deafult metrics updated to suppress spurious warnings in log.
 - The sample dashboard is updated to include new metrics.
 - Fixed a bug which prevented periodic freeing of memory.
+- Set CLIENT_INFO to a meaningful value.
 - Update Go toolchain to 1.22.4.
 - Updated some third-party dependencies.
 
