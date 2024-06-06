@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, Oracle and/or its affiliates.
+// Copyright (c) 2021, 2024, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 // Portions Copyright (c) 2016 Seth Miller <seth@sethmiller.me>
 
@@ -40,6 +40,8 @@ type Exporter struct {
 	scrapeErrors    *prometheus.CounterVec
 	scrapeResults   []prometheus.Metric
 	up              prometheus.Gauge
+	dbtype          int
+	dbtypeGauge     prometheus.Gauge
 	db              *sql.DB
 	logger          log.Logger
 }
@@ -49,6 +51,7 @@ type Config struct {
 	User               string
 	Password           string
 	ConnectString      string
+	DbRole             string
 	MaxIdleConns       int
 	MaxOpenConns       int
 	CustomMetrics      string
@@ -137,6 +140,11 @@ func NewExporter(logger log.Logger, cfg *Config) (*Exporter, error) {
 			Name:      "up",
 			Help:      "Whether the Oracle database server is up.",
 		}),
+		dbtypeGauge: prometheus.NewGauge(prometheus.GaugeOpts{
+			Namespace: namespace,
+			Name:      "dbtype",
+			Help:      "Type of database the exporter is connected to (0=non-CDB, 1=CDB, >1=PDB).",
+		}),
 		logger: logger,
 		config: cfg,
 	}
@@ -196,6 +204,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	ch <- e.error
 	e.scrapeErrors.Collect(ch)
 	ch <- e.up
+	ch <- e.dbtypeGauge
 }
 
 // RunScheduledScrapes is only relevant for users of this package that want to set the scrape on a timer
@@ -277,6 +286,8 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 		return
 	}
 
+	e.dbtypeGauge.Set(float64(e.dbtype))
+
 	level.Debug(e.logger).Log("msg", "Successfully pinged Oracle database: "+maskDsn(e.connectString))
 	e.up.Set(1)
 
@@ -325,11 +336,15 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 
 			scrapeStart := time.Now()
 			if err = e.ScrapeMetric(e.db, ch, metric); err != nil {
-				level.Error(e.logger).Log("msg", "Error scraping metric",
-					"Context", metric.Context,
-					"MetricsDesc", fmt.Sprint(metric.MetricsDesc),
-					"time", time.Since(scrapeStart),
-					"error", err)
+				if !metric.IgnoreZeroResult {
+					// do not print repetitive error messages for metrics
+					// with ignoreZeroResult set to true
+					level.Error(e.logger).Log("msg", "Error scraping metric",
+						"Context", metric.Context,
+						"MetricsDesc", fmt.Sprint(metric.MetricsDesc),
+						"time", time.Since(scrapeStart),
+						"error", err)
+				}
 				e.scrapeErrors.WithLabelValues(metric.Context).Inc()
 			} else {
 				level.Debug(e.logger).Log("msg", "Successfully scraped metric",
@@ -348,6 +363,14 @@ func (e *Exporter) connect() error {
 	var P godror.ConnectionParams
 	P.Username, P.Password, P.ConnectString = e.user, godror.NewPassword(e.password), e.connectString
 
+	if strings.ToUpper(e.config.DbRole) == "SYSDBA" {
+		P.IsSysDBA = true
+	}
+
+	if strings.ToUpper(e.config.DbRole) == "SYSOPER" {
+		P.IsSysOper = true
+	}
+
 	level.Debug(e.logger).Log("msg", "connection properties: "+fmt.Sprint(P))
 
 	// note that this just configures the connection, it does not acutally connect until later
@@ -360,7 +383,32 @@ func (e *Exporter) connect() error {
 	db.SetConnMaxLifetime(0)
 	level.Debug(e.logger).Log("msg", "Successfully configured connection to "+maskDsn(e.connectString))
 	e.db = db
+
+	if _, err := db.Exec(`
+			begin
+	       		dbms_application_info.set_client_info('oracledb_exporter');
+			end;`); err != nil {
+		level.Info(e.logger).Log("msg", "Could not set CLIENT_INFO.")
+	}
+
+	var result int
+	if err := db.QueryRow("select sys_context('USERENV', 'CON_ID') from dual").Scan(&result); err != nil {
+		level.Info(e.logger).Log("msg", "dbtype err ="+string(err.Error()))
+	}
+	e.dbtype = result
+
+	var sysdba string
+	if err := db.QueryRow("select sys_context('USERENV', 'ISDBA') from dual").Scan(&sysdba); err != nil {
+		level.Info(e.logger).Log("msg", "got error checking my database role")
+	}
+	level.Info(e.logger).Log("msg", "Connected as SYSDBA? "+sysdba)
+
 	return nil
+}
+
+// this is used by the log exporter to share the database connection
+func (e *Exporter) GetDB() *sql.DB {
+	return e.db
 }
 
 func (e *Exporter) checkIfMetricsChanged() bool {

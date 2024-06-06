@@ -13,6 +13,7 @@ Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 - [Roadmap](#roadmap)
 - [Standard metrics](#standard-metrics)
 - [Database permissions required](#database-permissions-required)
+- [Alert logs](#alert-logs)
 - [Installation](#installation)
    - [Docker, podman, etc.](#docker-podman-etc)
    - [Test/demo environment using Docker Compose](#testdemo-environment-with-docker-compose)
@@ -26,6 +27,28 @@ Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 - [Developer notes](#developer-notes)
 
 ## Release Notes
+
+### Version 1.3.0, June 7, 2024
+
+This release includes the following changes:
+
+- Alert logs can be exported for collection by a log reader like Promtail or FluentBit. Default
+  output to `/log/alert.log` in JSON format.
+- Provide ability to connect as SYSDBA or SYSOPER by setting DB_ROLE.
+- New default metric is added to report the type of database connected to (CDB or PDB).
+- New default metrics are added for cache hit ratios.
+- Deafult metrics updated to suppress spurious warnings in log.
+- Wait class metric updated to use a better query.
+- The sample dashboard is updated to include new metrics.
+- Fixed a bug which prevented periodic freeing of memory.
+- Set CLIENT_INFO to a meaningful value.
+- Update Go toolchain to 1.22.4.
+- Updated some third-party dependencies.
+
+Thank you to the following people for their suggestions and contributions:
+
+- [@pioro](https://github.com/pioro)
+- [@savoir81](https://github.com/savoir81)
 
 ### Version 1.2.1, April 16, 2024
 
@@ -92,33 +115,193 @@ Currently, we plan to address the following key features:
 
 ## Standard metrics
 
-The following metrics are exposed currently.
+The following metrics are exposed by default:
 
-- oracledb_exporter_last_scrape_duration_seconds
-- oracledb_exporter_last_scrape_error
-- oracledb_exporter_scrapes_total
-- oracledb_up
-- oracledb_activity_execute_count
-- oracledb_activity_parse_count_total
-- oracledb_activity_user_commits
-- oracledb_activity_user_rollbacks
-- oracledb_sessions_activity
-- oracledb_wait_time_application
-- oracledb_wait_time_commit
-- oracledb_wait_time_concurrency
-- oracledb_wait_time_configuration
-- oracledb_wait_time_network
-- oracledb_wait_time_other
-- oracledb_wait_time_scheduler
-- oracledb_wait_time_system_io
-- oracledb_wait_time_user_io
-- oracledb_tablespace_bytes
-- oracledb_tablespace_max_bytes
-- oracledb_tablespace_free
-- oracledb_tablespace_used_percent
-- oracledb_process_count
-- oracledb_resource_current_utilization
-- oracledb_resource_limit_value
+```
+# HELP oracledb_activity_execute_count Generic counter metric from v$sysstat view in Oracle.
+# TYPE oracledb_activity_execute_count gauge
+oracledb_activity_execute_count 64469
+# HELP oracledb_activity_parse_count_total Generic counter metric from v$sysstat view in Oracle.
+# TYPE oracledb_activity_parse_count_total gauge
+oracledb_activity_parse_count_total 25883
+# HELP oracledb_activity_user_commits Generic counter metric from v$sysstat view in Oracle.
+# TYPE oracledb_activity_user_commits gauge
+oracledb_activity_user_commits 158
+# HELP oracledb_activity_user_rollbacks Generic counter metric from v$sysstat view in Oracle.
+# TYPE oracledb_activity_user_rollbacks gauge
+oracledb_activity_user_rollbacks 2
+# HELP oracledb_db_platform_value Database platform
+# TYPE oracledb_db_platform_value gauge
+oracledb_db_platform_value{platform_name="Linux x86 64-bit"} 1
+# HELP oracledb_db_system_value Database system resources metric
+# TYPE oracledb_db_system_value gauge
+oracledb_db_system_value{name="cpu_count"} 2
+oracledb_db_system_value{name="pga_aggregate_limit"} 2.147483648e+09
+oracledb_db_system_value{name="sga_max_size"} 1.610612736e+09
+# HELP oracledb_dbtype Type of database the exporter is connected to (0=non-CDB, 1=CDB, >1=PDB).
+# TYPE oracledb_dbtype gauge
+oracledb_dbtype 0
+# HELP oracledb_exporter_build_info A metric with a constant '1' value labeled by version, revision, branch, goversion from which oracledb_exporter was built, and the goos and goarch for the build.
+# TYPE oracledb_exporter_build_info gauge
+oracledb_exporter_build_info{branch="",goarch="amd64",goos="linux",goversion="go1.22.4",revision="unknown",tags="unknown",version=""} 1
+# HELP oracledb_exporter_last_scrape_duration_seconds Duration of the last scrape of metrics from Oracle DB.
+# TYPE oracledb_exporter_last_scrape_duration_seconds gauge
+oracledb_exporter_last_scrape_duration_seconds 0.040507382
+# HELP oracledb_exporter_last_scrape_error Whether the last scrape of metrics from Oracle DB resulted in an error (1 for error, 0 for success).
+# TYPE oracledb_exporter_last_scrape_error gauge
+oracledb_exporter_last_scrape_error 0
+# HELP oracledb_exporter_scrapes_total Total number of times Oracle DB was scraped for metrics.
+# TYPE oracledb_exporter_scrapes_total counter
+oracledb_exporter_scrapes_total 3
+# HELP oracledb_process_count Gauge metric with count of processes.
+# TYPE oracledb_process_count gauge
+oracledb_process_count 79
+# HELP oracledb_resource_current_utilization Generic counter metric from v$resource_limit view in Oracle (current value).
+# TYPE oracledb_resource_current_utilization gauge
+oracledb_resource_current_utilization{resource_name="branches"} 0
+oracledb_resource_current_utilization{resource_name="cmtcallbk"} 0
+oracledb_resource_current_utilization{resource_name="dml_locks"} 0
+oracledb_resource_current_utilization{resource_name="enqueue_locks"} 43
+oracledb_resource_current_utilization{resource_name="enqueue_resources"} 31
+oracledb_resource_current_utilization{resource_name="gcs_resources"} 0
+oracledb_resource_current_utilization{resource_name="gcs_shadows"} 0
+oracledb_resource_current_utilization{resource_name="ges_big_msgs"} 0
+oracledb_resource_current_utilization{resource_name="ges_cache_ress"} 0
+oracledb_resource_current_utilization{resource_name="ges_locks"} 0
+oracledb_resource_current_utilization{resource_name="ges_procs"} 0
+oracledb_resource_current_utilization{resource_name="ges_reg_msgs"} 0
+oracledb_resource_current_utilization{resource_name="ges_ress"} 0
+oracledb_resource_current_utilization{resource_name="ges_rsv_msgs"} 0
+oracledb_resource_current_utilization{resource_name="k2q_locks"} 0
+oracledb_resource_current_utilization{resource_name="max_rollback_segments"} 22
+oracledb_resource_current_utilization{resource_name="max_shared_servers"} 2
+oracledb_resource_current_utilization{resource_name="parallel_max_servers"} 2
+oracledb_resource_current_utilization{resource_name="processes"} 80
+oracledb_resource_current_utilization{resource_name="sessions"} 95
+oracledb_resource_current_utilization{resource_name="smartio_buffer_memory"} 0
+oracledb_resource_current_utilization{resource_name="smartio_metadata_memory"} 0
+oracledb_resource_current_utilization{resource_name="smartio_overhead_memory"} 0
+oracledb_resource_current_utilization{resource_name="smartio_sessions"} 0
+oracledb_resource_current_utilization{resource_name="sort_segment_locks"} 2
+oracledb_resource_current_utilization{resource_name="temporary_table_locks"} 0
+oracledb_resource_current_utilization{resource_name="transactions"} 0
+# HELP oracledb_resource_limit_value Generic counter metric from v$resource_limit view in Oracle (UNLIMITED: -1).
+# TYPE oracledb_resource_limit_value gauge
+oracledb_resource_limit_value{resource_name="branches"} -1
+oracledb_resource_limit_value{resource_name="cmtcallbk"} -1
+oracledb_resource_limit_value{resource_name="dml_locks"} -1
+oracledb_resource_limit_value{resource_name="enqueue_locks"} 5542
+oracledb_resource_limit_value{resource_name="enqueue_resources"} -1
+oracledb_resource_limit_value{resource_name="gcs_resources"} -1
+oracledb_resource_limit_value{resource_name="gcs_shadows"} -1
+oracledb_resource_limit_value{resource_name="ges_big_msgs"} -1
+oracledb_resource_limit_value{resource_name="ges_cache_ress"} -1
+oracledb_resource_limit_value{resource_name="ges_locks"} -1
+oracledb_resource_limit_value{resource_name="ges_procs"} 0
+oracledb_resource_limit_value{resource_name="ges_reg_msgs"} -1
+oracledb_resource_limit_value{resource_name="ges_ress"} -1
+oracledb_resource_limit_value{resource_name="ges_rsv_msgs"} 0
+oracledb_resource_limit_value{resource_name="k2q_locks"} -1
+oracledb_resource_limit_value{resource_name="max_rollback_segments"} 65535
+oracledb_resource_limit_value{resource_name="max_shared_servers"} -1
+oracledb_resource_limit_value{resource_name="parallel_max_servers"} 32767
+oracledb_resource_limit_value{resource_name="processes"} 300
+oracledb_resource_limit_value{resource_name="sessions"} 472
+oracledb_resource_limit_value{resource_name="smartio_buffer_memory"} -1
+oracledb_resource_limit_value{resource_name="smartio_metadata_memory"} -1
+oracledb_resource_limit_value{resource_name="smartio_overhead_memory"} -1
+oracledb_resource_limit_value{resource_name="smartio_sessions"} -1
+oracledb_resource_limit_value{resource_name="sort_segment_locks"} -1
+oracledb_resource_limit_value{resource_name="temporary_table_locks"} -1
+oracledb_resource_limit_value{resource_name="transactions"} -1
+# HELP oracledb_sessions_value Gauge metric with count of sessions by status and type.
+# TYPE oracledb_sessions_value gauge
+oracledb_sessions_value{status="ACTIVE",type="BACKGROUND"} 65
+oracledb_sessions_value{status="ACTIVE",type="USER"} 7
+oracledb_sessions_value{status="INACTIVE",type="USER"} 1
+# HELP oracledb_tablespace_bytes Generic counter metric of tablespaces bytes in Oracle.
+# TYPE oracledb_tablespace_bytes gauge
+oracledb_tablespace_bytes{tablespace="SYSAUX",type="PERMANENT"} 5.7442304e+08
+oracledb_tablespace_bytes{tablespace="SYSTEM",type="PERMANENT"} 1.101135872e+09
+oracledb_tablespace_bytes{tablespace="TEMP",type="TEMPORARY"} 0
+oracledb_tablespace_bytes{tablespace="UNDOTBS1",type="UNDO"} 4.1353216e+07
+oracledb_tablespace_bytes{tablespace="USERS",type="PERMANENT"} 1.048576e+06
+# HELP oracledb_tablespace_free Generic counter metric of tablespaces free bytes in Oracle.
+# TYPE oracledb_tablespace_free gauge
+oracledb_tablespace_free{tablespace="SYSAUX",type="PERMANENT"} 1.7939390464e+10
+oracledb_tablespace_free{tablespace="SYSTEM",type="PERMANENT"} 1.7936965632e+10
+oracledb_tablespace_free{tablespace="TEMP",type="TEMPORARY"} 1.7947820032e+10
+oracledb_tablespace_free{tablespace="UNDOTBS1",type="UNDO"} 3.4318368768e+10
+oracledb_tablespace_free{tablespace="USERS",type="PERMANENT"} 1.7930805248e+10
+# HELP oracledb_tablespace_max_bytes Generic counter metric of tablespaces max bytes in Oracle.
+# TYPE oracledb_tablespace_max_bytes gauge
+oracledb_tablespace_max_bytes{tablespace="SYSAUX",type="PERMANENT"} 1.8513813504e+10
+oracledb_tablespace_max_bytes{tablespace="SYSTEM",type="PERMANENT"} 1.9038101504e+10
+oracledb_tablespace_max_bytes{tablespace="TEMP",type="TEMPORARY"} 1.7947820032e+10
+oracledb_tablespace_max_bytes{tablespace="UNDOTBS1",type="UNDO"} 3.4359721984e+10
+oracledb_tablespace_max_bytes{tablespace="USERS",type="PERMANENT"} 1.7931853824e+10
+# HELP oracledb_tablespace_used_percent Gauge metric showing as a percentage of how much of the tablespace has been used.
+# TYPE oracledb_tablespace_used_percent gauge
+oracledb_tablespace_used_percent{tablespace="SYSAUX",type="PERMANENT"} 3.102672714489066
+oracledb_tablespace_used_percent{tablespace="SYSTEM",type="PERMANENT"} 5.783853352019611
+oracledb_tablespace_used_percent{tablespace="TEMP",type="TEMPORARY"} 0
+oracledb_tablespace_used_percent{tablespace="UNDOTBS1",type="UNDO"} 0.1203537561196118
+oracledb_tablespace_used_percent{tablespace="USERS",type="PERMANENT"} 0.005847560493698568
+# HELP oracledb_teq_curr_inst_id ID of current instance
+# TYPE oracledb_teq_curr_inst_id gauge
+oracledb_teq_curr_inst_id 1
+# HELP oracledb_top_sql_elapsed SQL statement elapsed time running
+# TYPE oracledb_top_sql_elapsed gauge
+oracledb_top_sql_elapsed{sql_id="01uy9sb7w8a9g",sql_text=" begin      dbms_aqadm_sys.remove_all_nondurablesub(:1,"} 0.147496
+oracledb_top_sql_elapsed{sql_id="0nakmm882vmq0",sql_text="select /* QOSH:DROP_STAT_HIST_PARTS */ partition_name, "} 0.072836
+oracledb_top_sql_elapsed{sql_id="0sbbcuruzd66f",sql_text="select /*+ rule */ bucket_cnt, row_cnt, cache_cnt, null"} 0.072226
+oracledb_top_sql_elapsed{sql_id="121ffmrc95v7g",sql_text="select i.obj#,i.ts#,i.file#,i.block#,i.intcols,i.type#,"} 0.17176
+oracledb_top_sql_elapsed{sql_id="20x4skzx6dbjm",sql_text="INSERT INTO OPATCH_XINV_TAB(XML_INVENTORY) SELECT * FRO"} 2.656821
+oracledb_top_sql_elapsed{sql_id="3un99a0zwp4vd",sql_text="select owner#,name,namespace,remoteowner,linkname,p_tim"} 0.069393
+oracledb_top_sql_elapsed{sql_id="3wrrjm9qtr2my",sql_text="SELECT T.CLIENT_ID,         T.OPERATION_ID,         T.T"} 0.309885
+oracledb_top_sql_elapsed{sql_id="44dn40afubks4",sql_text="select decode(u.type#, 2, u.ext_username, u.name), o.na"} 0.098865
+oracledb_top_sql_elapsed{sql_id="586577qpbkgnk",sql_text="select 1 from DBA_SCHEDULER_JOBS  where JOB_NAME like '"} 0.072079
+oracledb_top_sql_elapsed{sql_id="5yutdqf5nvrmt",sql_text="SELECT     dt.tablespace_name as tablespace,     dt.con"} 0.081922
+oracledb_top_sql_elapsed{sql_id="8gbt6t0s3jn0t",sql_text="MERGE /*+ OPT_PARAM('_parallel_syspls_obey_force' 'fals"} 0.068104
+oracledb_top_sql_elapsed{sql_id="b9c6ffh8tc71f",sql_text="BEGIN dbms_output.enable(NULL); END;"} 0.0982
+oracledb_top_sql_elapsed{sql_id="cz8wbmy7k5bxn",sql_text="begin sys.dbms_aq_inv.internal_purge_queue_table(:1, :2"} 0.181691
+# HELP oracledb_up Whether the Oracle database server is up.
+# TYPE oracledb_up gauge
+oracledb_up 1
+# HELP oracledb_wait_time_administrative counter metric from system_wait_class view in Oracle.
+# TYPE oracledb_wait_time_administrative counter
+oracledb_wait_time_administrative 0
+# HELP oracledb_wait_time_application counter metric from system_wait_class view in Oracle.
+# TYPE oracledb_wait_time_application counter
+oracledb_wait_time_application 0.03
+# HELP oracledb_wait_time_cluster counter metric from system_wait_class view in Oracle.
+# TYPE oracledb_wait_time_cluster counter
+oracledb_wait_time_cluster 0
+# HELP oracledb_wait_time_commit counter metric from system_wait_class view in Oracle.
+# TYPE oracledb_wait_time_commit counter
+oracledb_wait_time_commit 0.04
+# HELP oracledb_wait_time_concurrency counter metric from system_wait_class view in Oracle.
+# TYPE oracledb_wait_time_concurrency counter
+oracledb_wait_time_concurrency 0.56
+# HELP oracledb_wait_time_configuration counter metric from system_wait_class view in Oracle.
+# TYPE oracledb_wait_time_configuration counter
+oracledb_wait_time_configuration 0.15
+# HELP oracledb_wait_time_network counter metric from system_wait_class view in Oracle.
+# TYPE oracledb_wait_time_network counter
+oracledb_wait_time_network 0
+# HELP oracledb_wait_time_other counter metric from system_wait_class view in Oracle.
+# TYPE oracledb_wait_time_other counter
+oracledb_wait_time_other 16.44
+# HELP oracledb_wait_time_scheduler counter metric from system_wait_class view in Oracle.
+# TYPE oracledb_wait_time_scheduler counter
+oracledb_wait_time_scheduler 0.59
+# HELP oracledb_wait_time_system_io counter metric from system_wait_class view in Oracle.
+# TYPE oracledb_wait_time_system_io counter
+oracledb_wait_time_system_io 1.62
+# HELP oracledb_wait_time_user_io counter metric from system_wait_class view in Oracle.
+# TYPE oracledb_wait_time_user_io counter
+oracledb_wait_time_user_io 24.5
+```
 
 ## Database permissions required
 
@@ -134,6 +317,41 @@ For the built-in default metrics, the database user that the exporter uses to co
 - v$waitclassmetric
 - v$session
 - v$resource_limit
+
+## Alert logs
+
+The exporter can export alert log records into a file that is suitable for collection by a log ingestion tool like Promtail or FluentBit.
+
+You can specify the interval that log records should be published using the parameter `log.interval` using a GoLang duration
+string.  A duration string is a possibly signed sequence of decimal numbers, each with optional fraction and a unit suffix, 
+such as "300ms", "-1.5h" or "2h45m". Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h", "d", "w", "y".
+
+You can specify the location of the output log file using the environment variable `LOG_DESTINATION`.
+The default is `/log/alert.log`.  If you are running in Kubernetes, you should mount a volume
+on `/log` so that it can be accessed by both the exporter container and your log collector container.
+
+The output is formatted as one JSON record per line, which most log collection tools will be able to parse with minimal configuration.
+
+Here is an example of the output:
+
+```
+{"timestamp":"2023-09-02T05:40:43.626Z","moduleId":"","ecid":"","message":"Starting ORACLE instance (restrict) (OS id: 1473)"}
+{"timestamp":"2023-09-02T05:40:43.64Z","moduleId":"","ecid":"","message":"****************************************************"}
+{"timestamp":"2023-09-02T05:40:43.64Z","moduleId":"","ecid":"","message":" Sys-V shared memory will be used for creating SGA "}
+{"timestamp":"2023-09-02T05:40:43.64Z","moduleId":"","ecid":"","message":" ****************************************************"}
+{"timestamp":"2023-09-02T05:40:43.641Z","moduleId":"","ecid":"","message":"**********************************************************************"}
+{"timestamp":"2023-09-02T05:40:43.641Z","moduleId":"","ecid":"","message":"Dump of system resources acquired for SHARED GLOBAL AREA (SGA) "}
+{"timestamp":"2023-09-02T05:40:43.642Z","moduleId":"","ecid":"","message":" Domain name: kubepods.slice/kubepods-besteffort.slice/kubepods-besteffort-poda2061467_5334_40c3_9328_71be8196ee89.slice/crio-09918aac8159cea"}
+{"timestamp":"2023-09-02T05:40:43.642Z","moduleId":"","ecid":"","message":" Per process system memlock (soft) limit = 64K"}
+{"timestamp":"2023-09-02T05:40:43.642Z","moduleId":"","ecid":"","message":" Expected per process system memlock (soft) limit to lock"}
+{"timestamp":"2023-09-02T05:40:43.642Z","moduleId":"","ecid":"","message":" instance MAX SHARED GLOBAL AREA (SGA) into memory: 1532M"}
+{"timestamp":"2023-09-02T05:40:43.643Z","moduleId":"","ecid":"","message":" Available system pagesizes:"}
+{"timestamp":"2023-09-02T05:40:43.643Z","moduleId":"","ecid":"","message":"  4K, 2048K "}
+{"timestamp":"2023-09-02T05:40:43.643Z","moduleId":"","ecid":"","message":" Supported system pagesize(s):"}
+{"timestamp":"2023-09-02T05:40:43.643Z","moduleId":"","ecid":"","message":"  PAGESIZE  AVAILABLE_PAGES  EXPECTED_PAGES  ALLOCATED_PAGES  ERROR(s)"}
+{"timestamp":"2023-09-02T05:40:43.644Z","moduleId":"","ecid":"","message":"        4K       Configured               5           391529        NONE"}
+{"timestamp":"2023-09-02T05:40:43.644Z","moduleId":"","ecid":"","message":"     2048K                0             766                0        NONE"}
+```
 
 ## Installation
 
@@ -194,6 +412,7 @@ For a simple connection, you will provide the details using these variables:
 - `DB_USERNAME` is the database username, e.g., `pdbadmin`
 - `DB_PASSWORD` is the password for that user, e.g., `Welcome12345`
 - `DB_CONNECT_STRING` is the connection string, e.g., `free23c:1521/freepdb`
+- `DB_ROLE` (Optional) can be set to `SYSDBA` or `SYSOPER` if you want to connect with one of those roles, however Oracle recommends that you connect with the lowest possible privileges and roles necessary for the exporter to run.
 
 To run the exporter in a container and expose the port, use a command like this, with the appropriate values for the environment variables:
 
@@ -203,7 +422,7 @@ docker run -it --rm \
     -e DB_PASSWORD=Welcome12345 \
     -e DB_CONNECT_STRING=free23c:1521/freepdb \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:1.2.1
+    container-registry.oracle.com/database/observability-exporter:1.3.0
 ```
 
 ##### Using a wallet
@@ -230,7 +449,7 @@ docker run -it --rm \
     -e DB_CONNECT_STRING=devdb_tp \
     -v ./wallet:/wallet \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:1.2.1
+    container-registry.oracle.com/database/observability-exporter:1.3.0
 ```
 
 
@@ -493,7 +712,7 @@ An exmaple of [custom metrics for Transacational Event Queues](./custom-metrics-
 If you run the exporter as a container image and want to include your custom metrics in the image itself, you can use the following example `Dockerfile` to create a new image:
 
 ```Dockerfile
-FROM container-registry.oracle.com/database/observability-exporter:1.2.1
+FROM container-registry.oracle.com/database/observability-exporter:1.3.0
 COPY custom-metrics.toml /
 ENTRYPOINT ["/oracledb_exporter", "--custom.metrics", "/custom-metrics.toml"]
 ```
@@ -669,7 +888,7 @@ Please consult the [security guide](./SECURITY.md) for our responsible security 
 
 ## License
 
-Copyright (c) 2016, 2023, Oracle and/or its affiliates.
+Copyright (c) 2016, 2024, Oracle and/or its affiliates.
 
 Released under the Universal Permissive License v1.0 as shown at
 <https://oss.oracle.com/licenses/upl/>

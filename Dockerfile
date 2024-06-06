@@ -2,10 +2,10 @@ ARG BASE_IMAGE
 FROM ${BASE_IMAGE} AS build
 
 RUN microdnf install wget gzip gcc && \
-    wget https://go.dev/dl/go1.21.6.linux-amd64.tar.gz && \
+    wget -q https://go.dev/dl/go1.22.4.linux-amd64.tar.gz && \
     rm -rf /usr/local/go && \
-    tar -C /usr/local -xzf go1.21.6.linux-amd64.tar.gz && \
-    rm go1.21.6.linux-amd64.tar.gz
+    tar -C /usr/local -xzf go1.22.4.linux-amd64.tar.gz && \
+    rm go1.22.4.linux-amd64.tar.gz
 
 ENV PATH $PATH:/usr/local/go/bin
 
@@ -25,7 +25,7 @@ LABEL org.opencontainers.image.description="Oracle Database Observability Export
 ENV VERSION ${VERSION:-1.0.0}
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN  microdnf install -y oracle-instantclient-release-el8 && microdnf install -y oracle-instantclient-basic
+RUN microdnf install -y oracle-instantclient-release-el8 && microdnf install -y oracle-instantclient-basic
 
 ENV LD_LIBRARY_PATH /usr/lib/oracle/21/client64/lib
 ENV PATH $PATH:/usr/lib/oracle/21/client64/bin
@@ -33,6 +33,9 @@ ENV ORACLE_HOME /usr/lib/oracle/21/client64
 
 COPY --from=build /go/src/oracledb_exporter/oracle-db-appdev-monitoring /oracledb_exporter
 ADD ./default-metrics.toml /default-metrics.toml
+
+# create the mount point for alert log exports (default location)
+RUN mkdir /log && chown 1000:1000 /log
 
 EXPOSE 9161
 

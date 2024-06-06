@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, Oracle and/or its affiliates.
+// Copyright (c) 2021, 2024, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 // Portions Copyright (c) 2016 Seth Miller <seth@sethmiller.me>
 
@@ -25,7 +25,11 @@ request = "SELECT status, type, COUNT(*) as value FROM v$session GROUP BY status
 context = "resource"
 labels = [ "resource_name" ]
 metricsdesc = { current_utilization= "Generic counter metric from v$resource_limit view in Oracle (current value).", limit_value="Generic counter metric from v$resource_limit view in Oracle (UNLIMITED: -1)." }
-request="SELECT resource_name,current_utilization,CASE WHEN TRIM(limit_value) LIKE 'UNLIMITED' THEN '-1' ELSE TRIM(limit_value) END as limit_value FROM v$resource_limit"
+request = '''
+SELECT resource_name, current_utilization, CASE WHEN TRIM(limit_value) LIKE 'UNLIMITED' THEN '-1' ELSE TRIM(limit_value) END as limit_value 
+FROM v$resource_limit
+'''
+ignorezeroresult = true
 
 [[metric]]
 context = "asm_diskgroup"
@@ -47,15 +51,19 @@ request = "SELECT COUNT(*) as count FROM v$process"
 
 [[metric]]
 context = "wait_time"
-metricsdesc = { value="Generic counter metric from v$waitclassmetric view in Oracle." }
+labels = ["wait_class","con_id"]
+metricsdesc = { time_waited_sec_total="counter metric from system_wait_class view in Oracle." }
+metricstype = { time_waited_sec_total = "counter" }
 fieldtoappend= "wait_class"
 request = '''
-SELECT wait_class as WAIT_CLASS, sum(time_waited) as VALUE
-FROM gv$active_session_history 
-where wait_class is not null 
-and sample_time > sysdate - interval '1' hour
-GROUP BY wait_class;
+select
+  wait_class,
+  round(time_waited/100,3) time_waited_sec_total,
+  con_id
+from v$system_wait_class
+where wait_class <> 'Idle'
 '''
+ignorezeroresult = true
 
 [[metric]]
 context = "tablespace"
@@ -73,6 +81,48 @@ FROM  dba_tablespace_usage_metrics dtum, dba_tablespaces dt
 WHERE dtum.tablespace_name = dt.tablespace_name
 ORDER by tablespace
 '''
+
+[[metric]]
+context = "db_system"
+labels = [ "name" ]
+metricsdesc = { value = "Database system resources metric" }
+request = '''
+select name, value 
+from v$parameter 
+where name in ('cpu_count', 'sga_max_size', 'pga_aggregate_limit')
+'''
+
+[[metric]]
+context = "db_platform"
+labels = [ "platform_name" ]
+metricsdesc = { value = "Database platform" }
+request = '''
+SELECT platform_name, 1 as value FROM v$database
+'''
+
+[[metric]]
+context = "top_sql"
+labels = [ "sql_id", "sql_text" ]
+metricsdesc = { elapsed = "SQL statement elapsed time running" }
+request = '''
+select * from (
+select sql_id, elapsed_time / 1000000 as elapsed, SUBSTRB(REPLACE(sql_text,'',' '),1,55) as sql_text
+from   V$SQLSTATS
+order by elapsed_time desc
+) where ROWNUM <= 15
+'''
+ignorezeroresult = true
+
+[[metric]]
+context = "cache_hit_ratio"
+labels = [ "cache_hit_type" ]
+metricsdesc = { value = "Cache Hit Ratio" }
+request = '''
+select metric_name cache_hit_type, value
+from v$sysmetric
+where group_id=2 and metric_id in (2000,2050,2112,2110)
+'''
+ignorezeroresult = true
 `
 
 // DefaultMetrics is a somewhat hacky way to load the default metrics

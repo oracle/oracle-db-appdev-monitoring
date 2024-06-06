@@ -43,14 +43,15 @@ services:
       start_period: 30s
 
   exporter:
-    image: container-registry.oracle.com/database/observability-exporter:1.2.0
+    image: container-registry.oracle.com/database/observability-exporter:1.3.0
     container_name: exporter
     ports:
       - 9161:9161
     environment:
-      - DB_USERNAME=system
+      - DB_USERNAME=sys
       - DB_PASSWORD=Welcome12345
       - DB_CONNECT_STRING=free23c:1521/free
+      - DB_ROLE=SYSDBA
       - CUSTOM_METRICS=/exporter/txeventq-metrics.toml
     volumes:
       - ./exporter:/exporter

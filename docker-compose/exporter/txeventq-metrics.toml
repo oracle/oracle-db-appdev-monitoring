@@ -9,11 +9,13 @@ FROM
 WHERE
     ROWNUM < 2
 '''
+ignorezeroresult = true
 
 [[metric]]
 context = "teq"
 metricsdesc = { curr_inst_id = "ID of current instance" }
 request = "SELECT instance_number AS curr_inst_id FROM v$instance"
+ignorezeroresult = true
 
 [[metric]]
 context = "teq"
@@ -35,6 +37,7 @@ FROM
 GROUP BY
     inst_id
 '''
+ignorezeroresult = true
 
 [[metric]]
 context = "teq"
@@ -55,6 +58,7 @@ FROM
 GROUP BY
     inst_id
 '''
+ignorezeroresult = true
 
 [[metric]]
 context = "teq"
@@ -97,3 +101,4 @@ FROM
     ) t1
     JOIN gv$persistent_queues t2 ON t1.queue_id = t2.queue_id
 '''
+ignorezeroresult = true

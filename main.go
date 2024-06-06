@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2023, Oracle and/or its affiliates.
+// Copyright (c) 2021, 2024, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 // Portions Copyright (c) 2016 Seth Miller <seth@sethmiller.me>
 
@@ -14,6 +14,7 @@ import (
 
 	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
+	cversion "github.com/prometheus/client_golang/prometheus/collectors/version"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/exporter-toolkit/web"
@@ -26,6 +27,7 @@ import (
 	// Required for debugging
 	// _ "net/http/pprof"
 
+	"github.com/oracle/oracle-db-appdev-monitoring/alertlog"
 	"github.com/oracle/oracle-db-appdev-monitoring/collector"
 	"github.com/oracle/oracle-db-appdev-monitoring/vault"
 )
@@ -40,6 +42,8 @@ var (
 	maxIdleConns       = kingpin.Flag("database.maxIdleConns", "Number of maximum idle connections in the connection pool. (env: DATABASE_MAXIDLECONNS)").Default(getEnv("DATABASE_MAXIDLECONNS", "0")).Int()
 	maxOpenConns       = kingpin.Flag("database.maxOpenConns", "Number of maximum open connections in the connection pool. (env: DATABASE_MAXOPENCONNS)").Default(getEnv("DATABASE_MAXOPENCONNS", "10")).Int()
 	scrapeInterval     = kingpin.Flag("scrape.interval", "Interval between each scrape. Default is to scrape on collect requests").Default("0s").Duration()
+	logInterval        = kingpin.Flag("log.interval", "Interval between log updates (e.g. 5s).").Default("15s").Duration()
+	logDestination     = kingpin.Flag("log.destination", "File to output the alert log to. (env: LOG_DESTINATION)").Default(getEnv("LOG_DESTINATION", "/log/alert.log")).String()
 	toolkitFlags       = webflag.AddFlags(kingpin.CommandLine, ":9161")
 )
 
@@ -53,6 +57,7 @@ func main() {
 	user := os.Getenv("DB_USERNAME")
 	password := os.Getenv("DB_PASSWORD")
 	connectString := os.Getenv("DB_CONNECT_STRING")
+	dbrole := os.Getenv("DB_ROLE")
 
 	vaultName, useVault := os.LookupEnv("VAULT_ID")
 	if useVault {
@@ -78,6 +83,7 @@ func main() {
 		User:               user,
 		Password:           password,
 		ConnectString:      connectString,
+		DbRole:             dbrole,
 		MaxOpenConns:       *maxOpenConns,
 		MaxIdleConns:       *maxIdleConns,
 		CustomMetrics:      *customMetrics,
@@ -96,9 +102,9 @@ func main() {
 	}
 
 	prometheus.MustRegister(exporter)
-	prometheus.MustRegister(version.NewCollector("oracledb_exporter"))
+	prometheus.MustRegister(cversion.NewCollector("oracledb_exporter"))
 
-	level.Info(logger).Log("msg", "Starting oracledb_exporter", "version", version.Info())
+	level.Info(logger).Log("msg", "Starting oracledb_exporter", "version", Version)
 	level.Info(logger).Log("msg", "Build context", "build", version.BuildContext())
 	level.Info(logger).Log("msg", "Collect from: ", "metricPath", *metricPath)
 
@@ -140,13 +146,29 @@ func main() {
 		defer memTicker.Stop()
 
 		go func() {
-			<-memTicker.C
-			level.Info(logger).Log("msg", "attempting to free OS memory")
-			debug.FreeOSMemory()
+			for {
+				<-memTicker.C
+				level.Info(logger).Log("msg", "attempting to free OS memory")
+				debug.FreeOSMemory()
+			}
 		}()
 
 	}
 
+	// start the log exporter
+	level.Info(logger).Log("msg", "Exporting alert logs to "+*logDestination)
+	logTicker := time.NewTicker(*logInterval)
+	defer logTicker.Stop()
+
+	go func() {
+		for {
+			<-logTicker.C
+			level.Debug(logger).Log("msg", "updating alert log")
+			alertlog.UpdateLog(*logDestination, logger, exporter.GetDB())
+		}
+	}()
+
+	// start the main server thread
 	server := &http.Server{}
 	if err := web.ListenAndServe(server, toolkitFlags, logger); err != nil {
 		level.Error(logger).Log("msg", "Listening error", "error", err)
