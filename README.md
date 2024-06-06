@@ -38,11 +38,17 @@ This release includes the following changes:
 - New default metric is added to report the type of database connected to (CDB or PDB).
 - New default metrics are added for cache hit ratios.
 - Deafult metrics updated to suppress spurious warnings in log.
+- Wait class metric updated to use a better query.
 - The sample dashboard is updated to include new metrics.
 - Fixed a bug which prevented periodic freeing of memory.
 - Set CLIENT_INFO to a meaningful value.
 - Update Go toolchain to 1.22.4.
 - Updated some third-party dependencies.
+
+Thank you to the following people for their suggestions and contributions:
+
+- https://github.com/pioro 
+- https://github.com/savoir81
 
 ### Version 1.2.1, April 16, 2024
 
