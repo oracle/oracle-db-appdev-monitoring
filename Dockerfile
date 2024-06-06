@@ -34,6 +34,9 @@ ENV ORACLE_HOME /usr/lib/oracle/21/client64
 COPY --from=build /go/src/oracledb_exporter/oracle-db-appdev-monitoring /oracledb_exporter
 ADD ./default-metrics.toml /default-metrics.toml
 
+# create the mount point for alert log exports (default location)
+RUN mkdir /log && chown 1000:1000 /log
+
 EXPOSE 9161
 
 USER 1000

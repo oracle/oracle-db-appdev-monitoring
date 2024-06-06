@@ -27,6 +27,7 @@ import (
 	// Required for debugging
 	// _ "net/http/pprof"
 
+	"github.com/oracle/oracle-db-appdev-monitoring/alertlog"
 	"github.com/oracle/oracle-db-appdev-monitoring/collector"
 	"github.com/oracle/oracle-db-appdev-monitoring/vault"
 )
@@ -41,6 +42,8 @@ var (
 	maxIdleConns       = kingpin.Flag("database.maxIdleConns", "Number of maximum idle connections in the connection pool. (env: DATABASE_MAXIDLECONNS)").Default(getEnv("DATABASE_MAXIDLECONNS", "0")).Int()
 	maxOpenConns       = kingpin.Flag("database.maxOpenConns", "Number of maximum open connections in the connection pool. (env: DATABASE_MAXOPENCONNS)").Default(getEnv("DATABASE_MAXOPENCONNS", "10")).Int()
 	scrapeInterval     = kingpin.Flag("scrape.interval", "Interval between each scrape. Default is to scrape on collect requests").Default("0s").Duration()
+	logInterval        = kingpin.Flag("log.interval", "Interval between log updates (e.g. 5s).").Default("15s").Duration()
+	logDestination     = kingpin.Flag("log.destination", "File to output the alert log to. (env: LOG_DESTINATION)").Default(getEnv("LOG_DESTINATION", "/log/alert.log")).String()
 	toolkitFlags       = webflag.AddFlags(kingpin.CommandLine, ":9161")
 )
 
@@ -141,13 +144,29 @@ func main() {
 		defer memTicker.Stop()
 
 		go func() {
-			<-memTicker.C
-			level.Info(logger).Log("msg", "attempting to free OS memory")
-			debug.FreeOSMemory()
+			for {
+				<-memTicker.C
+				level.Info(logger).Log("msg", "attempting to free OS memory")
+				debug.FreeOSMemory()
+			}
 		}()
 
 	}
 
+	// start the log exporter
+	level.Info(logger).Log("msg", "Exporting alert logs to "+*logDestination)
+	logTicker := time.NewTicker(*logInterval)
+	defer logTicker.Stop()
+
+	go func() {
+		for {
+			<-logTicker.C
+			level.Debug(logger).Log("msg", "updating alert log")
+			alertlog.UpdateLog(*logDestination, logger, exporter.GetDB())
+		}
+	}()
+
+	// start the main server thread
 	server := &http.Server{}
 	if err := web.ListenAndServe(server, toolkitFlags, logger); err != nil {
 		level.Error(logger).Log("msg", "Listening error", "error", err)

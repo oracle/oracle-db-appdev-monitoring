@@ -142,7 +142,7 @@ func NewExporter(logger log.Logger, cfg *Config) (*Exporter, error) {
 		dbtypeGauge: prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: namespace,
 			Name:      "dbtype",
-			Help:      "Type of database the exporter is connected to (CDB or PDB).",
+			Help:      "Type of database the exporter is connected to (0=non-CDB, 1=CDB, >1=PDB).",
 		}),
 		logger: logger,
 		config: cfg,
@@ -379,10 +379,14 @@ func (e *Exporter) connect() error {
 	if err := db.QueryRow("select sys_context('USERENV', 'CON_ID') from dual").Scan(&result); err != nil {
 		level.Info(e.logger).Log("MARK", "dbtype err ="+string(err.Error()))
 	}
-	level.Info(e.logger).Log("MARK", "dbtype = "+string(result))
 	e.dbtype = result
 
 	return nil
+}
+
+// this is used by the log exporter to share the database connection
+func (e *Exporter) GetDB() *sql.DB {
+	return e.db
 }
 
 func (e *Exporter) checkIfMetricsChanged() bool {
