@@ -47,8 +47,8 @@ This release includes the following changes:
 
 Thank you to the following people for their suggestions and contributions:
 
-- @pioro 
-- @savoir81
+- [@pioro](https://github.com/pioro)
+- [@savoir81](https://github.com/savoir81)
 
 ### Version 1.2.1, April 16, 2024
 
