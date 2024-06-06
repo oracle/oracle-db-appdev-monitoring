@@ -882,7 +882,7 @@ Please consult the [security guide](./SECURITY.md) for our responsible security 
 
 ## License
 
-Copyright (c) 2016, 2023, Oracle and/or its affiliates.
+Copyright (c) 2016, 2024, Oracle and/or its affiliates.
 
 Released under the Universal Permissive License v1.0 as shown at
 <https://oss.oracle.com/licenses/upl/>
