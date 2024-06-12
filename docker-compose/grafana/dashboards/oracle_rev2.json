@@ -863,42 +863,41 @@
         "datasource": {
           "type": "prometheus"
         },
-        "description": "",
         "fieldConfig": {
           "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
             "custom": {
-              "axisCenteredZero": false,
-              "axisColorMode": "text",
-              "axisLabel": "",
-              "axisPlacement": "auto",
-              "barAlignment": 0,
               "drawStyle": "line",
+              "lineInterpolation": "linear",
+              "barAlignment": 0,
+              "lineWidth": 1,
               "fillOpacity": 72,
               "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
+              "spanNulls": true,
               "insertNulls": false,
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
+              "showPoints": "auto",
               "pointSize": 5,
+              "stacking": {
+                "mode": "normal",
+                "group": "A"
+              },
+              "axisPlacement": "auto",
+              "axisLabel": "",
+              "axisColorMode": "text",
               "scaleDistribution": {
                 "type": "linear"
               },
-              "showPoints": "auto",
-              "spanNulls": true,
-              "stacking": {
-                "group": "A",
-                "mode": "normal"
+              "axisCenteredZero": false,
+              "hideFrom": {
+                "tooltip": false,
+                "viz": false,
+                "legend": false
               },
               "thresholdsStyle": {
                 "mode": "off"
               }
+            },
+            "color": {
+              "mode": "palette-classic"
             },
             "mappings": [],
             "thresholds": {
@@ -926,15 +925,15 @@
         },
         "id": 21,
         "options": {
-          "legend": {
-            "calcs": [],
-            "displayMode": "list",
-            "placement": "bottom",
-            "showLegend": true
-          },
           "tooltip": {
             "mode": "single",
             "sort": "none"
+          },
+          "legend": {
+            "showLegend": true,
+            "displayMode": "list",
+            "placement": "bottom",
+            "calcs": []
           }
         },
         "targets": [
@@ -944,15 +943,16 @@
             },
             "disableTextWrap": false,
             "editorMode": "code",
-            "expr": "oracledb_wait_time_administrative",
+            "expr": "rate(oracledb_wait_time_administrative[$__rate_interval])",
             "format": "time_series",
             "fullMetaSearch": false,
             "includeNullMetadata": true,
             "instant": false,
-            "legendFormat": "{{__name__}}",
+            "legendFormat": "Administrative",
             "range": true,
             "refId": "A",
-            "useBackend": false
+            "useBackend": false,
+            "exemplar": false
           },
           {
             "datasource": {
@@ -960,15 +960,16 @@
             },
             "disableTextWrap": false,
             "editorMode": "builder",
-            "expr": "oracledb_wait_time_application",
+            "expr": "rate(oracledb_wait_time_application[$__rate_interval])",
             "fullMetaSearch": false,
             "hide": false,
-            "includeNullMetadata": true,
+            "includeNullMetadata": false,
             "instant": false,
-            "legendFormat": "{{__name__}}",
+            "legendFormat": "Application",
             "range": true,
             "refId": "B",
-            "useBackend": false
+            "useBackend": false,
+            "exemplar": false
           },
           {
             "datasource": {
@@ -976,15 +977,16 @@
             },
             "disableTextWrap": false,
             "editorMode": "builder",
-            "expr": "oracledb_wait_time_cluster",
+            "expr": "rate(oracledb_wait_time_cluster[$__rate_interval])",
             "fullMetaSearch": false,
             "hide": false,
-            "includeNullMetadata": true,
+            "includeNullMetadata": false,
             "instant": false,
-            "legendFormat": "{{__name__}}",
+            "legendFormat": "Cluster",
             "range": true,
             "refId": "C",
-            "useBackend": false
+            "useBackend": false,
+            "exemplar": false
           },
           {
             "datasource": {
@@ -992,15 +994,16 @@
             },
             "disableTextWrap": false,
             "editorMode": "builder",
-            "expr": "oracledb_wait_time_commit",
+            "expr": "rate(oracledb_wait_time_commit[$__rate_interval])",
             "fullMetaSearch": false,
             "hide": false,
-            "includeNullMetadata": true,
+            "includeNullMetadata": false,
             "instant": false,
-            "legendFormat": "{{__name__}}",
+            "legendFormat": "Commit",
             "range": true,
             "refId": "D",
-            "useBackend": false
+            "useBackend": false,
+            "exemplar": false
           },
           {
             "datasource": {
@@ -1008,15 +1011,16 @@
             },
             "disableTextWrap": false,
             "editorMode": "builder",
-            "expr": "oracledb_wait_time_concurrency",
+            "expr": "rate(oracledb_wait_time_concurrency[$__rate_interval])",
             "fullMetaSearch": false,
             "hide": false,
-            "includeNullMetadata": true,
+            "includeNullMetadata": false,
             "instant": false,
-            "legendFormat": "{{__name__}}",
+            "legendFormat": "Concurrency",
             "range": true,
             "refId": "E",
-            "useBackend": false
+            "useBackend": false,
+            "exemplar": false
           },
           {
             "datasource": {
@@ -1024,15 +1028,16 @@
             },
             "disableTextWrap": false,
             "editorMode": "builder",
-            "expr": "oracledb_wait_time_configuration",
+            "expr": "rate(oracledb_wait_time_configuration[$__rate_interval])",
             "fullMetaSearch": false,
             "hide": false,
-            "includeNullMetadata": true,
+            "includeNullMetadata": false,
             "instant": false,
-            "legendFormat": "{{__name__}}",
+            "legendFormat": "Configuration",
             "range": true,
             "refId": "F",
-            "useBackend": false
+            "useBackend": false,
+            "exemplar": false
           },
           {
             "datasource": {
@@ -1040,15 +1045,16 @@
             },
             "disableTextWrap": false,
             "editorMode": "builder",
-            "expr": "oracledb_wait_time_network",
+            "expr": "rate(oracledb_wait_time_network[$__rate_interval])",
             "fullMetaSearch": false,
             "hide": false,
-            "includeNullMetadata": true,
+            "includeNullMetadata": false,
             "instant": false,
-            "legendFormat": "{{__name__}}",
+            "legendFormat": "Network",
             "range": true,
             "refId": "G",
-            "useBackend": false
+            "useBackend": false,
+            "exemplar": false
           },
           {
             "datasource": {
@@ -1056,15 +1062,16 @@
             },
             "disableTextWrap": false,
             "editorMode": "builder",
-            "expr": "oracledb_wait_time_other",
+            "expr": "rate(oracledb_wait_time_other[$__rate_interval])",
             "fullMetaSearch": false,
             "hide": false,
-            "includeNullMetadata": true,
+            "includeNullMetadata": false,
             "instant": false,
-            "legendFormat": "{{__name__}}",
+            "legendFormat": "Other",
             "range": true,
             "refId": "H",
-            "useBackend": false
+            "useBackend": false,
+            "exemplar": false
           },
           {
             "datasource": {
@@ -1072,15 +1079,16 @@
             },
             "disableTextWrap": false,
             "editorMode": "builder",
-            "expr": "oracledb_wait_time_scheduler",
+            "expr": "rate(oracledb_wait_time_scheduler[$__rate_interval])",
             "fullMetaSearch": false,
             "hide": false,
-            "includeNullMetadata": true,
+            "includeNullMetadata": false,
             "instant": false,
-            "legendFormat": "{{__name__}}",
+            "legendFormat": "Scheduler",
             "range": true,
             "refId": "I",
-            "useBackend": false
+            "useBackend": false,
+            "exemplar": false
           },
           {
             "datasource": {
@@ -1088,15 +1096,16 @@
             },
             "disableTextWrap": false,
             "editorMode": "builder",
-            "expr": "oracledb_wait_time_user_io",
+            "expr": "rate(oracledb_wait_time_user_io[$__rate_interval])",
             "fullMetaSearch": false,
             "hide": false,
-            "includeNullMetadata": true,
+            "includeNullMetadata": false,
             "instant": false,
-            "legendFormat": "{{__name__}}",
+            "legendFormat": "User I/O",
             "range": true,
             "refId": "J",
-            "useBackend": false
+            "useBackend": false,
+            "exemplar": false
           },
           {
             "datasource": {
@@ -1104,16 +1113,17 @@
             },
             "disableTextWrap": false,
             "editorMode": "builder",
-            "expr": "oracledb_wait_time_system_io",
+            "expr": "rate(oracledb_wait_time_system_io[$__rate_interval])",
             "format": "time_series",
             "fullMetaSearch": false,
             "hide": false,
-            "includeNullMetadata": true,
+            "includeNullMetadata": false,
             "instant": false,
-            "legendFormat": "{{__name__}}",
+            "legendFormat": "System I/O",
             "range": true,
             "refId": "K",
-            "useBackend": false
+            "useBackend": false,
+            "exemplar": false
           }
         ],
         "title": "Database Wait Times",
@@ -1126,7 +1136,8 @@
             }
           }
         ],
-        "type": "timeseries"
+        "type": "timeseries",
+        "description": ""
       },
       {
         "collapsed": false,
