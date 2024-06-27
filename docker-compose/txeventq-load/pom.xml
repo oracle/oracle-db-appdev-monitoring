@@ -12,7 +12,7 @@
 	<artifactId>txeventq-load</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>txeventq-load</name>
-	<description>Demo project for Spring Boot</description>
+	<description>Create some load to demo TxEventQ dashboard</description>
 	<url/>
 	<licenses>
 		<license/>
@@ -33,6 +33,18 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.oracle.database.spring</groupId>
+			<artifactId>oracle-spring-boot-starter-aqjms</artifactId>
+			<version>23.4.0</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.oracle.database.spring</groupId>
+			<artifactId>oracle-spring-boot-starter-ucp</artifactId>
+			<version>23.4.0</version>
 		</dependency>
 
 		<dependency>

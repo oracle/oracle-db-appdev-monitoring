@@ -7,3 +7,4 @@ dist/
 oci8.pc
 *.skip
 .vscode
+**/target/
