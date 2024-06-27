@@ -1,4 +1,5 @@
 alter session set container=freepdb1;
+grant unlimited tablespace to pdbadmin;
 grant select_catalog_role to pdbadmin;
 grant execute on dbms_aq to pdbadmin;
 grant execute on dbms_aqadm to pdbadmin;
