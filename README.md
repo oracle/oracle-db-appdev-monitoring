@@ -835,7 +835,7 @@ A Grafana dashboard for Transactional Event Queues is provided [in this file](./
 
 The dashboard will look like this: 
 
-![](./doc/txeventq-dashboard.png)
+![](./doc/txeventq-dashboard-v2.png)
 
 ## Developer notes
 
