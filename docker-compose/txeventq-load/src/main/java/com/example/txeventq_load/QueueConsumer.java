@@ -10,73 +10,73 @@ public class QueueConsumer {
 
     private Random random = new Random();
     
-    @JmsListener(destination = "topic_0", containerFactory = "factory")
+    @JmsListener(destination = "topic_0", containerFactory = "factory", concurrency = "1")
     public void topic0(Object object) {
         try {
-            Thread.sleep(random.nextInt(1000));
+            Thread.sleep(random.nextInt(2000)+500);
         } catch (InterruptedException ignore) {}
     }
     
-    @JmsListener(destination = "topic_1", containerFactory = "factory")
+    @JmsListener(destination = "topic_1", containerFactory ="factory", concurrency = "1")
     public void topic1(Object object) {
         try {
-            Thread.sleep(random.nextInt(1000));
+            Thread.sleep(random.nextInt(2000)+500);
         } catch (InterruptedException ignore) {}
     }
 
-    @JmsListener(destination = "topic_2", containerFactory = "factory")
+    @JmsListener(destination = "topic_2", containerFactory ="factory", concurrency = "1")
     public void topic2(Object object) {
         try {
-            Thread.sleep(random.nextInt(1000));
+            Thread.sleep(random.nextInt(2000)+500);
         } catch (InterruptedException ignore) {}
     }
 
-    @JmsListener(destination = "topic_3", containerFactory = "factory")
+    @JmsListener(destination = "topic_3", containerFactory ="factory", concurrency = "1")
     public void topic3(Object object) {
         try {
-            Thread.sleep(random.nextInt(1000));
+            Thread.sleep(random.nextInt(2000)+500);
         } catch (InterruptedException ignore) {}
     }
 
-    @JmsListener(destination = "topic_4", containerFactory = "factory")
+    @JmsListener(destination = "topic_4", containerFactory ="factory", concurrency = "1")
     public void topic4(Object object) {
         try {
-            Thread.sleep(random.nextInt(1000));
+            Thread.sleep(random.nextInt(2000)+500);
         } catch (InterruptedException ignore) {}
     }
 
-    @JmsListener(destination = "topic_5", containerFactory = "factory")
+    @JmsListener(destination = "topic_5", containerFactory ="factory", concurrency = "1")
     public void topic5(Object object) {
         try {
-            Thread.sleep(random.nextInt(1000));
+            Thread.sleep(random.nextInt(2000)+500);
         } catch (InterruptedException ignore) {}
     }
 
-    @JmsListener(destination = "topic_6", containerFactory = "factory")
+    @JmsListener(destination = "topic_6", containerFactory ="factory", concurrency = "1")
     public void topic6(Object object) {
         try {
-            Thread.sleep(random.nextInt(1000));
+            Thread.sleep(random.nextInt(2000)+500);
         } catch (InterruptedException ignore) {}
     }
 
-    @JmsListener(destination = "topic_7", containerFactory = "factory")
+    @JmsListener(destination = "topic_7", containerFactory ="factory", concurrency = "1")
     public void topic7(Object object) {
         try {
-            Thread.sleep(random.nextInt(1000));
+            Thread.sleep(random.nextInt(2000)+500);
         } catch (InterruptedException ignore) {}
     }
 
-    @JmsListener(destination = "topic_8", containerFactory = "factory")
+    @JmsListener(destination = "topic_8", containerFactory ="factory", concurrency = "1")
     public void topic8(Object object) {
         try {
-            Thread.sleep(random.nextInt(1000));
+            Thread.sleep(random.nextInt(2000)+500);
         } catch (InterruptedException ignore) {}
     }
 
-    @JmsListener(destination = "topic_9", containerFactory = "factory")
+    @JmsListener(destination = "topic_9", containerFactory ="factory", concurrency = "1")
     public void topic9(Object object) {
         try {
-            Thread.sleep(random.nextInt(1000));
+            Thread.sleep(random.nextInt(2000)+500);
         } catch (InterruptedException ignore) {}
     }
 

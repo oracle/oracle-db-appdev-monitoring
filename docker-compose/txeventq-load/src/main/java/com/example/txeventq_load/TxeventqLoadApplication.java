@@ -91,7 +91,7 @@ public class TxeventqLoadApplication implements CommandLineRunner {
 		while (true) {
 			jmsTemplate.convertAndSend("topic_" + random.nextInt(NUM_TOPICS), animals.get(random.nextInt(animals.size())));
 			try {
-				Thread.sleep(random.nextInt(2000));
+				Thread.sleep(random.nextInt(300));
 			} catch (InterruptedException ignore) {}
 		}
 
