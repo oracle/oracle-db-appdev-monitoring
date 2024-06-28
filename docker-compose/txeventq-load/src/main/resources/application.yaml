@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: txeventq-load
+  threads:
+    virtual:
+      enabled: true
+
+  datasource:
+    url: jdbc:oracle:thin:@//172.23.0.3:1521/freepdb1
+    username: pdbadmin
+    password: Welcome12345
+    driver-class-name: oracle.jdbc.OracleDriver
+    type: oracle.ucp.jdbc.PoolDataSource
+    oracleucp:
+      connection-factory-class-name: oracle.jdbc.pool.OracleDataSource
+      connection-pool-name: TollReaderConnectionPool
+      initial-pool-size: 15
+      min-pool-size: 10
+      max-pool-size: 30

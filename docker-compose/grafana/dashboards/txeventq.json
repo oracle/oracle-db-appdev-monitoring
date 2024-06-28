@@ -1,14 +1,4 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_PROMETHEUS",
-      "label": "Prometheus",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    }
-  ],
   "annotations": {
     "list": [
       {
@@ -34,43 +24,10 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 28,
-  "iteration": 1655322497532,
+  "id": 2,
   "links": [],
   "liveNow": false,
   "panels": [
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "id": 96,
-      "options": {
-        "alertInstanceLabelFilter": "",
-        "alertName": "",
-        "dashboardAlerts": false,
-        "groupBy": [],
-        "groupMode": "default",
-        "maxItems": 20,
-        "sortOrder": 1,
-        "stateFilter": {
-          "error": true,
-          "firing": true,
-          "inactive": false,
-          "noData": false,
-          "normal": false,
-          "pending": true
-        }
-      },
-      "title": "Alerts",
-      "type": "alertlist"
-    },
     {
       "collapsed": false,
       "datasource": {
@@ -81,7 +38,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 0
       },
       "id": 64,
       "panels": [],
@@ -139,10 +96,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
+        "h": 4,
         "w": 4,
         "x": 0,
-        "y": 9
+        "y": 1
       },
       "id": 48,
       "links": [],
@@ -161,7 +118,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "8.5.3",
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "expr": "oracledb_teq_total_queues{inst_id=~\"[[instance]]\"}",
@@ -190,10 +147,10 @@
       "fill": 3,
       "fillGradient": 4,
       "gridPos": {
-        "h": 13,
-        "w": 12,
+        "h": 12,
+        "w": 16,
         "x": 4,
-        "y": 9
+        "y": 1
       },
       "hiddenSeries": false,
       "id": 56,
@@ -213,7 +170,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.5.3",
+      "pluginVersion": "10.1.1",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -317,10 +274,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
+        "h": 6,
         "w": 4,
-        "x": 16,
-        "y": 9
+        "x": 20,
+        "y": 1
       },
       "id": 12,
       "links": [],
@@ -339,7 +296,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "8.5.3",
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "expr": "sum(oracledb_teq_enqueued_msgs{inst_id=~\"[[instance]]\"})",
@@ -347,6 +304,68 @@
         }
       ],
       "title": "Overall Enqueue Messages",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "description": "The number of TxEventQs running",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 5
+      },
+      "id": 30,
+      "links": [],
+      "maxDataPoints": 100,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.1",
+      "targets": [
+        {
+          "expr": "oracledb_teq_total_queues{inst_id=~\"[[instance]]\"}",
+          "refId": "A"
+        }
+      ],
+      "title": "Total TxEventQ",
       "type": "stat"
     },
     {
@@ -390,10 +409,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
+        "h": 6,
         "w": 4,
         "x": 20,
-        "y": 9
+        "y": 7
       },
       "id": 49,
       "links": [],
@@ -412,7 +431,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "8.5.3",
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "expr": "sum(oracledb_teq_dequeued_msgs{inst_id=~\"[[instance]]\"})",
@@ -421,173 +440,6 @@
       ],
       "title": "Overall Dequeue Messages",
       "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "description": "The number of TxEventQs running",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 0,
-        "y": 14
-      },
-      "id": 30,
-      "links": [],
-      "maxDataPoints": 100,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.5.3",
-      "targets": [
-        {
-          "expr": "oracledb_teq_total_queues{inst_id=~\"[[instance]]\"}",
-          "refId": "A"
-        }
-      ],
-      "title": "Total TxEventQ",
-      "type": "stat"
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "description": "Approximate aggregate bytes-in/bytes-out rates for all TxEventQs",
-      "fieldConfig": {
-        "defaults": {
-          "links": []
-        },
-        "overrides": []
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 14
-      },
-      "hiddenSeries": false,
-      "id": 87,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "8.5.3",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "Total Bytes In Rate",
-          "yaxis": 1
-        },
-        {
-          "alias": "Total Bytes Out Rate",
-          "yaxis": 2
-        }
-      ],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "rate(oracledb_system_network_received_from_client{inst_id=~\"[[instance]]\"}[3m])",
-          "interval": "",
-          "legendFormat": "Total Bytes In Rate",
-          "refId": "A"
-        },
-        {
-          "expr": "rate(oracledb_system_network_sent_to_client{inst_id=~\"[[instance]]\"}[3m])",
-          "interval": "",
-          "legendFormat": "Total Bytes Out Rate",
-          "refId": "B"
-        }
-      ],
-      "thresholds": [],
-      "timeRegions": [],
-      "title": "Overall Bytes In/Bytes Out Rate",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "mode": "time",
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "decbytes",
-          "label": "Total Bytes In Rate (Bytes/Second)",
-          "logBase": 1,
-          "show": true
-        },
-        {
-          "format": "decbytes",
-          "label": "Total Bytes Out Rate (Bytes/Second)",
-          "logBase": 1,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false
-      }
     },
     {
       "datasource": {
@@ -622,7 +474,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 18
+        "y": 9
       },
       "id": 50,
       "links": [],
@@ -641,7 +493,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "8.5.3",
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "expr": "oracledb_teq_total_subscribers{inst_id=~\"[[instance]]\"}",
@@ -652,299 +504,235 @@
       "type": "stat"
     },
     {
-      "columns": [
-        {
-          "$$hashKey": "object:262",
-          "text": "Current",
-          "value": "current"
-        }
-      ],
       "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
+        "type": "prometheus"
       },
-      "description": "TxEventQ Quick Lookup Table: simply click on the metric name and order it increasingly or decreasingly, easy to identify a 'good' queue or a 'bad' queue.",
-      "fontSize": "150%",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Message Latency"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dequeue Rate / Enqueue Rate"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Enqueued Messages"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dequeued Messages"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              }
+            ]
+          }
+        ]
+      },
       "gridPos": {
-        "h": 8,
+        "h": 12,
         "w": 24,
         "x": 0,
-        "y": 22
+        "y": 13
       },
-      "id": 93,
-      "pageSize": 5,
-      "showHeader": true,
-      "sort": {
-        "desc": false
+      "id": 94,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "frameIndex": 0,
+        "showHeader": true
       },
-      "styles": [
-        {
-          "$$hashKey": "object:558",
-          "alias": "Queue Depth",
-          "align": "auto",
-          "colorMode": "value",
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 0,
-          "pattern": "Value #A",
-          "thresholds": [
-            ""
-          ],
-          "type": "number",
-          "unit": "short"
-        },
-        {
-          "$$hashKey": "object:559",
-          "alias": "Message Latency",
-          "align": "auto",
-          "colorMode": "value",
-          "colors": [
-            "#5794F2",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 0,
-          "mappingType": 1,
-          "pattern": "Value #D",
-          "thresholds": [],
-          "type": "number",
-          "unit": "ms"
-        },
-        {
-          "$$hashKey": "object:560",
-          "alias": "",
-          "align": "auto",
-          "colors": [
-            "rgba(245, 54, 54, 0.9)",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 2,
-          "mappingType": 1,
-          "pattern": "Time",
-          "thresholds": [],
-          "type": "hidden",
-          "unit": "short"
-        },
-        {
-          "$$hashKey": "object:561",
-          "alias": "Enqueue Rate",
-          "align": "auto",
-          "colorMode": "value",
-          "colors": [
-            "#73BF69",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 2,
-          "mappingType": 1,
-          "pattern": "Value #B",
-          "thresholds": [],
-          "type": "number",
-          "unit": "short"
-        },
-        {
-          "$$hashKey": "object:562",
-          "alias": "Dequeue Rate",
-          "align": "auto",
-          "colorMode": "value",
-          "colors": [
-            "#FF9830",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 2,
-          "mappingType": 1,
-          "pattern": "Value #C",
-          "thresholds": [],
-          "type": "number",
-          "unit": "short"
-        },
-        {
-          "$$hashKey": "object:563",
-          "alias": "Enqueue Message",
-          "align": "auto",
-          "colorMode": "value",
-          "colors": [
-            "rgba(245, 54, 54, 0.9)",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 3,
-          "mappingType": 1,
-          "pattern": "Value #E",
-          "thresholds": [],
-          "type": "number",
-          "unit": "short"
-        },
-        {
-          "$$hashKey": "object:564",
-          "alias": "Dequeue Message",
-          "align": "auto",
-          "colorMode": "value",
-          "colors": [
-            "rgba(245, 54, 54, 0.9)",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 3,
-          "mappingType": 1,
-          "pattern": "Value #F",
-          "thresholds": [],
-          "type": "number",
-          "unit": "short"
-        },
-        {
-          "$$hashKey": "object:637",
-          "alias": "Deq Rate / Enq Rate",
-          "align": "auto",
-          "colors": [
-            "rgba(245, 54, 54, 0.9)",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 3,
-          "mappingType": 1,
-          "pattern": "Value #G",
-          "thresholds": [],
-          "type": "number",
-          "unit": "short"
-        },
-        {
-          "$$hashKey": "object:6725",
-          "alias": "Enq-Deq",
-          "align": "auto",
-          "colors": [
-            "rgba(245, 54, 54, 0.9)",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 2,
-          "mappingType": 1,
-          "pattern": "Value #H",
-          "thresholds": [],
-          "type": "number",
-          "unit": "short"
-        }
-      ],
+      "pluginVersion": "10.1.1",
       "targets": [
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "Prometheus"
+            "type": "prometheus"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "sum(oracledb_teq_remained_msgs) by (queue_name)",
           "format": "table",
           "instant": true,
-          "interval": "",
           "legendFormat": "{{queue_name}}",
+          "range": false,
           "refId": "A"
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "Prometheus"
+            "type": "prometheus"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "sum(oracledb_teq_message_latency_1) by (queue_name)",
           "format": "table",
+          "hide": false,
           "instant": true,
-          "interval": "",
           "legendFormat": "{{queue_name}}",
-          "refId": "D"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "Prometheus"
-          },
-          "exemplar": false,
-          "expr": "sum(rate(oracledb_teq_enqueued_msgs[3m])) by (queue_name)",
-          "format": "table",
-          "instant": true,
-          "interval": "",
-          "legendFormat": "{{queue_name}}",
+          "range": false,
           "refId": "B"
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "Prometheus"
+            "type": "prometheus"
           },
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(rate(oracledb_teq_dequeued_msgs[3m])) by (queue_name)",
+          "expr": "sum(rate(oracledb_teq_enqueued_msgs[3m])) by (queue_name)",
           "format": "table",
+          "hide": false,
           "instant": true,
-          "interval": "",
           "legendFormat": "{{queue_name}}",
+          "range": false,
           "refId": "C"
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "Prometheus"
+            "type": "prometheus"
           },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "sum(rate(oracledb_teq_dequeued_msgs[3m])) by (queue_name)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "{{queue_name}}",
+          "range": false,
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus"
+          },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "sum(oracledb_teq_enqueued_msgs) by (queue_name)",
           "format": "table",
+          "hide": false,
           "instant": true,
-          "interval": "",
-          "legendFormat": "",
+          "legendFormat": "{{queue_name}}",
+          "range": false,
           "refId": "E"
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "Prometheus"
+            "type": "prometheus"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "sum(oracledb_teq_dequeued_msgs) by (queue_name)",
           "format": "table",
+          "hide": false,
           "instant": true,
-          "interval": "",
-          "legendFormat": "",
+          "legendFormat": "{{queue_name}}",
+          "range": false,
           "refId": "F"
         },
         {
           "datasource": {
-            "type": "prometheus",
-            "uid": "Prometheus"
+            "type": "prometheus"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "sum(rate(oracledb_teq_dequeued_msgs[3m]))  by (queue_name) / sum(rate(oracledb_teq_enqueued_msgs[3m])) by (queue_name) ",
           "format": "table",
           "hide": false,
           "instant": true,
-          "interval": "",
           "legendFormat": "{{queue_name}}",
+          "range": false,
           "refId": "G"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "Prometheus"
-          },
-          "exemplar": false,
-          "expr": "sum(oracledb_teq_enqueued_msgs) by (queue_name) - sum(oracledb_teq_dequeued_msgs) by (queue_name)",
-          "format": "table",
-          "hide": false,
-          "instant": true,
-          "interval": "",
-          "legendFormat": "{{queue_name}}",
-          "refId": "H"
         }
       ],
-      "title": "TxEventQ Quick Lookup Table ",
-      "transform": "table",
-      "type": "table-old"
+      "title": "TxEventQ Overall Metrics",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {},
+            "renameByName": {
+              "Value #A": "Queue Depth",
+              "Value #B": "Message Latency",
+              "Value #C": "Enqueue Rate",
+              "Value #D": "Dequeue Rate",
+              "Value #E": "Enqueued Messages",
+              "Value #F": "Dequeued Messages",
+              "Value #G": "Dequeue Rate / Enqueue Rate",
+              "queue_name": "Queue Name"
+            }
+          }
+        }
+      ],
+      "type": "table"
     },
     {
       "collapsed": false,
@@ -956,7 +744,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 30
+        "y": 25
       },
       "id": 34,
       "panels": [],
@@ -985,7 +773,7 @@
         "h": 9,
         "w": 9,
         "x": 0,
-        "y": 31
+        "y": 26
       },
       "hiddenSeries": false,
       "id": 36,
@@ -1005,7 +793,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.5.3",
+      "pluginVersion": "10.1.1",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1090,7 +878,7 @@
         "h": 9,
         "w": 9,
         "x": 9,
-        "y": 31
+        "y": 26
       },
       "hiddenSeries": false,
       "id": 38,
@@ -1110,7 +898,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.5.3",
+      "pluginVersion": "10.1.1",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1183,14 +971,19 @@
         "h": 2,
         "w": 6,
         "x": 18,
-        "y": 31
+        "y": 26
       },
       "id": 45,
       "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
         "content": "<div style=\"text-align: center;\"><span style=\"color:green\"><b>$queue</b></span></div>",
         "mode": "html"
       },
-      "pluginVersion": "8.5.3",
+      "pluginVersion": "10.1.1",
       "title": "TxEventQ Name",
       "type": "text"
     },
@@ -1204,14 +997,19 @@
         "h": 2,
         "w": 6,
         "x": 18,
-        "y": 33
+        "y": 28
       },
       "id": 46,
       "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
         "content": "<div style=\"text-align: center;\"><span style=\"color:green\"><b>$subscriber</b></span></div>",
         "mode": "html"
       },
-      "pluginVersion": "8.5.3",
+      "pluginVersion": "10.1.1",
       "title": "Subscriber Name",
       "type": "text"
     },
@@ -1237,7 +1035,7 @@
         "h": 6,
         "w": 6,
         "x": 18,
-        "y": 35
+        "y": 30
       },
       "hiddenSeries": false,
       "id": 83,
@@ -1257,7 +1055,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.5.3",
+      "pluginVersion": "10.1.1",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1307,7 +1105,7 @@
     }
   ],
   "refresh": "5s",
-  "schemaVersion": 36,
+  "schemaVersion": 38,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -1316,8 +1114,8 @@
         "allValue": "1 | 2 | 3",
         "current": {
           "selected": false,
-          "text": "2",
-          "value": "2"
+          "text": "1",
+          "value": "1"
         },
         "datasource": {
           "type": "prometheus",
@@ -1346,8 +1144,8 @@
       {
         "current": {
           "selected": false,
-          "text": "INVENTORYQUEUE",
-          "value": "INVENTORYQUEUE"
+          "text": "TOPIC_1",
+          "value": "TOPIC_1"
         },
         "datasource": {
           "type": "prometheus",
@@ -1376,8 +1174,8 @@
       {
         "current": {
           "selected": false,
-          "text": "1",
-          "value": "1"
+          "text": "0",
+          "value": "0"
         },
         "datasource": {
           "type": "prometheus",
@@ -1460,11 +1258,22 @@
         "tagsQuery": "",
         "type": "query",
         "useTags": false
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "Prometheus"
+        },
+        "filters": [],
+        "hide": 0,
+        "name": "Filters",
+        "skipUrlSync": false,
+        "type": "adhoc"
       }
     ]
   },
   "time": {
-    "from": "now-30m",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {
@@ -1484,6 +1293,6 @@
   "timezone": "",
   "title": "TxEventQ Monitor",
   "uid": "b6momtbWk",
-  "version": 2,
+  "version": 1,
   "weekStart": ""
 }

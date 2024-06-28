@@ -746,7 +746,7 @@ The exporter includes a set of metrics for monitoring TxEventQ and a pre-built G
 
 > Note: The metrics are written for Oracle Database 21c or later. 
 
-### How to create a topic
+### How to create some traffic with PL/SQL
 
 If you need to create a topic to monitor, you can use these statements to create and start a topic, and create a subscriber:
 
@@ -807,6 +807,19 @@ begin
 end;
 ```
 
+### How to create some traffic with Java (Spring Boot)
+
+A simple load generator is provided in [this directory](./docker-compose/txeventq-load/) which you can use to create some traffic so you can experiment with the sample dashboard.
+
+To run the sample, first update [application.yaml](./docker-compose/txeventq-load/src/main/resources/application.yaml) with the correct IP address for your database, then start the application as follows:
+
+```bash
+mvn spring-boot:run
+```
+
+The application will create ten queues names TOPIC_0 through TOPIC_9 and randomly produce and consume messages on those queues.  The example dashboard shown below was monitoring traffic produced using this application.
+
+
 ### Metrics definitions
 
 The metrics definitions are provided in [this file](./custom-metrics-example/txeventq-metrics.toml).  You need to provide this file to the exporter, e.g., by adding it to your container image, or creating a Kubernetes config map containing the file and mounting that config map as a volume in your deployment.  You also need to set the `CUSTOM_METRICS` environment variable to the location of this file. 
@@ -835,7 +848,7 @@ A Grafana dashboard for Transactional Event Queues is provided [in this file](./
 
 The dashboard will look like this: 
 
-![](./doc/txeventq-dashboard.png)
+![](./doc/txeventq-dashboard-v2.png)
 
 ## Developer notes
 
