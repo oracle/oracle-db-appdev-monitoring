@@ -319,7 +319,7 @@ oracledb_wait_time_user_io 24.5
 
 ## Database permissions required
 
-For the built-in default metrics, the database user that the exporter uses to connect to the Oracle Database instance must have the `SELECT_CATALOG_ROLE` privilege and/or `SELECT` permission on the following tables.
+For the built-in default metrics, the database user that the exporter uses to connect to the Oracle Database instance must have the `SELECT_CATALOG_ROLE` privilege and/or `SELECT` permission on the following objects:
 
 - dba_tablespace_usage_metrics
 - dba_tablespaces
@@ -331,6 +331,10 @@ For the built-in default metrics, the database user that the exporter uses to co
 - v$waitclassmetric
 - v$session
 - v$resource_limit
+- v$parameter
+- v$database
+- v$sqlstats
+- v$sysmetric
 - v$diag_alert_ext (for alert logs only)
 
 ## Alert logs
