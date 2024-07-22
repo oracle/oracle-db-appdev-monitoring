@@ -317,6 +317,7 @@ For the built-in default metrics, the database user that the exporter uses to co
 - v$waitclassmetric
 - v$session
 - v$resource_limit
+- v$diag_alert_ext (for alert logs only)
 
 ## Alert logs
 
@@ -352,6 +353,8 @@ Here is an example of the output:
 {"timestamp":"2023-09-02T05:40:43.644Z","moduleId":"","ecid":"","message":"        4K       Configured               5           391529        NONE"}
 {"timestamp":"2023-09-02T05:40:43.644Z","moduleId":"","ecid":"","message":"     2048K                0             766                0        NONE"}
 ```
+
+You may disable alert logs by setting the parameter `log.disable` to `1`.
 
 ## Installation
 
