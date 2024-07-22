@@ -42,6 +42,7 @@ var (
 	maxIdleConns       = kingpin.Flag("database.maxIdleConns", "Number of maximum idle connections in the connection pool. (env: DATABASE_MAXIDLECONNS)").Default(getEnv("DATABASE_MAXIDLECONNS", "0")).Int()
 	maxOpenConns       = kingpin.Flag("database.maxOpenConns", "Number of maximum open connections in the connection pool. (env: DATABASE_MAXOPENCONNS)").Default(getEnv("DATABASE_MAXOPENCONNS", "10")).Int()
 	scrapeInterval     = kingpin.Flag("scrape.interval", "Interval between each scrape. Default is to scrape on collect requests").Default("0s").Duration()
+	logDisable         = kingpin.Flag("log.disable", "Set to 1 to disable alert logs").Default("0").Int()
 	logInterval        = kingpin.Flag("log.interval", "Interval between log updates (e.g. 5s).").Default("15s").Duration()
 	logDestination     = kingpin.Flag("log.destination", "File to output the alert log to. (env: LOG_DESTINATION)").Default(getEnv("LOG_DESTINATION", "/log/alert.log")).String()
 	toolkitFlags       = webflag.AddFlags(kingpin.CommandLine, ":9161")
@@ -156,17 +157,21 @@ func main() {
 	}
 
 	// start the log exporter
-	level.Info(logger).Log("msg", "Exporting alert logs to "+*logDestination)
-	logTicker := time.NewTicker(*logInterval)
-	defer logTicker.Stop()
+	if *logDisable == 1 {
+		level.Info(logger).Log("msg", "log.disable set to 1, so will not export the alert logs")
+	} else {
+		level.Info(logger).Log("msg", "Exporting alert logs to "+*logDestination)
+		logTicker := time.NewTicker(*logInterval)
+		defer logTicker.Stop()
 
-	go func() {
-		for {
-			<-logTicker.C
-			level.Debug(logger).Log("msg", "updating alert log")
-			alertlog.UpdateLog(*logDestination, logger, exporter.GetDB())
-		}
-	}()
+		go func() {
+			for {
+				<-logTicker.C
+				level.Debug(logger).Log("msg", "updating alert log")
+				alertlog.UpdateLog(*logDestination, logger, exporter.GetDB())
+			}
+		}()
+	}
 
 	// start the main server thread
 	server := &http.Server{}
@@ -174,6 +179,7 @@ func main() {
 		level.Error(logger).Log("msg", "Listening error", "error", err)
 		os.Exit(1)
 	}
+
 }
 
 // getEnv returns the value of an environment variable, or returns the provided fallback value

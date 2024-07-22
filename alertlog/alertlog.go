@@ -23,7 +23,19 @@ type LogRecord struct {
 	Message   string `json:"message"`
 }
 
+var queryFailures int = 0
+
 func UpdateLog(logDestination string, logger log.Logger, db *sql.DB) {
+
+	if queryFailures == 3 {
+		level.Info(logger).Log("msg", "Failed to query the alert log three consecutive times, so will not try any more")
+		queryFailures++
+		return
+	}
+
+	if queryFailures > 3 {
+		return
+	}
 
 	// check if the log file exists, and if not, create it
 	if _, err := os.Stat(logDestination); errors.Is(err, os.ErrNotExist) {
@@ -101,6 +113,7 @@ func UpdateLog(logDestination string, logger log.Logger, db *sql.DB) {
 	rows, err := db.Query(stmt)
 	if err != nil {
 		level.Error(logger).Log("msg", "Error querying the alert logs")
+		queryFailures++
 		return
 	}
 	defer rows.Close()
@@ -111,9 +124,9 @@ func UpdateLog(logDestination string, logger log.Logger, db *sql.DB) {
 		level.Error(logger).Log("msg", "Could not open log file for writing: "+logDestination)
 		return
 	}
-
 	defer outfile.Close()
 
+	queryFailures = 0
 	for rows.Next() {
 		var newRecord LogRecord
 		if err := rows.Scan(&newRecord.Timestamp, &newRecord.ModuleId, &newRecord.ECID, &newRecord.Message); err != nil {
@@ -138,5 +151,6 @@ func UpdateLog(logDestination string, logger log.Logger, db *sql.DB) {
 
 	if err = rows.Err(); err != nil {
 		level.Error(logger).Log("msg", "Error querying the alert logs")
+		queryFailures++
 	}
 }
