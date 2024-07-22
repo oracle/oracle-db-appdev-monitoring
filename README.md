@@ -28,6 +28,19 @@ Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 
 ## Release Notes
 
+### Version 1.3.1, July 22, 2024
+
+This release includes the following changes:
+
+- Alert logs can be disabled by setting parameter `log.disable` to `1`.
+- Updated the list of required permissions.
+- Updated the TxEventQ sample dashboard.
+- Updated some third-party dependencies.
+
+Thank you to the following people for their suggestions and contributions:
+
+- [@tux-jochen](https://github.com/tux-jochen)
+
 ### Version 1.3.0, June 7, 2024
 
 This release includes the following changes:
@@ -425,7 +438,7 @@ docker run -it --rm \
     -e DB_PASSWORD=Welcome12345 \
     -e DB_CONNECT_STRING=free23c:1521/freepdb \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:1.3.0
+    container-registry.oracle.com/database/observability-exporter:1.3.1
 ```
 
 ##### Using a wallet
@@ -452,7 +465,7 @@ docker run -it --rm \
     -e DB_CONNECT_STRING=devdb_tp \
     -v ./wallet:/wallet \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:1.3.0
+    container-registry.oracle.com/database/observability-exporter:1.3.1
 ```
 
 
@@ -715,7 +728,7 @@ An exmaple of [custom metrics for Transacational Event Queues](./custom-metrics-
 If you run the exporter as a container image and want to include your custom metrics in the image itself, you can use the following example `Dockerfile` to create a new image:
 
 ```Dockerfile
-FROM container-registry.oracle.com/database/observability-exporter:1.3.0
+FROM container-registry.oracle.com/database/observability-exporter:1.3.1
 COPY custom-metrics.toml /
 ENTRYPOINT ["/oracledb_exporter", "--custom.metrics", "/custom-metrics.toml"]
 ```
