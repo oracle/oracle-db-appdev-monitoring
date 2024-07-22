@@ -33,6 +33,7 @@ Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 This release includes the following changes:
 
 - Alert logs can be disabled by setting parameter `log.disable` to `1`.
+- Alert log exporter will stop if it gets three consecutive failures.
 - Updated the list of required permissions.
 - Updated the TxEventQ sample dashboard.
 - Updated some third-party dependencies.
