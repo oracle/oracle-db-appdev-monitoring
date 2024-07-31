@@ -391,6 +391,12 @@ You can run the exporter in a local container using a conatiner image from [Orac
 
 If you need an Oracle Database to test the exporter, you can use this command to start up an instance of [Oracle Database 23ai Free](https://www.oracle.com/database/free/) which also requires no authentication or license presentment/acceptance to pull the image.
 
+If you are running on a Mac with an Mx processor you need to install and run [colima] (https://github.com/abiosoft/colima) to make the 23a Free database run in the Mac platform. Run this command to start colima:
+
+```bash
+colima start --arch x86_64 --memory 8 --vm-type=vz --mount-type virtiofs
+```
+
 ```bash
 docker run --name free23ai \
     -d \
@@ -477,6 +483,11 @@ docker run -it --rm \
 ### Test/demo environment with Docker Compose
 
 If you would like to set up a test environment with the exporter, you can use the provided "Docker Compose" file in this repository which will start an Oracle Database instance, the exporter, Prometheus and Grafana.
+
+If you are running on a Mac with an Mx processor you need to install and run [colima] (https://github.com/abiosoft/colima) to make the 23a Free database run in the Mac platform. Run this command to start colima:
+
+```bash
+colima start --arch x86_64 --memory 8 --vm-type=vz --mount-type virtiofs
 
 ```bash
 cd docker-compose
