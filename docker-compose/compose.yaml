@@ -26,9 +26,9 @@ services:
       - ./grafana/dashboard.yaml:/etc/grafana/provisioning/dashboards/main.yaml
       - ./grafana/dashboards:/var/lib/grafana/dashboards
 
-  free23c:
+  free23ai:
     image: container-registry.oracle.com/database/free:latest
-    container_name: free23c
+    container_name: free23ai
     ports:
       - 1521:1521
     environment:
@@ -50,12 +50,12 @@ services:
     environment:
       - DB_USERNAME=pdbadmin
       - DB_PASSWORD=Welcome12345
-      - DB_CONNECT_STRING=free23c:1521/freepdb1
+      - DB_CONNECT_STRING=free23ai:1521/freepdb1
       - CUSTOM_METRICS=/exporter/txeventq-metrics.toml
     volumes:
       - ./exporter:/exporter
     depends_on: 
-      free23c:
+      free23ai:
         condition: service_healthy
 
 volumes:
