@@ -389,10 +389,16 @@ You can run the exporter in a local container using a conatiner image from [Orac
 
 #### Oracle Database 
 
-If you need an Oracle Database to test the exporter, you can use this command to start up an instance of [Oracle Database 23c Free](https://www.oracle.com/database/free/) which also requires no authentication or license presentment/acceptance to pull the image.
+If you need an Oracle Database to test the exporter, you can use this command to start up an instance of [Oracle Database 23ai Free](https://www.oracle.com/database/free/) which also requires no authentication or license presentment/acceptance to pull the image.
+
+If you are running on a Mac with an Mx processor you need to install and run [colima] (https://github.com/abiosoft/colima) to make the 23a Free database run in the Mac platform. Run this command to start colima:
 
 ```bash
-docker run --name free23c \
+colima start --arch x86_64 --memory 8 --vm-type=vz --mount-type virtiofs
+```
+
+```bash
+docker run --name free23ai \
     -d \
     -p 1521:1521 \
     -e ORACLE_PWD=Welcome12345 \
@@ -404,7 +410,7 @@ This will pull the image and start up the database with a listener on port 1521.
 You can tail the logs to see when the database is ready to use:
 
 ```bash
-docker logs -f free23c
+docker logs -f free23ai
 
 (look for this message...)
 #########################
@@ -415,7 +421,7 @@ DATABASE IS READY TO USE!
 To obtain the IP address of the container, which you will need to connect to the database, use this command.  Note: depending on your platform and container runtime, you may be able to access the database at "localhost":
 
 ```bash
-docker inspect free23c | grep IPA
+docker inspect free23ai | grep IPA
     "SecondaryIPAddresses": null,
     "IPAddress": "172.17.0.2",
             "IPAMConfig": null,
@@ -432,7 +438,7 @@ For a simple connection, you will provide the details using these variables:
 
 - `DB_USERNAME` is the database username, e.g., `pdbadmin`
 - `DB_PASSWORD` is the password for that user, e.g., `Welcome12345`
-- `DB_CONNECT_STRING` is the connection string, e.g., `free23c:1521/freepdb`
+- `DB_CONNECT_STRING` is the connection string, e.g., `free23ai:1521/freepdb`
 - `DB_ROLE` (Optional) can be set to `SYSDBA` or `SYSOPER` if you want to connect with one of those roles, however Oracle recommends that you connect with the lowest possible privileges and roles necessary for the exporter to run.
 
 To run the exporter in a container and expose the port, use a command like this, with the appropriate values for the environment variables:
@@ -441,7 +447,7 @@ To run the exporter in a container and expose the port, use a command like this,
 docker run -it --rm \
     -e DB_USERNAME=pdbadmin \
     -e DB_PASSWORD=Welcome12345 \
-    -e DB_CONNECT_STRING=free23c:1521/freepdb \
+    -e DB_CONNECT_STRING=free23ai:1521/freepdb \
     -p 9161:9161 \
     container-registry.oracle.com/database/observability-exporter:1.3.1
 ```
@@ -477,6 +483,11 @@ docker run -it --rm \
 ### Test/demo environment with Docker Compose
 
 If you would like to set up a test environment with the exporter, you can use the provided "Docker Compose" file in this repository which will start an Oracle Database instance, the exporter, Prometheus and Grafana.
+
+If you are running on a Mac with an Mx processor you need to install and run [colima] (https://github.com/abiosoft/colima) to make the 23a Free database run in the Mac platform. Run this command to start colima:
+
+```bash
+colima start --arch x86_64 --memory 8 --vm-type=vz --mount-type virtiofs
 
 ```bash
 cd docker-compose
