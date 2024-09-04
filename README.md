@@ -621,7 +621,7 @@ Usage of oracledb_exporter:
   --log.level value
        	Only log messages with the given severity or above. Valid levels: [debug, info, warn, error, fatal].
   --custom.metrics string
-        File that may contain various custom metrics in a TOML file.
+        Comma separated list of file(s) that contain various custom metrics in a TOML format.
   --default.metrics string
         Default TOML file metrics.
   --web.systemd-socket
@@ -634,6 +634,8 @@ Usage of oracledb_exporter:
         Number of maximum idle connections in the connection pool. (default "0")
   --database.maxOpenConns string
         Number of maximum open connections in the connection pool. (default "10")
+  --query.timeout int
+        Query timeout (in seconds).
   --web.config.file
         Path to configuration file that can enable TLS or authentication.
 ```
@@ -654,12 +656,21 @@ exporter, you can:
 - Use `--custom.metrics` flag followed by a comma separated list of TOML files, or
 - Export `CUSTOM_METRICS` variable environment (`export CUSTOM_METRICS=my-custom-metrics.toml,my-other-custom-metrics.toml`)
 
-This file must contain the following elements:
+Custom metrics file must contain a series of `[[metric]]` definitions, in TOML. Each metric definition must follow the custom metric schema:
 
-- One or several metric sections (`[[metric]]`)
-- For each section: a context, a request and a map between the field(s) in the request and comment(s).
+| Field Name       | Description                                                                                                                                                                                | Type                              | Required | Default                      |
+|------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------|----------|------------------------------|
+| context          | Metric context, used to build metric FQN                                                                                                                                                   | String                            | Yes      |                              |
+| labels           | Metric labels, which must match column names in the query. Any column that is not a label will be parsed as a metric                                                                       | Array of Strings                  | No       |                              |
+| metricsdesc      | Mapping between field(s) in the request and comment(s)                                                                                                                                     | Dictionary of Strings             | Yes      |                              |
+| metricstype      | Mapping between field(s) in the request and [Prometheus metric types](https://prometheus.io/docs/concepts/metric_types/)                                                                   | Dictionary of Strings             | No       |                              |
+| metricsbuckets   | Split [histogram](https://prometheus.io/docs/concepts/metric_types/#histogram) metric types into buckets based on value ([example](./custom-metrics-example/metric-histogram-example.toml)) | Dictionary of String dictionaries | No       |                              |
+| fieldtoappend    | Field from the request to append to the metric FQN                                                                                                                                         | String                            | No       |                              |
+| request          | Oracle database query to run for metrics scraping                                                                                                                                          | String                            | Yes      |                              |
+| ignorezeroresult | Whether or not an error will be printed if the request does not return any results                                                                                                         | Boolean                           | No       | false                        |
+| querytimeout     | Oracle Database query timeout, in seconds                                                                                                                                                  | Integer                           | No       | 5, or value of query.timeout |
 
-Here's a simple example:
+Here's a simple example of a metric definition:
 
 ```
 [[metric]]
