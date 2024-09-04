@@ -648,11 +648,11 @@ variables:
 
 ## Custom metrics
 
-The exporter allows definition of arbitrary custom metrics in a TOML file. To specify this file to the
+The exporter allows definition of arbitrary custom metrics in one or more TOML files. To specify this file to the
 exporter, you can:
 
-- Use `--custom.metrics` flag followed by the name of the TOML file, or
-- Export `CUSTOM_METRICS` variable environment (`export CUSTOM_METRICS=my-custom-metrics.toml`)
+- Use `--custom.metrics` flag followed by a comma separated list of TOML files, or
+- Export `CUSTOM_METRICS` variable environment (`export CUSTOM_METRICS=my-custom-metrics.toml,my-other-custom-metrics.toml`)
 
 This file must contain the following elements:
 
