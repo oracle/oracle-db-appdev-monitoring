@@ -25,7 +25,8 @@ LABEL org.opencontainers.image.description="Oracle Database Observability Export
 ENV VERSION ${VERSION:-1.0.0}
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN microdnf install -y oracle-instantclient-release-el8 && microdnf install -y oracle-instantclient-basic
+RUN microdnf install -y oracle-instantclient-release-el8 && microdnf install -y oracle-instantclient-basic && \
+    microdnf install glibc-2.28-251.0.2.el8_10.4
 
 ENV LD_LIBRARY_PATH /usr/lib/oracle/21/client64/lib
 ENV PATH $PATH:/usr/lib/oracle/21/client64/bin

@@ -28,6 +28,16 @@ Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 
 ## Release Notes
 
+### Version 1.4.0, September 4, 2024
+
+This release includes the following changes:
+
+- Allow mulitple custom metrics defintion files.
+- Allow query timeout per-metric.
+- Allow scrape interval per-metric.
+- Updated some third-party dependencies.
+
+
 ### Version 1.3.1, July 22, 2024
 
 This release includes the following changes:
