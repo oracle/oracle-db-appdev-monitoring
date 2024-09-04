@@ -668,7 +668,7 @@ Custom metrics file must contain a series of `[[metric]]` definitions, in TOML. 
 | fieldtoappend    | Field from the request to append to the metric FQN                                                                                                                                          | String                            | No       |                              |
 | request          | Oracle database query to run for metrics scraping                                                                                                                                           | String                            | Yes      |                              |
 | ignorezeroresult | Whether or not an error will be printed if the request does not return any results                                                                                                          | Boolean                           | No       | false                        |
-| querytimeout     | Oracle Database query timeout, in seconds                                                                                                                                                   |                                   | No       | 5, or value of query.timeout |
+| querytimeout     | Oracle Database query timeout, in seconds                                                                                                                                                   | Integer                           | No       | 5, or value of query.timeout |
 
 Here's a simple example of a metric definition:
 
