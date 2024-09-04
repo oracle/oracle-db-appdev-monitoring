@@ -44,6 +44,7 @@ type Exporter struct {
 	dbtypeGauge     prometheus.Gauge
 	db              *sql.DB
 	logger          log.Logger
+	lastTick        *time.Time
 }
 
 // Config is the configuration of the exporter
@@ -81,7 +82,8 @@ type Metric struct {
 	FieldToAppend    string
 	Request          string
 	IgnoreZeroResult bool
-	QueryTimeout     int
+	QueryTimeout     string
+	ScrapeInterval   string
 }
 
 // Metrics is a container structure for prometheus metrics
@@ -199,7 +201,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	// otherwise do a normal scrape per request
 	e.mu.Lock() // ensure no simultaneous scrapes
 	defer e.mu.Unlock()
-	e.scrape(ch)
+	e.scrape(ch, nil)
 	ch <- e.duration
 	ch <- e.totalScrapes
 	ch <- e.error
@@ -217,9 +219,11 @@ func (e *Exporter) RunScheduledScrapes(ctx context.Context, si time.Duration) {
 
 	for {
 		select {
-		case <-ticker.C:
+		case tick := <-ticker.C:
+
 			e.mu.Lock() // ensure no simultaneous scrapes
-			e.scheduledScrape()
+			e.scheduledScrape(&tick)
+			e.lastTick = &tick
 			e.mu.Unlock()
 		case <-ctx.Done():
 			return
@@ -227,7 +231,7 @@ func (e *Exporter) RunScheduledScrapes(ctx context.Context, si time.Duration) {
 	}
 }
 
-func (e *Exporter) scheduledScrape() {
+func (e *Exporter) scheduledScrape(tick *time.Time) {
 	metricCh := make(chan prometheus.Metric, 5)
 
 	wg := &sync.WaitGroup{}
@@ -244,7 +248,7 @@ func (e *Exporter) scheduledScrape() {
 			return
 		}
 	}()
-	e.scrape(metricCh)
+	e.scrape(metricCh, tick)
 
 	// report metadata metrics
 	metricCh <- e.duration
@@ -252,12 +256,11 @@ func (e *Exporter) scheduledScrape() {
 	metricCh <- e.error
 	e.scrapeErrors.Collect(metricCh)
 	metricCh <- e.up
-
 	close(metricCh)
 	wg.Wait()
 }
 
-func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
+func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 	e.totalScrapes.Inc()
 	var err error
 	defer func(begun time.Time) {
@@ -336,7 +339,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 			}
 
 			scrapeStart := time.Now()
-			if err = e.ScrapeMetric(e.db, ch, metric); err != nil {
+			if err = e.ScrapeMetric(e.db, ch, metric, tick); err != nil {
 				if !metric.IgnoreZeroResult {
 					// do not print repetitive error messages for metrics
 					// with ignoreZeroResult set to true
@@ -470,17 +473,21 @@ func (e *Exporter) reloadMetrics() {
 }
 
 // ScrapeMetric is an interface method to call scrapeGenericValues using Metric struct values
-func (e *Exporter) ScrapeMetric(db *sql.DB, ch chan<- prometheus.Metric, m Metric) error {
+func (e *Exporter) ScrapeMetric(db *sql.DB, ch chan<- prometheus.Metric, m Metric, tick *time.Time) error {
 	level.Debug(e.logger).Log("msg", "Calling function ScrapeGenericValues()")
-	return e.scrapeGenericValues(db, ch, m.Context, m.Labels, m.MetricsDesc,
-		m.MetricsType, m.MetricsBuckets, m.FieldToAppend, m.IgnoreZeroResult,
-		m.Request, m.QueryTimeout)
+	if e.isScrapeMetric(tick, m) {
+		queryTimeout := e.getQueryTimeout(m)
+		return e.scrapeGenericValues(db, ch, m.Context, m.Labels, m.MetricsDesc,
+			m.MetricsType, m.MetricsBuckets, m.FieldToAppend, m.IgnoreZeroResult,
+			m.Request, queryTimeout)
+	}
+	return nil
 }
 
 // generic method for retrieving metrics.
 func (e *Exporter) scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, context string, labels []string,
 	metricsDesc map[string]string, metricsType map[string]string, metricsBuckets map[string]map[string]string,
-	fieldToAppend string, ignoreZeroResult bool, request string, queryTimeout int) error {
+	fieldToAppend string, ignoreZeroResult bool, request string, queryTimeout time.Duration) error {
 	metricsCount := 0
 	genericParser := func(row map[string]string) error {
 		// Construct labels value
@@ -586,13 +593,8 @@ func (e *Exporter) scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, 
 
 // inspired by https://kylewbanks.com/blog/query-result-to-map-in-golang
 // Parse SQL result and call parsing function to each row
-func (e *Exporter) generatePrometheusMetrics(db *sql.DB, parse func(row map[string]string) error, query string, queryTimeout int) error {
-	timeout := e.config.QueryTimeout
-	if queryTimeout > 0 {
-		timeout = queryTimeout
-	}
-	timeoutDuration := time.Duration(timeout) * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
+func (e *Exporter) generatePrometheusMetrics(db *sql.DB, parse func(row map[string]string) error, query string, queryTimeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), queryTimeout)
 	defer cancel()
 	rows, err := db.QueryContext(ctx, query)
 

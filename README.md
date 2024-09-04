@@ -616,28 +616,27 @@ The following command line arguments (flags) can be passed to the exporter:
 
 ```bash
 Usage of oracledb_exporter:
-  --log.format value
-       	If set use a syslog logger or JSON logging. Example: logger:syslog?appname=bob&local=7 or logger:stdout?json=true. Defaults to stderr.
-  --log.level value
-       	Only log messages with the given severity or above. Valid levels: [debug, info, warn, error, fatal].
-  --custom.metrics string
-        Comma separated list of file(s) that contain various custom metrics in a TOML format.
-  --default.metrics string
-        Default TOML file metrics.
-  --web.systemd-socket
-        Use systemd socket activation listeners instead of port listeners (Linux only).
-  --web.listen-address string
-       	Address to listen on for web interface and telemetry. (default ":9161")
-  --web.telemetry-path string
-       	Path under which to expose metrics. (default "/metrics")
-  --database.maxIdleConns string
-        Number of maximum idle connections in the connection pool. (default "0")
-  --database.maxOpenConns string
-        Number of maximum open connections in the connection pool. (default "10")
-  --query.timeout int
-        Query timeout (in seconds).
-  --web.config.file
-        Path to configuration file that can enable TLS or authentication.
+      --web.telemetry-path="/metrics"  
+                                 Path under which to expose metrics. (env: TELEMETRY_PATH)
+      --default.metrics="default-metrics.toml"  
+                                 File with default metrics in a TOML file. (env: DEFAULT_METRICS)
+      --custom.metrics=""        Comma separated list of file(s) that contain various custom metrics in a TOML format. (env: CUSTOM_METRICS)
+      --query.timeout=5          Query timeout (in seconds). (env: QUERY_TIMEOUT)
+      --database.maxIdleConns=0  Number of maximum idle connections in the connection pool. (env: DATABASE_MAXIDLECONNS)
+      --database.maxOpenConns=10  
+                                 Number of maximum open connections in the connection pool. (env: DATABASE_MAXOPENCONNS)
+      --scrape.interval=0s       Interval between each scrape. Default is to scrape on collect requests.
+      --log.disable=0            Set to 1 to disable alert logs
+      --log.interval=15s         Interval between log updates (e.g. 5s).
+      --log.destination="/log/alert.log"  
+                                 File to output the alert log to. (env: LOG_DESTINATION)
+      --web.listen-address=:9161 ...  
+                                 Addresses on which to expose metrics and web interface. Repeatable for multiple addresses.
+      --web.config.file=""       Path to configuration file that can enable TLS or authentication. See: https://github.com/prometheus/exporter-toolkit/blob/master/docs/web-configuration.md
+      --log.level=info           Only log messages with the given severity or above. One of: [debug, info, warn, error]
+      --log.format=logfmt        Output format of log messages. One of: [logfmt, json]
+      --[no-]version             Show application version.
+
 ```
 
 ### Using OCI Vault
@@ -658,17 +657,18 @@ exporter, you can:
 
 Custom metrics file must contain a series of `[[metric]]` definitions, in TOML. Each metric definition must follow the custom metric schema:
 
-| Field Name       | Description                                                                                                                                                                                | Type                              | Required | Default                      |
-|------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------|----------|------------------------------|
-| context          | Metric context, used to build metric FQN                                                                                                                                                   | String                            | Yes      |                              |
-| labels           | Metric labels, which must match column names in the query. Any column that is not a label will be parsed as a metric                                                                       | Array of Strings                  | No       |                              |
-| metricsdesc      | Mapping between field(s) in the request and comment(s)                                                                                                                                     | Dictionary of Strings             | Yes      |                              |
-| metricstype      | Mapping between field(s) in the request and [Prometheus metric types](https://prometheus.io/docs/concepts/metric_types/)                                                                   | Dictionary of Strings             | No       |                              |
-| metricsbuckets   | Split [histogram](https://prometheus.io/docs/concepts/metric_types/#histogram) metric types into buckets based on value ([example](./custom-metrics-example/metric-histogram-example.toml)) | Dictionary of String dictionaries | No       |                              |
-| fieldtoappend    | Field from the request to append to the metric FQN                                                                                                                                         | String                            | No       |                              |
-| request          | Oracle database query to run for metrics scraping                                                                                                                                          | String                            | Yes      |                              |
-| ignorezeroresult | Whether or not an error will be printed if the request does not return any results                                                                                                         | Boolean                           | No       | false                        |
-| querytimeout     | Oracle Database query timeout, in seconds                                                                                                                                                  | Integer                           | No       | 5, or value of query.timeout |
+| Field Name       | Description                                                                                                                                                                                 | Type                              | Required | Default                           |
+|------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------|----------|-----------------------------------|
+| context          | Metric context, used to build metric FQN                                                                                                                                                    | String                            | Yes      |                                   |
+| labels           | Metric labels, which must match column names in the query. Any column that is not a label will be parsed as a metric                                                                        | Array of Strings                  | No       |                                   |
+| metricsdesc      | Mapping between field(s) in the request and comment(s)                                                                                                                                      | Dictionary of Strings             | Yes      |                                   |
+| metricstype      | Mapping between field(s) in the request and [Prometheus metric types](https://prometheus.io/docs/concepts/metric_types/)                                                                    | Dictionary of Strings             | No       |                                   |
+| metricsbuckets   | Split [histogram](https://prometheus.io/docs/concepts/metric_types/#histogram) metric types into buckets based on value ([example](./custom-metrics-example/metric-histogram-example.toml)) | Dictionary of String dictionaries | No       |                                   |
+| fieldtoappend    | Field from the request to append to the metric FQN                                                                                                                                          | String                            | No       |                                   |
+| request          | Oracle database query to run for metrics scraping                                                                                                                                           | String                            | Yes      |                                   |
+| ignorezeroresult | Whether or not an error will be printed if the request does not return any results                                                                                                          | Boolean                           | No       | false                             |
+| querytimeout     | Oracle Database query timeout duration, e.g., 300ms, 0.5h                                                                                                                                   | String duration                   | No       | Value of query.timeout in seconds |
+| scrapeinterval   | Custom metric scrape interval, used if scrape.interval is provided, otherwise metrics are always scraped on request.                                                                        | String duration                   | No       |                                   |
 
 Here's a simple example of a metric definition:
 
