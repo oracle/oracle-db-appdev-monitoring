@@ -2,10 +2,10 @@ ARG BASE_IMAGE
 FROM ${BASE_IMAGE} AS build
 
 ARG GOOS
-ENV GOOS ${GOOS:linux}
+ENV GOOS ${GOOS:-linux}
 
 ARG GOARCH
-ENV GOARCH ${GOARCH:amd64}
+ENV GOARCH ${GOARCH:-amd64}
 
 RUN microdnf install wget gzip gcc && \
     wget -q https://go.dev/dl/go1.22.4.${GOOS}-${GOARCH}.tar.gz && \
