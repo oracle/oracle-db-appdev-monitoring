@@ -1,11 +1,17 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE} AS build
 
+ARG GOOS
+ENV GOOS ${GOOS:linux}
+
+ARG GOARCH
+ENV GOARCH ${GOARCH:amd64}
+
 RUN microdnf install wget gzip gcc && \
-    wget -q https://go.dev/dl/go1.22.4.linux-amd64.tar.gz && \
+    wget -q https://go.dev/dl/go1.22.4.${GOOS}-${GOARCH}.tar.gz && \
     rm -rf /usr/local/go && \
-    tar -C /usr/local -xzf go1.22.4.linux-amd64.tar.gz && \
-    rm go1.22.4.linux-amd64.tar.gz
+    tar -C /usr/local -xzf go1.22.4.${GOOS}-${GOARCH}.tar.gz && \
+    rm go1.22.4.${GOOS}-${GOARCH}.tar.gz
 
 ENV PATH $PATH:/usr/local/go/bin
 
@@ -16,7 +22,7 @@ RUN go get -d -v
 ARG VERSION
 ENV VERSION ${VERSION:-1.0.0}
 
-RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -v -ldflags "-X main.Version=${VERSION} -s -w"
+RUN CGO_ENABLED=1 GOOS=${GOOS} GOARCH=${GOARCH} go build -v -ldflags "-X main.Version=${VERSION} -s -w"
 
 FROM ${BASE_IMAGE} as exporter
 LABEL org.opencontainers.image.authors="Oracle America, Inc."
