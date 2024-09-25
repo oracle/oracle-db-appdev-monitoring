@@ -34,7 +34,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN if [ "$GOARCH" = "amd64" ]; then \
       microdnf install -y oracle-instantclient-release-el8 && microdnf install -y oracle-instantclient-basic && \
       microdnf install glibc-2.28-251.0.2.el8_10.4 \
-    else \
+    ; else \
       microdnf install oracle-release-el8 && \
       microdnf install -y oracle-instantclient19.23-basic && \
       microdnf install glibc-2.28-251.0.2.el8_10.4 \
