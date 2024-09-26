@@ -482,6 +482,7 @@ Now, you provide the connection details using these variables:
 - `DB_USERNAME` is the database username, e.g., `pdbadmin`
 - `DB_PASSWORD` is the password for that user, e.g., `Welcome12345`
 - `DB_CONNECT_STRING` is the connection string, e.g., `devdb_tp?TNS_ADMIN=/wallet`
+- `DB_ROLE` (Optional) can be set to `SYSDBA` or `SYSOPER` if you want to connect with one of those roles, however Oracle recommends that you connect with the lowest possible privileges and roles necessary for the exporter to run.
 - `ORACLE_HOME` is the location of the Oracle Instant Client, i.e., `/lib/oracle/21/client64/lib`.  If you built your own container image, the path may be different.
 
 To run the exporter in a container and expose the port, use a command like this, with the appropriate values for the environment variables, and mounting your `wallet` directory as `/wallet` in the container to provide access to the wallet:
@@ -656,6 +657,14 @@ Usage of oracledb_exporter:
 
 ```
 
+You may provide the connection details using these variables: 
+
+- `DB_USERNAME` is the database username, e.g., `pdbadmin`
+- `DB_PASSWORD` is the password for that user, e.g., `Welcome12345`
+- `DB_CONNECT_STRING` is the connection string, e.g., `devdb_tp?TNS_ADMIN=/wallet`
+- `DB_ROLE` (Optional) can be set to `SYSDBA` or `SYSOPER` if you want to connect with one of those roles, however Oracle recommends that you connect with the lowest possible privileges and roles necessary for the exporter to run.
+- `ORACLE_HOME` is the location of the Oracle Instant Client, e.g., `/lib/oracle/21/client64/lib`.  
+
 ### Using OCI Vault
 
 The exporter will read the password from a secret stored in OCI Vault if you set these two environment
@@ -663,6 +672,8 @@ variables:
 
 - `VAULT_ID` should be set to the OCID of the OCI vault that you wish to use
 - `VAULT_SECRET_NAME` should be set to the name of the secret in the OCI vault which contains the database password
+
+Note that the process must be running under a user that has the OCI CLI installed and configured correctly to access the desired tenancy and region.
 
 ## Custom metrics
 
