@@ -411,8 +411,8 @@ If you need an Oracle Database to test the exporter, you can use this command to
 docker run --name free23ai \
     -d \
     -p 1521:1521 \
-    -e ORACLE_PWD=Welcome12345 \
-    container-registry.oracle.com/database/free:latest
+    e ORACLE_PASSWORD=Welcome12345 \
+    gvenzl/oracle-free:23.5-slim-faststart
 ```
 
 This will pull the image and start up the database with a listener on port 1521. It will also create a pluggable database (a database container) called "FREEPDB1" and will set the admin passwords to the password you specified on this command.
