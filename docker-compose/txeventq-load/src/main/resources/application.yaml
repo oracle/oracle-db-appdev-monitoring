@@ -6,8 +6,8 @@ spring:
       enabled: true
 
   datasource:
-    url: jdbc:oracle:thin:@//172.20.0.4:1521/freepdb1
-    username: pdbadmin
+    url: jdbc:oracle:thin:@//172.24.0.3:1521/freepdb1
+    username: system
     password: Welcome12345
     driver-class-name: oracle.jdbc.OracleDriver
     type: oracle.ucp.jdbc.PoolDataSource
