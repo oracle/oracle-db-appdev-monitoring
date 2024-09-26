@@ -1,13 +1,12 @@
-# Unified Observability for Oracle Database 
+# Unified Observability for Oracle Database
 
 This project aims to provide observability for the Oracle Database so that users can understand performance and diagnose issues easily across applications and database.  Over time, this project will provide not just metrics, but also logging and tracing support, and integration into popular frameworks like Spring Boot.  The project aims to deliver functionality to support both cloud and on-premises databases, including those running in Kubernetes and containers.
 
-From the first production release, v1.0, onwards, this project provides a [Prometheus](https://prometheus.io/) exporter for Oracle Database that is based in part on a Prometheus exporter created by [Seth Miller](https://github.com/iamseth/oracledb_exporter) with changes to comply with various Oracle standards and policies. 
+From the first production release, v1.0, onwards, this project provides a [Prometheus](https://prometheus.io/) exporter for Oracle Database that is based in part on a Prometheus exporter created by [Seth Miller](https://github.com/iamseth/oracledb_exporter) with changes to comply with various Oracle standards and policies.
 
 Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 
-
-### Table of Contents
+## Table of Contents
 
 - [Release Notes](#release-notes)
 - [Roadmap](#roadmap)
@@ -15,11 +14,11 @@ Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 - [Database permissions required](#database-permissions-required)
 - [Alert logs](#alert-logs)
 - [Installation](#installation)
-   - [Docker, podman, etc.](#docker-podman-etc)
-   - [Test/demo environment using Docker Compose](#testdemo-environment-with-docker-compose)
-   - [Kubernetes](#kubernetes)
-   - [Standalone binary](#standalone-binary)
-   - [Using OCI Vault](#using-oci-vault)
+  - [Docker, podman, etc.](#docker-podman-etc)
+  - [Test/demo environment using Docker Compose](#testdemo-environment-with-docker-compose)
+  - [Kubernetes](#kubernetes)
+  - [Standalone binary](#standalone-binary)
+  - [Using OCI Vault](#using-oci-vault)
 - [Custom metrics](#custom-metrics)
 - [Controlling memory usage](#controlling-memory-usage)
 - [Grafana dashboards](#grafana-dashboards)
@@ -40,7 +39,7 @@ This release includes the following changes:
 
 This release includes the following changes:
 
-- Allow mulitple custom metrics defintion files.
+- Allow multiple custom metrics definition files.
 - Allow query timeout per-metric.
 - Allow scrape interval per-metric.
 - Updated some third-party dependencies.
@@ -68,7 +67,7 @@ This release includes the following changes:
 - Provide ability to connect as SYSDBA or SYSOPER by setting DB_ROLE.
 - New default metric is added to report the type of database connected to (CDB or PDB).
 - New default metrics are added for cache hit ratios.
-- Deafult metrics updated to suppress spurious warnings in log.
+- Default metrics updated to suppress spurious warnings in log.
 - Wait class metric updated to use a better query.
 - The sample dashboard is updated to include new metrics.
 - Fixed a bug which prevented periodic freeing of memory.
@@ -102,7 +101,7 @@ This release just updates some third-party dependencies.
 
 ### Version 1.1, October 27, 2023
 
-This release includes the following changes: 
+This release includes the following changes:
 
 - The query for the standard metric `wait_class` has been updated so that it will work in both container databases
   and pluggable databases, including in Oracle Autonomous Database instances.  Note that this query will not return
@@ -113,23 +112,23 @@ This release includes the following changes:
 
 ### Version 1.0, September 13, 2023
 
-The first production release, v1.0, includes the following features: 
+The first production release, v1.0, includes the following features:
 
 - A number of [standard metrics](#standard-metrics) are exposed,
 - Users can define [custom metrics](#custom-metrics),
 - Oracle regularly reviews third-party licenses and scans the code and images, including transitive/recursive dependencies for issues,
 - Connection to Oracle can be a basic connection or use an Oracle Wallet and TLS - connection to Oracle Autonomous Database is supported,
 - Metrics for Oracle Transactional Event Queues are also supported,
-- A Grafana dashboard is provided for Transacational Event Queues, and
+- A Grafana dashboard is provided for Transactional Event Queues, and
 - A pre-built container image is provided, based on Oracle Linux, and optimized for size and security.
 
-Note that this exporter uses a different Oracle Database driver which in turn uses code directly written by Oracle to access the database.  This driver does require an Oracle client.  In this initial release, the client is bundled into the container image, however we intend to make that optional in order to minimize the image size. 
+Note that this exporter uses a different Oracle Database driver which in turn uses code directly written by Oracle to access the database.  This driver does require an Oracle client.  In this initial release, the client is bundled into the container image, however we intend to make that optional in order to minimize the image size.
 
 The interfaces for this version have been kept as close as possible to those of earlier alpha releases in this repository to assist with migration.  However, it should be expected that there may be breaking changes in future releases.
 
 ## Roadmap
 
-We always welcome input on features you would like to see supported.  Please open an issue in this repository with your suggestions. 
+We always welcome input on features you would like to see supported.  Please open an issue in this repository with your suggestions.
 
 Currently, we plan to address the following key features:
 
@@ -148,7 +147,7 @@ Currently, we plan to address the following key features:
 
 The following metrics are exposed by default:
 
-```
+```text
 # HELP oracledb_activity_execute_count Generic counter metric from v$sysstat view in Oracle.
 # TYPE oracledb_activity_execute_count gauge
 oracledb_activity_execute_count 64469
@@ -359,7 +358,7 @@ For the built-in default metrics, the database user that the exporter uses to co
 The exporter can export alert log records into a file that is suitable for collection by a log ingestion tool like Promtail or FluentBit.
 
 You can specify the interval that log records should be published using the parameter `log.interval` using a GoLang duration
-string.  A duration string is a possibly signed sequence of decimal numbers, each with optional fraction and a unit suffix, 
+string.  A duration string is a possibly signed sequence of decimal numbers, each with optional fraction and a unit suffix,
 such as "300ms", "-1.5h" or "2h45m". Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h", "d", "w", "y".
 
 You can specify the location of the output log file using the environment variable `LOG_DESTINATION`.
@@ -370,7 +369,7 @@ The output is formatted as one JSON record per line, which most log collection t
 
 Here is an example of the output:
 
-```
+```log
 {"timestamp":"2023-09-02T05:40:43.626Z","moduleId":"","ecid":"","message":"Starting ORACLE instance (restrict) (OS id: 1473)"}
 {"timestamp":"2023-09-02T05:40:43.64Z","moduleId":"","ecid":"","message":"****************************************************"}
 {"timestamp":"2023-09-02T05:40:43.64Z","moduleId":"","ecid":"","message":" Sys-V shared memory will be used for creating SGA "}
@@ -400,26 +399,20 @@ There are a number of ways to run the exporter.  In this section you will find i
 - In [Kubernetes](#kubernetes)
 - As a [standalone binary](#standalone-binary)
 
-### Docker, Podman, etc.
+### Docker, Podman, etc
 
-You can run the exporter in a local container using a conatiner image from [Oracle Container Registry](https://container-registry.oracle.com).  The container image is available in the "observability-exporter" repository in the "Database" category.  No authentication or license presentment/acceptance are required to pull this image from the registry.
+You can run the exporter in a local container using a container image from [Oracle Container Registry](https://container-registry.oracle.com).  The container image is available in the "observability-exporter" repository in the "Database" category.  No authentication or license presentment/acceptance are required to pull this image from the registry.
 
-#### Oracle Database 
+#### Oracle Database
 
 If you need an Oracle Database to test the exporter, you can use this command to start up an instance of [Oracle Database 23ai Free](https://www.oracle.com/database/free/) which also requires no authentication or license presentment/acceptance to pull the image.
-
-If you are running on a Mac with an Mx processor you need to install and run [colima] (https://github.com/abiosoft/colima) to make the 23a Free database run in the Mac platform. Run this command to start colima:
-
-```bash
-colima start --arch x86_64 --memory 8 --vm-type=vz --mount-type virtiofs
-```
 
 ```bash
 docker run --name free23ai \
     -d \
     -p 1521:1521 \
-    -e ORACLE_PWD=Welcome12345 \
-    container-registry.oracle.com/database/free:latest
+    -e ORACLE_PASSWORD=Welcome12345 \
+    gvenzl/oracle-free:23.5-slim-faststart
 ```
 
 This will pull the image and start up the database with a listener on port 1521. It will also create a pluggable database (a database container) called "FREEPDB1" and will set the admin passwords to the password you specified on this command.
@@ -445,13 +438,13 @@ docker inspect free23ai | grep IPA
             "IPAddress": "172.17.0.2",
 ```
 
-#### Exporter 
+#### Exporter
 
-You need to give the exporter the connection details for the Oracle Database that you want it to run against.  You can use a simple connection, or a wallet. 
+You need to give the exporter the connection details for the Oracle Database that you want it to run against.  You can use a simple connection, or a wallet.
 
 ##### Simple connection
 
-For a simple connection, you will provide the details using these variables: 
+For a simple connection, you will provide the details using these variables:
 
 - `DB_USERNAME` is the database username, e.g., `pdbadmin`
 - `DB_PASSWORD` is the password for that user, e.g., `Welcome12345`
@@ -477,7 +470,7 @@ For a wallet connection, you must first set up the wallet.  If you are using Ora
 1. Edit the `sqlnet.ora` file and set the `DIRECTORY` to `/wallet`.  This is the path inside the exporter container where you will provide the wallet.
 1. Take a note of the TNS name from the `tnsnames.ora` that will be used to connect to the database, e.g., `devdb_tp`.
 
-Now, you provide the connection details using these variables: 
+Now, you provide the connection details using these variables:
 
 - `DB_USERNAME` is the database username, e.g., `pdbadmin`
 - `DB_PASSWORD` is the password for that user, e.g., `Welcome12345`
@@ -497,22 +490,16 @@ docker run -it --rm \
     container-registry.oracle.com/database/observability-exporter:1.5.0
 ```
 
-
 ### Test/demo environment with Docker Compose
 
 If you would like to set up a test environment with the exporter, you can use the provided "Docker Compose" file in this repository which will start an Oracle Database instance, the exporter, Prometheus and Grafana.
-
-If you are running on a Mac with an Mx processor you need to install and run [colima] (https://github.com/abiosoft/colima) to make the 23a Free database run in the Mac platform. Run this command to start colima:
-
-```bash
-colima start --arch x86_64 --memory 8 --vm-type=vz --mount-type virtiofs
 
 ```bash
 cd docker-compose
 docker-compose up -d
 ```
 
-The containers will take a short time to start.  The first time, the Oracle container might take a few minutes to start while it creates the database instance, but this is a one-time operation, and subequent restarts will be much faster (a few seconds). 
+The containers will take a short time to start.  The first time, the Oracle container might take a few minutes to start while it creates the database instance, but this is a one-time operation, and subequent restarts will be much faster (a few seconds).
 
 Once the containers are all running, you can access the services using these URLs:
 
@@ -526,7 +513,7 @@ To run the exporter in Kubernetes, you need to complete the following steps.  Al
 
 #### Create a secret with credentials for connecting to the Oracle Database
 
-Create a secret with the Oracle database user and password that the exporter should use to connect to the database using this command.  You must specify the correct user and password for your environment.  This example uses `pdbadmin` as the user and `Welcome12345` as the password: 
+Create a secret with the Oracle database user and password that the exporter should use to connect to the database using this command.  You must specify the correct user and password for your environment.  This example uses `pdbadmin` as the user and `Welcome12345` as the password:
 
 ```bash
 kubectl create secret generic db-secret \
@@ -554,7 +541,7 @@ kubectl create cm db-metrics-tns-admin \
 
 #### Create a config map for you metrics definition file (optional)
 
-If you have defined any [custom metrics](#custom-metrics), you must create a config map for the metrics definition file.  For example, if you created a configuration file called `txeventq-metrics.toml`, then create the config map with this command: 
+If you have defined any [custom metrics](#custom-metrics), you must create a config map for the metrics definition file.  For example, if you created a configuration file called `txeventq-metrics.toml`, then create the config map with this command:
 
 ```bash
 kubectl create cm db-metrics-txeventq-exporter-config \
@@ -566,7 +553,7 @@ kubectl create cm db-metrics-txeventq-exporter-config \
 
 A sample Kubernetes manifest is provided [here](/kubernetes/metrics-exporter-deployment.yaml).  You must edit this file to set the namespace you wish to use, the database connect string to use, and if you have any custom metrics, you will need to uncomment and customize some sections in this file.
 
-Once you have made the necessary updates, apply the file to your cluster using this command: 
+Once you have made the necessary updates, apply the file to your cluster using this command:
 
 ```bash
 kubectl apply -f metrics-exporter-deployment.yaml
@@ -578,7 +565,7 @@ You can check the deployment was successful and monitor the exporter startup wit
 kubectl get pods -n exporter -w
 ```
 
-You can view the exporter's logs with this command: 
+You can view the exporter's logs with this command:
 
 ```bash
 kubectl logs -f svc/metrics-exporter -n exporter
@@ -586,9 +573,9 @@ kubectl logs -f svc/metrics-exporter -n exporter
 
 #### Create a Kubernetes service for the exporter
 
-Create a Kubernetes service to allow access to the exporter pod(s).  A sample Kubernetes manifest is provided [here](/kubernetes/metrics-exporter-service.yaml).  You may need to customize this file to update the namespace. 
+Create a Kubernetes service to allow access to the exporter pod(s).  A sample Kubernetes manifest is provided [here](/kubernetes/metrics-exporter-service.yaml).  You may need to customize this file to update the namespace.
 
-Once you have made any necessary udpates, apply the file to your cluster using this command: 
+Once you have made any necessary udpates, apply the file to your cluster using this command:
 
 ```bash
 kubectl apply -f metrics-exporter-service.yaml
@@ -596,9 +583,9 @@ kubectl apply -f metrics-exporter-service.yaml
 
 #### Create a Kubernetes service monitor
 
-Create a Kubernetes service monitor to tell Prometheus (for example) to collect metrics from the exporter.  A sample Kubernetes manifest is provided [here](/kubernetes/metrics-service-monitor.yaml).  You may need to customize this file to update the namespace. 
+Create a Kubernetes service monitor to tell Prometheus (for example) to collect metrics from the exporter.  A sample Kubernetes manifest is provided [here](/kubernetes/metrics-service-monitor.yaml).  You may need to customize this file to update the namespace.
 
-Once you have made any necessary udpates, apply the file to your cluster using this command: 
+Once you have made any necessary udpates, apply the file to your cluster using this command:
 
 ```bash
 kubectl apply -f metrics-service-monitor.yaml
@@ -622,15 +609,15 @@ You may need to update your Prometheus configuration to add a target.  If so, yo
 
 See [Grafana dashboards](#grafana-dashboards) below.
 
-
 ### Standalone binary
 
-Pre-compiled versions for Linux 64 bit can be found under [releases](https://github.com/oracle/oracle-db-appdev-monitoring/releases).
+Pre-compiled versions for Linux, ARM and Darwin 64-bit can be found under [releases](https://github.com/oracle/oracle-db-appdev-monitoring/releases).
 
-In order to run, you'll need the [Oracle Instant Client Basic](http://www.oracle.com/technetwork/database/features/instant-client/index-097480.html)
-for your operating system. Only the basic version is required for execution.
+In order to run, you'll need the [Oracle Instant Client Basic](http://www.oracle.com/technetwork/database/features/instant-client/index-097480.html) for your operating system. Only the basic version is required for the exporter.
 
-The following command line arguments (flags) can be passed to the exporter:
+> NOTE: If you are running the Standalone binary on a Mac ARM platform you must set the variable `DYLD_LIBRARY_PATH` to the location of where the instant client installed. For example `export DYLD_LIBRARY_PATH=/lib/oracle/instantclient_23_3`.
+
+The following command line arguments (flags) can be passed to the exporter (the --help flag will show the table below).
 
 ```bash
 Usage of oracledb_exporter:
@@ -657,18 +644,23 @@ Usage of oracledb_exporter:
 
 ```
 
-You may provide the connection details using these variables: 
+You may provide the connection details using these variables:
 
 - `DB_USERNAME` is the database username, e.g., `pdbadmin`
 - `DB_PASSWORD` is the password for that user, e.g., `Welcome12345`
-- `DB_CONNECT_STRING` is the connection string, e.g., `devdb_tp?TNS_ADMIN=/wallet`
+- `DB_CONNECT_STRING` is the connection string, e.g., `localhost:1521/freepdb1`
 - `DB_ROLE` (Optional) can be set to `SYSDBA` or `SYSOPER` if you want to connect with one of those roles, however Oracle recommends that you connect with the lowest possible privileges and roles necessary for the exporter to run.
 - `ORACLE_HOME` is the location of the Oracle Instant Client, e.g., `/lib/oracle/21/client64/lib`.  
 
+The following example puts the logfile in the current location with the filename `alert.log` and loads the default matrics file (`default-metrics,toml`) from the current location.
+
+```shell
+./oracledb_exporter --log.destination="./alert.log" --default.metrics="./default-metrics.toml"
+```
+
 ### Using OCI Vault
 
-The exporter will read the password from a secret stored in OCI Vault if you set these two environment
-variables: 
+The exporter will read the password from a secret stored in OCI Vault if you set these two environment variables:
 
 - `VAULT_ID` should be set to the OCID of the OCI vault that you wish to use
 - `VAULT_SECRET_NAME` should be set to the name of the secret in the OCI vault which contains the database password
@@ -700,7 +692,7 @@ Custom metrics file must contain a series of `[[metric]]` definitions, in TOML. 
 
 Here's a simple example of a metric definition:
 
-```
+```toml
 [[metric]]
 context = "test"
 request = "SELECT 1 as value_1, 2 as value_2 FROM DUAL"
@@ -711,7 +703,7 @@ metricsdesc = { value_1 = "Simple example returning always 1.", value_2 = "Same 
 
 This file produce the following entries in the exporter:
 
-```
+```text
 # HELP oracledb_test_value_1 Simple example returning always 1.
 # TYPE oracledb_test_value_1 gauge
 oracledb_test_value_1 1
@@ -722,7 +714,7 @@ oracledb_test_value_2 2
 
 You can also provide labels using `labels` field. Here's an example providing two metrics, with and without labels:
 
-```
+```toml
 [[metric]]
 context = "context_no_label"
 request = "SELECT 1 as value_1, 2 as value_2 FROM DUAL"
@@ -737,7 +729,7 @@ metricsdesc = { value_1 = "Simple example returning always 1.", value_2 = "Same 
 
 This TOML file produces the following result:
 
-```
+```text
 # HELP oracledb_context_no_label_value_1 Simple example returning always 1.
 # TYPE oracledb_context_no_label_value_1 gauge
 oracledb_context_no_label_value_1 1
@@ -754,7 +746,7 @@ oracledb_context_with_labels_value_2{label_1="First label",label_2="Second label
 
 Last, you can set metric type using **metricstype** field.
 
-```
+```toml
 [[metric]]
 context = "context_with_labels"
 labels = [ "label_1", "label_2" ]
@@ -766,7 +758,7 @@ metricstype = { value_1 = "counter" }
 
 This TOML file will produce the following result:
 
-```
+```text
 # HELP oracledb_test_value_1 Simple test example returning always 1 as counter.
 # TYPE oracledb_test_value_1 counter
 oracledb_test_value_1 1
@@ -792,7 +784,7 @@ ENTRYPOINT ["/oracledb_exporter", "--custom.metrics", "/custom-metrics.toml"]
 
 If you are running in an environment with limited memory, or you are running a large number of exporters, you may want to control the exporter's usage of memory.
 
-Under normal circumstances, the exporter process will retain OS memory that was used by the Go garbage collector but is no longer needed, in case it may be needed again in the future, unless the host OS is under memory pressure.  The result of this behavior (which is the normal behavior of the Go runtime) is that the resident set size will not decrease until the host OS memory is almost all used.  Under most circumstances, this will not cause any issues, but if you are in an environment where you need to conserve memory, the following options are provided: 
+Under normal circumstances, the exporter process will retain OS memory that was used by the Go garbage collector but is no longer needed, in case it may be needed again in the future, unless the host OS is under memory pressure.  The result of this behavior (which is the normal behavior of the Go runtime) is that the resident set size will not decrease until the host OS memory is almost all used.  Under most circumstances, this will not cause any issues, but if you are in an environment where you need to conserve memory, the following options are provided:
 
 - You may set the `FREE_INTERVAL` environment variable to a Go [duration string](https://pkg.go.dev/maze.io/x/duration), e.g., `60s` and run the exporter in debug mode by setting the `GODEBUG` environment variable to a value including `madvdontneed=1`, e.g., `GODEBUG=gctrace=1,madvdontneed=1`.  The exporter will call the [FreeOSMemory()](https://pkg.go.dev/runtime/debug#FreeOSMemory) at the specified interval.  This tells the Go runtime to attempt to release memory which is no longer needed.  Please note that this does not guarantee that the memory will be released to the OS, but over time you should see the RSS shrink sooner than without these settings.
 - You may set the `RESTART_INTERVAL` environment variable to a Go [duration string](https://pkg.go.dev/maze.io/x/duration), e.g., `10m`.  The exporter will restart its own process at the specified iterval (by calling the OS `exec` syscall).  As no new process is created, the process identifier (PID) does not change, but the machine code, data, heap, and stack of the process are replaced by those of the new program (source: [Wikipedia](https://en.wikipedia.org/wiki/Exec_(system_call))).  This has the side effect of freeing the resident set, so that it will return to its original size.
@@ -804,8 +796,7 @@ A sample Grafana dashboard definition is provided [in this directory](/docker-co
 
 The dashboard shows some basic information, as shown below:
 
-![](doc/oracledb-dashboard.png)
-
+![Oracle Database Dashboard](doc/oracledb-dashboard.png)
 
 ## Monitoring Transactional Event Queues
 
@@ -813,9 +804,9 @@ The dashboard shows some basic information, as shown below:
 
 Access to the real-time broker, producer, and consumer metrics in a single dashboard and receiving alerts for issues allows teams to understand the state of their system.
 
-The exporter includes a set of metrics for monitoring TxEventQ and a pre-built Grafana dashboard. 
+The exporter includes a set of metrics for monitoring TxEventQ and a pre-built Grafana dashboard.
 
-> Note: The metrics are written for Oracle Database 21c or later. 
+> Note: The metrics are written for Oracle Database 21c or later.
 
 ### How to create some traffic with PL/SQL
 
@@ -890,10 +881,9 @@ mvn spring-boot:run
 
 The application will create ten queues names TOPIC_0 through TOPIC_9 and randomly produce and consume messages on those queues.  The example dashboard shown below was monitoring traffic produced using this application.
 
-
 ### Metrics definitions
 
-The metrics definitions are provided in [this file](./custom-metrics-example/txeventq-metrics.toml).  You need to provide this file to the exporter, e.g., by adding it to your container image, or creating a Kubernetes config map containing the file and mounting that config map as a volume in your deployment.  You also need to set the `CUSTOM_METRICS` environment variable to the location of this file. 
+The metrics definitions are provided in [this file](./custom-metrics-example/txeventq-metrics.toml).  You need to provide this file to the exporter, e.g., by adding it to your container image, or creating a Kubernetes config map containing the file and mounting that config map as a volume in your deployment.  You also need to set the `CUSTOM_METRICS` environment variable to the location of this file.
 
 ### Additional database permissions
 
@@ -917,9 +907,9 @@ A Grafana dashboard for Transactional Event Queues is provided [in this file](./
 
 > Note:  You may not see any activity on the dashboard unless there are clients producing and consuming messages from topics.
 
-The dashboard will look like this: 
+The dashboard will look like this:
 
-![](./doc/txeventq-dashboard-v2.png)
+![Oracle Database Dashboard](./doc/txeventq-dashboard-v2.png)
 
 ## Developer notes
 
@@ -942,7 +932,6 @@ For each element (of `Metric` type), a call to the `ScrapeMetric` function will 
 
 The `ScrapeGenericValues` function will read the information from the `Metric` structure and, depending on the parameters, will generate the metrics to return. In particular, it will use the `GeneratePrometheusMetrics` function which will make SQL calls to the database.
 
-
 ### Docker/container build
 
 To build a container image, run the following command:
@@ -950,7 +939,6 @@ To build a container image, run the following command:
 ```bash
 make docker
 ```
-
 
 ### Building Binaries
 
