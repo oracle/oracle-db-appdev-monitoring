@@ -8,10 +8,10 @@ ARG GOARCH
 ENV GOARCH ${GOARCH:-amd64}
 
 RUN microdnf install wget gzip gcc && \
-    wget -q https://go.dev/dl/go1.22.4.${GOOS}-${GOARCH}.tar.gz && \
+    wget -q https://go.dev/dl/go1.22.7.${GOOS}-${GOARCH}.tar.gz && \
     rm -rf /usr/local/go && \
-    tar -C /usr/local -xzf go1.22.4.${GOOS}-${GOARCH}.tar.gz && \
-    rm go1.22.4.${GOOS}-${GOARCH}.tar.gz
+    tar -C /usr/local -xzf go1.22.7.${GOOS}-${GOARCH}.tar.gz && \
+    rm go1.22.7.${GOOS}-${GOARCH}.tar.gz
 
 ENV PATH $PATH:/usr/local/go/bin
 
