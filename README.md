@@ -34,7 +34,7 @@ This release includes the following changes:
 
 - Support for running the exporter on ARM processors (darwin and linux).
 - Updated some third-party dependencies.
-- Updated the "test/demo environment" to use newer version of Oracle Database (23.5) and faster startup.
+- Updated the "test/demo environment" to use newer version of Oracle Database (23.5.0.24.07) and faster startup.
 
 ### Version 1.4.0, September 4, 2024
 
