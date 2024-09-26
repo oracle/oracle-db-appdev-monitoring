@@ -411,7 +411,7 @@ If you need an Oracle Database to test the exporter, you can use this command to
 docker run --name free23ai \
     -d \
     -p 1521:1521 \
-    e ORACLE_PASSWORD=Welcome12345 \
+    -e ORACLE_PASSWORD=Welcome12345 \
     gvenzl/oracle-free:23.5-slim-faststart
 ```
 
