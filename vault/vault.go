@@ -6,18 +6,38 @@ package vault
 import (
 	"context"
 	b64 "encoding/base64"
+
+	// "fmt"
 	"strings"
 
+	"github.com/go-kit/log/level"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/example/helpers"
 	"github.com/oracle/oci-go-sdk/v65/secrets"
+	"github.com/prometheus/common/promlog"
 )
 
 func GetVaultSecret(vaultId string, secretName string) string {
-	configProvider := common.ConfigurationProviderEnvironmentVariables("vault", "")
+	promLogConfig := &promlog.Config{}
+	logger := promlog.New(promLogConfig)
 
-	client, err := secrets.NewSecretsClientWithConfigurationProvider(configProvider)
+	// configProvider := common.ConfigurationProviderEnvironmentVariables("vault", "")
+	// configProvider := common.DefaultConfigProvider()
+	client, err := secrets.NewSecretsClientWithConfigurationProvider(common.DefaultConfigProvider())
 	helpers.FatalIfError(err)
+
+	// client, err := secrets.NewSecretsClientWithConfigurationProvider(configProvider)
+	// helpers.FatalIfError(err)
+
+	tenancyID, err := common.DefaultConfigProvider().TenancyOCID()
+	helpers.FatalIfError(err)
+	region, err := common.DefaultConfigProvider().Region()
+	helpers.FatalIfError(err)
+	userID, err := common.DefaultConfigProvider().UserOCID()
+	helpers.FatalIfError(err)
+	level.Info(logger).Log("msg", "Region", "region", region)
+	level.Info(logger).Log("msg", "Tenancy ID", "tenancy-id", tenancyID)
+	level.Info(logger).Log("msg", "User ID", "user-id", userID)
 
 	req := secrets.GetSecretBundleByNameRequest{
 		SecretName: common.String(secretName),
