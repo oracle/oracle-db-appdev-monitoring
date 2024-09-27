@@ -62,7 +62,7 @@ func main() {
 
 	vaultID, useVault := os.LookupEnv("OCI_VAULT_ID")
 	if useVault {
-		level.Info(logger).Log("msg", "OCI_VAULT_ID env var is present so using OCI Vault", "vault_id", vaultID)
+		level.Info(logger).Log("msg", "OCI_VAULT_ID env var is present so using OCI Vault", "vaultOCID", vaultID)
 		password = vault.GetVaultSecret(vaultID, os.Getenv("OCI_VAULT_SECRET_NAME"))
 	}
 
