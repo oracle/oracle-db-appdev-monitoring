@@ -1,8 +1,7 @@
 module github.com/oracle/oracle-db-appdev-monitoring
 
 go 1.21
-
-toolchain go1.21.4
+toolchain go1.22.5
 
 require (
 	github.com/BurntSushi/toml v1.4.0
@@ -12,7 +11,7 @@ require (
 	github.com/oracle/oci-go-sdk/v65 v65.75.0
 	github.com/prometheus/client_golang v1.20.2
 	github.com/prometheus/common v0.59.1
-	github.com/prometheus/exporter-toolkit v0.11.0
+	github.com/prometheus/exporter-toolkit v0.13.0
 )
 
 require (
@@ -25,6 +24,8 @@ require (
 	github.com/gofrs/flock v0.8.1 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
+	github.com/mdlayher/socket v0.4.1 // indirect
+	github.com/mdlayher/vsock v1.2.1 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
