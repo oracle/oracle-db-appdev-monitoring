@@ -33,11 +33,11 @@ func GetVaultSecret(vaultId string, secretName string) string {
 	helpers.FatalIfError(err)
 	region, err := common.DefaultConfigProvider().Region()
 	helpers.FatalIfError(err)
-	userID, err := common.DefaultConfigProvider().UserOCID()
-	helpers.FatalIfError(err)
+	// userID, err := common.DefaultConfigProvider().UserOCID()
+	// helpers.FatalIfError(err)
 	level.Info(logger).Log("msg", "Region", "region", region)
 	level.Info(logger).Log("msg", "Tenancy ID", "tenancy-id", tenancyID)
-	level.Info(logger).Log("msg", "User ID", "user-id", userID)
+	// level.Info(logger).Log("msg", "User ID", "user-id", userID)
 
 	req := secrets.GetSecretBundleByNameRequest{
 		SecretName: common.String(secretName),
