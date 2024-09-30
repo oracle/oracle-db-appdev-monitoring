@@ -60,10 +60,10 @@ func main() {
 	connectString := os.Getenv("DB_CONNECT_STRING")
 	dbrole := os.Getenv("DB_ROLE")
 
-	vaultName, useVault := os.LookupEnv("VAULT_ID")
+	vaultID, useVault := os.LookupEnv("OCI_VAULT_ID")
 	if useVault {
-		level.Info(logger).Log("msg", "VAULT_ID env var is present so using OCI Vault", "vault_name", vaultName)
-		password = vault.GetVaultSecret(vaultName, os.Getenv("VAULT_SECRET_NAME"))
+		level.Info(logger).Log("msg", "OCI_VAULT_ID env var is present so using OCI Vault", "vaultOCID", vaultID)
+		password = vault.GetVaultSecret(vaultID, os.Getenv("OCI_VAULT_SECRET_NAME"))
 	}
 
 	freeOSMemInterval, enableFree := os.LookupEnv("FREE_INTERVAL")

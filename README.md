@@ -662,10 +662,10 @@ The following example puts the logfile in the current location with the filename
 
 The exporter will read the password from a secret stored in OCI Vault if you set these two environment variables:
 
-- `VAULT_ID` should be set to the OCID of the OCI vault that you wish to use
-- `VAULT_SECRET_NAME` should be set to the name of the secret in the OCI vault which contains the database password
+- `OCI_VAULT_ID` should be set to the OCID of the OCI vault that you wish to use
+- `OCI_VAULT_SECRET_NAME` should be set to the name of the secret in the OCI vault which contains the database password
 
-Note that the process must be running under a user that has the OCI CLI installed and configured correctly to access the desired tenancy and region.
+> Note that the process must be running under a user that has the OCI CLI installed and configured correctly to access the desired tenancy and region. The OCI Profile used is `DEFAULT`.
 
 ## Custom metrics
 

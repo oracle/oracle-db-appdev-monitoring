@@ -8,16 +8,26 @@ import (
 	b64 "encoding/base64"
 	"strings"
 
+	"github.com/go-kit/log/level"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/example/helpers"
 	"github.com/oracle/oci-go-sdk/v65/secrets"
+	"github.com/prometheus/common/promlog"
 )
 
 func GetVaultSecret(vaultId string, secretName string) string {
-	configProvider := common.ConfigurationProviderEnvironmentVariables("vault", "")
+	promLogConfig := &promlog.Config{}
+	logger := promlog.New(promLogConfig)
 
-	client, err := secrets.NewSecretsClientWithConfigurationProvider(configProvider)
+	client, err := secrets.NewSecretsClientWithConfigurationProvider(common.DefaultConfigProvider())
 	helpers.FatalIfError(err)
+
+	tenancyID, err := common.DefaultConfigProvider().TenancyOCID()
+	helpers.FatalIfError(err)
+	region, err := common.DefaultConfigProvider().Region()
+	helpers.FatalIfError(err)
+	level.Info(logger).Log("msg", "OCI_VAULT_ID env var is present so using OCI Vault", "Region", region)
+	level.Info(logger).Log("msg", "OCI_VAULT_ID env var is present so using OCI Vault", "tenancyOCID", tenancyID)
 
 	req := secrets.GetSecretBundleByNameRequest{
 		SecretName: common.String(secretName),
