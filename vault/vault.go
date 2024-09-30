@@ -6,8 +6,6 @@ package vault
 import (
 	"context"
 	b64 "encoding/base64"
-
-	// "fmt"
 	"strings"
 
 	"github.com/go-kit/log/level"
@@ -21,23 +19,15 @@ func GetVaultSecret(vaultId string, secretName string) string {
 	promLogConfig := &promlog.Config{}
 	logger := promlog.New(promLogConfig)
 
-	// configProvider := common.ConfigurationProviderEnvironmentVariables("vault", "")
-	// configProvider := common.DefaultConfigProvider()
 	client, err := secrets.NewSecretsClientWithConfigurationProvider(common.DefaultConfigProvider())
 	helpers.FatalIfError(err)
-
-	// client, err := secrets.NewSecretsClientWithConfigurationProvider(configProvider)
-	// helpers.FatalIfError(err)
 
 	tenancyID, err := common.DefaultConfigProvider().TenancyOCID()
 	helpers.FatalIfError(err)
 	region, err := common.DefaultConfigProvider().Region()
 	helpers.FatalIfError(err)
-	// userID, err := common.DefaultConfigProvider().UserOCID()
-	// helpers.FatalIfError(err)
 	level.Info(logger).Log("msg", "OCI_VAULT_ID env var is present so using OCI Vault", "Region", region)
 	level.Info(logger).Log("msg", "OCI_VAULT_ID env var is present so using OCI Vault", "tenancyOCID", tenancyID)
-	// level.Info(logger).Log("msg", "User ID", "user-id", userID)
 
 	req := secrets.GetSecretBundleByNameRequest{
 		SecretName: common.String(secretName),
