@@ -479,6 +479,8 @@ Now, you provide the connection details using these variables:
 - `ORACLE_HOME` is the location of the Oracle Instant Client, i.e., `/lib/oracle/21/client64/lib`.  If you built your own container image, the path may be different.
 - `TNS_ADMIN` is the location of your (unzipped) wallet.  The `DIRECTORY` set in the `sqlnet.ora` file must match the path that it will be mounted on inside the container.
 
+> **Note:** Specify the path to your wallet using the `TNS_ADMIN` environment variable rather than adding it to the `DB_CONNECT_STRING`.
+
 To run the exporter in a container and expose the port, use a command like this, with the appropriate values for the environment variables, and mounting your `wallet` directory as `/wallet` in the container to provide access to the wallet:
 
 ```bash
@@ -653,6 +655,7 @@ You may provide the connection details using these variables:
 - `DB_CONNECT_STRING` is the connection string, e.g., `localhost:1521/freepdb1`
 - `DB_ROLE` (Optional) can be set to `SYSDBA` or `SYSOPER` if you want to connect with one of those roles, however Oracle recommends that you connect with the lowest possible privileges and roles necessary for the exporter to run.
 - `ORACLE_HOME` is the location of the Oracle Instant Client, e.g., `/lib/oracle/21/client64/lib`.  
+- `TNS_ADMIN` is the location of your (unzipped) wallet.  The `DIRECTORY` set in the `sqlnet.ora` file must match the path that it will be mounted on inside the container.
 
 The following example puts the logfile in the current location with the filename `alert.log` and loads the default matrics file (`default-metrics,toml`) from the current location.
 
