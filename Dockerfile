@@ -57,6 +57,7 @@ ADD ./default-metrics.toml /default-metrics.toml
 
 # create the mount point for alert log exports (default location)
 RUN mkdir /log && chown 1000:1000 /log
+RUN mkdir /wallet && chown 1000:1000 /wallet
 
 EXPOSE 9161
 
