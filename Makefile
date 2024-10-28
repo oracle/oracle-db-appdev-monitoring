@@ -83,7 +83,7 @@ push-images:
 	@make --no-print-directory push-oraclelinux-image
 	
 docker:
-	docker build --no-cache --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)-amd64" --build-arg BASE_IMAGE=$(ORACLE_LINUX_BASE_IMAGE) . 
+	docker build --no-cache --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)-amd64" --build-arg BASE_IMAGE=$(ORACLE_LINUX_BASE_IMAGE) --build-arg GOARCH=amd64 . 
 
 docker-arm:
 	docker build --no-cache --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)-arm64" --build-arg BASE_IMAGE=$(ORACLE_LINUX_BASE_IMAGE) --build-arg GOARCH=arm64 . 
