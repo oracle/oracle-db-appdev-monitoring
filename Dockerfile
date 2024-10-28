@@ -34,6 +34,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 ARG GOARCH
 ENV GOARCH ${GOARCH:-amd64}
 
+# note: the 23ai arm drivers are not in yum yet, when they are can switch this to just use yum and not need
+# to wget the driver for arm.  also note that the permalink for otn download of drivers does not have version
+# in it, and does not appear to be a link vith version in it, so that link is very brittle and could break build
 RUN if [ "$GOARCH" = "amd64" ]; then \
       export DBVER=23 && \
       microdnf install -y oracle-instantclient-release-23ai-el8 && microdnf install -y oracle-instantclient-basic && \
