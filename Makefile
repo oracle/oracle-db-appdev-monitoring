@@ -3,7 +3,7 @@ OS_TYPE        ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
 ARCH_TYPE      ?= $(subst x86_64,amd64,$(patsubst i%86,386,$(ARCH)))
 GOOS           ?= $(shell go env GOOS)
 GOARCH         ?= $(shell go env GOARCH)
-VERSION        ?= 1.5.0
+VERSION        ?= 1.5.1
 LDFLAGS        := -X main.Version=$(VERSION)
 GOFLAGS        := -ldflags "$(LDFLAGS) -s -w"
 BUILD_ARGS      = --build-arg VERSION=$(VERSION)
@@ -83,10 +83,10 @@ push-images:
 	@make --no-print-directory push-oraclelinux-image
 	
 docker:
-	docker build --no-cache --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)" --build-arg BASE_IMAGE=$(ORACLE_LINUX_BASE_IMAGE) . 
+	docker build --no-cache --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)-amd64" --build-arg BASE_IMAGE=$(ORACLE_LINUX_BASE_IMAGE) . 
 
 docker-arm:
-	docker build --no-cache --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)" --build-arg BASE_IMAGE=$(ORACLE_LINUX_BASE_IMAGE) --build-arg GOARCH=arm64 . 
+	docker build --no-cache --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)-arm64" --build-arg BASE_IMAGE=$(ORACLE_LINUX_BASE_IMAGE) --build-arg GOARCH=arm64 . 
 
 push-oraclelinux-image:
 	docker push $(IMAGE_ID)
