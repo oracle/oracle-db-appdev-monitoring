@@ -35,17 +35,20 @@ ARG GOARCH
 ENV GOARCH ${GOARCH:-amd64}
 
 RUN if [ "$GOARCH" = "amd64" ]; then \
+      export DBVER=23 && \
       microdnf install -y oracle-instantclient-release-23ai-el8 && microdnf install -y oracle-instantclient-basic && \
       microdnf install glibc-2.28-251.0.2.el8_10.4 \
     ; else \
+      export DBVER=19.24 && \
+      microdnf install wget libaio && \
       wget https://download.oracle.com/otn_software/linux/instantclient/instantclient-basic-linux-arm64.rpm && \
-      microdnf localinstall -y instantclient-basic-linux-arm64.rpm && \
+      rpm -ivh instantclient-basic-linux-arm64.rpm && \
       microdnf install glibc-2.28-251.0.2.el8_10.4 \
     ; fi
 
-ENV LD_LIBRARY_PATH /usr/lib/oracle/23/client64/lib
-ENV PATH $PATH:/usr/lib/oracle/23/client64/bin
-ENV ORACLE_HOME /usr/lib/oracle/23/client64
+ENV LD_LIBRARY_PATH /usr/lib/oracle/23/client64/lib:usr/lib/oracle/19.24/client64/lib
+ENV PATH $PATH:/usr/lib/oracle/23/client64/bin:usr/lib/oracle/19.24/client64/bin
+ENV ORACLE_HOME /usr/lib/oracle/${DBVER:-23}/client64
 
 COPY --from=build /go/src/oracledb_exporter/oracle-db-appdev-monitoring /oracledb_exporter
 ADD ./default-metrics.toml /default-metrics.toml
