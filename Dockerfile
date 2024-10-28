@@ -38,20 +38,19 @@ ENV GOARCH ${GOARCH:-amd64}
 # to wget the driver for arm.  also note that the permalink for otn download of drivers does not have version
 # in it, and does not appear to be a link vith version in it, so that link is very brittle and could break build
 RUN if [ "$GOARCH" = "amd64" ]; then \
-      export DBVER=23 && \
       microdnf install -y oracle-instantclient-release-23ai-el8 && microdnf install -y oracle-instantclient-basic && \
       microdnf install glibc-2.28-251.0.2.el8_10.4 \
     ; else \
-      export DBVER=19.24 && \
       microdnf install wget libaio && \
       wget https://download.oracle.com/otn_software/linux/instantclient/instantclient-basic-linux-arm64.rpm && \
       rpm -ivh instantclient-basic-linux-arm64.rpm && \
+      ln -s /usr/lib/oracle/19.24 /usr/lib/oracle/23 && \
       microdnf install glibc-2.28-251.0.2.el8_10.4 \
     ; fi
 
 ENV LD_LIBRARY_PATH /usr/lib/oracle/23/client64/lib:usr/lib/oracle/19.24/client64/lib
 ENV PATH $PATH:/usr/lib/oracle/23/client64/bin:usr/lib/oracle/19.24/client64/bin
-ENV ORACLE_HOME /usr/lib/oracle/${DBVER:-23}/client64
+ENV ORACLE_HOME /usr/lib/oracle/23/client64
 
 COPY --from=build /go/src/oracledb_exporter/oracle-db-appdev-monitoring /oracledb_exporter
 ADD ./default-metrics.toml /default-metrics.toml
