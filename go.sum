@@ -54,6 +54,8 @@ github.com/oracle/oci-go-sdk/v65 v65.73.0 h1:C7uel6CoKk4A1KPkdhFBAyvVyFRTHAmX8m0
 github.com/oracle/oci-go-sdk/v65 v65.73.0/go.mod h1:IBEV9l1qBzUpo7zgGaRUhbB05BVfcDGYRFBCPlTcPp0=
 github.com/oracle/oci-go-sdk/v65 v65.75.0 h1:tifYRSqCjxANJb0xnMSZ6N2bF2xGyqcCIMg7xihgk+s=
 github.com/oracle/oci-go-sdk/v65 v65.75.0/go.mod h1:IBEV9l1qBzUpo7zgGaRUhbB05BVfcDGYRFBCPlTcPp0=
+github.com/oracle/oci-go-sdk/v65 v65.77.1 h1:gqjTXIUWvTihkn470AclxSAMcR1JecqjD2IUtp+sDIU=
+github.com/oracle/oci-go-sdk/v65 v65.77.1/go.mod h1:IBEV9l1qBzUpo7zgGaRUhbB05BVfcDGYRFBCPlTcPp0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/prometheus/client_golang v1.20.2 h1:5ctymQzZlyOON1666svgwn3s6IKWgfbjsejTMiXIyjg=
