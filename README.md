@@ -333,6 +333,11 @@ oracledb_wait_time_system_io 1.62
 oracledb_wait_time_user_io 24.5
 ```
 
+These standard metrics are defined in the file `default-metrics.toml` found in the root directory of this repository. 
+
+> **Note:** You can change the interval at which metrics are collected at a per-metric level.  If you find that any of the default metrics are placing too much load on your database instance, you may will too collect that particular metric less often, which can be done by adding the `scrapeinterval` paraemeter to the metric definition.  See the definition of the `top_sql` metric for an example.
+
+
 ## Database permissions required
 
 For the built-in default metrics, the database user that the exporter uses to connect to the Oracle Database instance must have the `SELECT_CATALOG_ROLE` privilege and/or `SELECT` permission on the following objects:
