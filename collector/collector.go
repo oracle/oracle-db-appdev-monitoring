@@ -35,6 +35,7 @@ type Exporter struct {
 	user            string
 	password        string
 	connectString   string
+	configDir       string
 	duration, error prometheus.Gauge
 	totalScrapes    prometheus.Counter
 	scrapeErrors    *prometheus.CounterVec
@@ -53,6 +54,7 @@ type Config struct {
 	Password           string
 	ConnectString      string
 	DbRole             string
+	ConfigDir          string
 	MaxIdleConns       int
 	MaxOpenConns       int
 	CustomMetrics      string
@@ -114,6 +116,7 @@ func NewExporter(logger log.Logger, cfg *Config) (*Exporter, error) {
 		user:          cfg.User,
 		password:      cfg.Password,
 		connectString: cfg.ConnectString,
+		configDir:     cfg.ConfigDir,
 		duration: prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: exporterName,
@@ -366,6 +369,9 @@ func (e *Exporter) connect() error {
 
 	var P godror.ConnectionParams
 	P.Username, P.Password, P.ConnectString = e.user, godror.NewPassword(e.password), e.connectString
+
+	// if TNS_ADMIN env var is set, set ConfigDir to that location
+	P.ConfigDir = e.configDir
 
 	if strings.ToUpper(e.config.DbRole) == "SYSDBA" {
 		P.IsSysDBA = true

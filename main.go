@@ -59,6 +59,7 @@ func main() {
 	password := os.Getenv("DB_PASSWORD")
 	connectString := os.Getenv("DB_CONNECT_STRING")
 	dbrole := os.Getenv("DB_ROLE")
+	tnsadmin := os.Getenv("TNS_ADMIN")
 
 	vaultID, useVault := os.LookupEnv("OCI_VAULT_ID")
 	if useVault {
@@ -85,6 +86,7 @@ func main() {
 		Password:           password,
 		ConnectString:      connectString,
 		DbRole:             dbrole,
+		ConfigDir:          tnsadmin,
 		MaxOpenConns:       *maxOpenConns,
 		MaxIdleConns:       *maxIdleConns,
 		CustomMetrics:      *customMetrics,

@@ -27,6 +27,17 @@ Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 
 ## Release Notes
 
+### Version 1.5.1, October 28, 2024
+
+This release includes the following changes:
+
+- Added support for using the `TNS_ADMIN` environment variable, which fixes an issue when connecting to Autonomous Database instances using TNS name.
+- Updated InstantClient to 23ai version for amd64 and latest available 19.24 version for arm64.
+- Fixed an issue with wrong `LD_LIBRARY_PATH` on some platforms. (#136)
+- Added documentation and an example of using the `scrapeinterval` setting to change the interval at which a certain metric is colected.
+- Added notes to documentation for extra security parameters needed when using a wallet with Podman.
+- Updated some third-party dependencies.
+
 ### Version 1.5.0, September 26, 2024
 
 This release includes the following changes:
@@ -333,6 +344,11 @@ oracledb_wait_time_system_io 1.62
 oracledb_wait_time_user_io 24.5
 ```
 
+These standard metrics are defined in the file `default-metrics.toml` found in the root directory of this repository. 
+
+> **Note:** You can change the interval at which metrics are collected at a per-metric level.  If you find that any of the default metrics are placing too much load on your database instance, you may will too collect that particular metric less often, which can be done by adding the `scrapeinterval` paraemeter to the metric definition.  See the definition of the `top_sql` metric for an example.
+
+
 ## Database permissions required
 
 For the built-in default metrics, the database user that the exporter uses to connect to the Oracle Database instance must have the `SELECT_CATALOG_ROLE` privilege and/or `SELECT` permission on the following objects:
@@ -459,7 +475,7 @@ docker run -it --rm \
     -e DB_PASSWORD=Welcome12345 \
     -e DB_CONNECT_STRING=free23ai:1521/freepdb \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:1.5.0
+    container-registry.oracle.com/database/observability-exporter:1.5.1
 ```
 
 ##### Using a wallet
@@ -477,6 +493,9 @@ Now, you provide the connection details using these variables:
 - `DB_CONNECT_STRING` is the connection string, e.g., `devdb_tp?TNS_ADMIN=/wallet`
 - `DB_ROLE` (Optional) can be set to `SYSDBA` or `SYSOPER` if you want to connect with one of those roles, however Oracle recommends that you connect with the lowest possible privileges and roles necessary for the exporter to run.
 - `ORACLE_HOME` is the location of the Oracle Instant Client, i.e., `/lib/oracle/21/client64/lib`.  If you built your own container image, the path may be different.
+- `TNS_ADMIN` is the location of your (unzipped) wallet.  The `DIRECTORY` set in the `sqlnet.ora` file must match the path that it will be mounted on inside the container.
+
+> **Note:** Specify the path to your wallet using the `TNS_ADMIN` environment variable rather than adding it to the `DB_CONNECT_STRING`.
 
 To run the exporter in a container and expose the port, use a command like this, with the appropriate values for the environment variables, and mounting your `wallet` directory as `/wallet` in the container to provide access to the wallet:
 
@@ -487,8 +506,9 @@ docker run -it --rm \
     -e DB_CONNECT_STRING=devdb_tp \
     -v ./wallet:/wallet \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:1.5.0
+    container-registry.oracle.com/database/observability-exporter:1.5.1
 ```
+> **Note:** If you are using `podman` you must specify the `:z` suffix on the volume mount so that the container will be able to access the files in the volume.  For example: `-v ./wallet:/wallet:z`
 
 ### Test/demo environment with Docker Compose
 
@@ -651,6 +671,7 @@ You may provide the connection details using these variables:
 - `DB_CONNECT_STRING` is the connection string, e.g., `localhost:1521/freepdb1`
 - `DB_ROLE` (Optional) can be set to `SYSDBA` or `SYSOPER` if you want to connect with one of those roles, however Oracle recommends that you connect with the lowest possible privileges and roles necessary for the exporter to run.
 - `ORACLE_HOME` is the location of the Oracle Instant Client, e.g., `/lib/oracle/21/client64/lib`.  
+- `TNS_ADMIN` is the location of your (unzipped) wallet.  The `DIRECTORY` set in the `sqlnet.ora` file must match the path that it will be mounted on inside the container.
 
 The following example puts the logfile in the current location with the filename `alert.log` and loads the default matrics file (`default-metrics,toml`) from the current location.
 
@@ -775,7 +796,7 @@ An exmaple of [custom metrics for Transacational Event Queues](./custom-metrics-
 If you run the exporter as a container image and want to include your custom metrics in the image itself, you can use the following example `Dockerfile` to create a new image:
 
 ```Dockerfile
-FROM container-registry.oracle.com/database/observability-exporter:1.5.0
+FROM container-registry.oracle.com/database/observability-exporter:1.5.1
 COPY custom-metrics.toml /
 ENTRYPOINT ["/oracledb_exporter", "--custom.metrics", "/custom-metrics.toml"]
 ```

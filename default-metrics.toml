@@ -95,6 +95,11 @@ order by elapsed_time desc
 ) where ROWNUM <= 15
 '''
 ignorezeroresult = true
+# scrapeinterval = "5m"
+# The previous line is an example of changing the interval at which this one metric
+# will be scraped. You may wish to do this to scrape a metric less often, if the SQL
+# statement to collect that metric places more load on your database instance than 
+# desired when it is run at every scrape.
 
 [[metric]]
 context = "cache_hit_ratio"
