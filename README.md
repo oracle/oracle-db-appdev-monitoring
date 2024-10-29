@@ -27,6 +27,16 @@ Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 
 ## Release Notes
 
+### Version 1.5.1, October 28, 2024
+
+This release includes the following changes:
+
+- Added support for using the `TNS_ADMIN` environment variable, which fixes an issue when connecting to Autonomous Database instances using TNS name.
+- Updated InstantClient to 23ai version for amd64 and latest available 19.24 version for arm64.
+- Fixed an issue with wrong `LD_LIBRARY_PATH` on some platforms. (#136)
+- Added documentation and an example of using the `scrapeinterval` setting to change the interval at which a certain metric is colected.
+- Updated some third-party dependencies.
+
 ### Version 1.5.0, September 26, 2024
 
 This release includes the following changes:
