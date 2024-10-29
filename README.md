@@ -35,6 +35,7 @@ This release includes the following changes:
 - Updated InstantClient to 23ai version for amd64 and latest available 19.24 version for arm64.
 - Fixed an issue with wrong `LD_LIBRARY_PATH` on some platforms. (#136)
 - Added documentation and an example of using the `scrapeinterval` setting to change the interval at which a certain metric is colected.
+- Added notes to documentation for extra security parameters needed when using a wallet with Podman.
 - Updated some third-party dependencies.
 
 ### Version 1.5.0, September 26, 2024
