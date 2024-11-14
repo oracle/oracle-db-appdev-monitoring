@@ -381,15 +381,23 @@ func (e *Exporter) connect() error {
 		P.IsSysOper = true
 	}
 
+	P.PoolParams = godror.PoolParams{
+		SessionTimeout:   5 * time.Minute,
+		MinSessions:      10,
+		SessionIncrement: 5,
+		MaxSessions:      25,
+		WaitTimeout:      5 * time.Minute,
+	}
+
 	level.Debug(e.logger).Log("msg", "connection properties: "+fmt.Sprint(P))
 
 	// note that this just configures the connection, it does not acutally connect until later
 	// when we call db.Ping()
 	db := sql.OpenDB(godror.NewConnector(P))
 	level.Debug(e.logger).Log("set max idle connections to ", e.config.MaxIdleConns)
-	db.SetMaxIdleConns(e.config.MaxIdleConns)
+	db.SetMaxIdleConns(0) //e.config.MaxIdleConns)
 	level.Debug(e.logger).Log("set max open connections to ", e.config.MaxOpenConns)
-	db.SetMaxOpenConns(e.config.MaxOpenConns)
+	db.SetMaxOpenConns(0) //e.config.MaxOpenConns)
 	db.SetConnMaxLifetime(0)
 	level.Debug(e.logger).Log("msg", "Successfully configured connection to "+maskDsn(e.connectString))
 	e.db = db
