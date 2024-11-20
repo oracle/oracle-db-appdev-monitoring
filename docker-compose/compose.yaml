@@ -43,15 +43,16 @@ services:
       start_period: 30s
 
   exporter:
-    image: container-registry.oracle.com/database/observability-exporter:1.5.1
+    image: container-registry.oracle.com/database/observability-exporter:1.5.2-amd64
     container_name: exporter
+    command: ["--log.level=debug"]
     ports:
       - 9161:9161
     environment:
       - DB_USERNAME=pdbadmin
       - DB_PASSWORD=Welcome12345
       - DB_CONNECT_STRING=free23ai:1521/freepdb1
-      - CUSTOM_METRICS=/exporter/txeventq-metrics.toml,/exporter/more-txeventq-metrics.toml
+      - CUSTOM_METRICS=/exporter/txeventq-metrics.toml,/exporter/more-txeventq-metrics.toml,/exporter/custom-metrics.toml
     volumes:
       - ./exporter:/exporter
     depends_on: 
