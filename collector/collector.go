@@ -36,6 +36,7 @@ type Exporter struct {
 	password        string
 	connectString   string
 	configDir       string
+	externalAuth	bool
 	duration, error prometheus.Gauge
 	totalScrapes    prometheus.Counter
 	scrapeErrors    *prometheus.CounterVec
@@ -55,6 +56,7 @@ type Config struct {
 	ConnectString      string
 	DbRole             string
 	ConfigDir          string
+	ExternalAuth	   bool
 	MaxIdleConns       int
 	MaxOpenConns       int
 	CustomMetrics      string
@@ -117,6 +119,7 @@ func NewExporter(logger log.Logger, cfg *Config) (*Exporter, error) {
 		password:      cfg.Password,
 		connectString: cfg.ConnectString,
 		configDir:     cfg.ConfigDir,
+		externalAuth:  cfg.ExternalAuth,
 		duration: prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: exporterName,
@@ -375,7 +378,16 @@ func (e *Exporter) connect() error {
 	level.Debug(e.logger).Log("msg", "Launching connection to "+maskDsn(e.connectString))
 
 	var P godror.ConnectionParams
-	P.Username, P.Password, P.ConnectString = e.user, godror.NewPassword(e.password), e.connectString
+	// If password is not specified, externalAuth will be true and we'll ignore user input
+	e.externalAuth = e.password == ""
+	level.Debug(e.logger).Log("external authentication set to ", e.externalAuth)
+	msg := "Using Username/Password Authentication."
+	if e.externalAuth {
+		msg = "Database Password not specified; will attempt to use external authentication (ignoring user input)."
+		e.user = ""
+	}
+	level.Info(e.logger).Log("msg", msg)
+	P.Username, P.Password, P.ConnectString, P.ExternalAuth = e.user, godror.NewPassword(e.password), e.connectString, e.externalAuth
 
 	// if TNS_ADMIN env var is set, set ConfigDir to that location
 	P.ConfigDir = e.configDir
@@ -398,7 +410,7 @@ func (e *Exporter) connect() error {
 
 	level.Debug(e.logger).Log("msg", "connection properties: "+fmt.Sprint(P))
 
-	// note that this just configures the connection, it does not acutally connect until later
+	// note that this just configures the connection, it does not actually connect until later
 	// when we call db.Ping()
 	db := sql.OpenDB(godror.NewConnector(P))
 	level.Debug(e.logger).Log("set max idle connections to ", e.config.MaxIdleConns)

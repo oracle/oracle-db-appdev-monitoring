@@ -60,6 +60,8 @@ func main() {
 	connectString := os.Getenv("DB_CONNECT_STRING")
 	dbrole := os.Getenv("DB_ROLE")
 	tnsadmin := os.Getenv("TNS_ADMIN")
+	// externalAuth - Default to user/password but if no password is supplied then will automagically set to true
+	externalAuth := false
 
 	vaultID, useVault := os.LookupEnv("OCI_VAULT_ID")
 	if useVault {
@@ -87,6 +89,7 @@ func main() {
 		ConnectString:      connectString,
 		DbRole:             dbrole,
 		ConfigDir:          tnsadmin,
+		ExternalAuth:		externalAuth,
 		MaxOpenConns:       *maxOpenConns,
 		MaxIdleConns:       *maxIdleConns,
 		CustomMetrics:      *customMetrics,
