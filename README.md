@@ -31,7 +31,8 @@ Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 
 This release includes the following changes:
 
-- x
+- Update the metric defintion for tablespace usage to report more accurate temp space usage.
+- Revert InstantClient to 21c version due to ADB connectivity issue.
 - Update documentation to explain how to obtain credentials from a wallet.
 - Fix race condition on err variable in scrape() func (by @valrusu).
 
