@@ -489,7 +489,7 @@ docker run -it --rm \
     -e DB_PASSWORD=Welcome12345 \
     -e DB_CONNECT_STRING=free23ai:1521/freepdb \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:1.5.1
+    container-registry.oracle.com/database/observability-exporter:1.5.2
 ```
 
 ##### Using a wallet
@@ -535,7 +535,7 @@ docker run -it --rm \
     -e DB_CONNECT_STRING=devdb_tp \
     -v ./wallet:/wallet \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:1.5.1
+    container-registry.oracle.com/database/observability-exporter:1.5.2
 ```
 > **Note:** If you are using `podman` you must specify the `:z` suffix on the volume mount so that the container will be able to access the files in the volume.  For example: `-v ./wallet:/wallet:z`
 
