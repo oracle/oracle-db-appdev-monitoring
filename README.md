@@ -38,6 +38,8 @@ This release includes the following changes:
 
 Thank you to the following people for their suggestions and contributions:
 
+- [@aureliocirella](https://github.com/aureliocirella)
+- [@mitoeth](https://github.com/mitoeth)
 - [@valrusu](https://github.com/valrusu)
 
 ### Version 1.5.1, October 28, 2024

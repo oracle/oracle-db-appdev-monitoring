@@ -623,9 +623,6 @@ func (e *Exporter) generatePrometheusMetrics(db *sql.DB, parse func(row map[stri
 	defer cancel()
 	rows, err := db.QueryContext(ctx, query)
 
-	// debug log
-	level.Debug(e.logger).Log("msg", "generatePrometheusMetrics() - query and err", "query", query, "err", err)
-
 	if ctx.Err() == context.DeadlineExceeded {
 		return errors.New("Oracle query timed out")
 	}
