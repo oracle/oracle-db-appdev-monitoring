@@ -54,7 +54,6 @@ RUN if [ "$GOARCH" = "amd64" ]; then \
 
 ENV LD_LIBRARY_PATH=/usr/lib/oracle/21/client64/lib:usr/lib/oracle/19.24/client64/lib
 ENV PATH=$PATH:/usr/lib/oracle/21/client64/bin:usr/lib/oracle/19.24/client64/bin
-ENV ORACLE_HOME=/usr/lib/oracle/21/client64
 
 COPY --from=build /go/src/oracledb_exporter/oracle-db-appdev-monitoring /oracledb_exporter
 ADD ./default-metrics.toml /default-metrics.toml
