@@ -35,6 +35,7 @@ This release includes the following changes:
 - Revert InstantClient to 21c version due to ADB connectivity issue.
 - Update documentation to explain how to obtain credentials from a wallet.
 - Fix race condition on err variable in scrape() func (by @valrusu).
+- Updated some third-party dependencies.
 
 Thank you to the following people for their suggestions and contributions:
 
@@ -162,12 +163,10 @@ Currently, we plan to address the following key features:
 - Implement connection storm protection - prevent the exporter from repeatedly connecting when the credentials fail, to prevent a storm of connections causing accounts to be locked across a large number of databases,
 - Provide the option to have the Oracle client outside of the container image, e.g., on a shared volume,
 - Implement the ability to update the configuration dynamically, i.e., without a restart,
-- Implement support for exporting logs, including audit logs for example, from the database,
 - Implement support for tracing within the database, e.g., using an execution context ID provide by an external caller,
 - Provide additional pre-built Grafana dashboards,
-- Integration with Spring Observability, e.g., Micrometer,
-- Provide additional documentation and samples, and
-- Integrate with the Oracle Database Operator for Kubernetes.
+- Integration with Spring Observability, e.g., Micrometer, and 
+- Provide additional documentation and samples.
 
 ## Standard metrics
 
