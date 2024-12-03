@@ -36,7 +36,7 @@ type Exporter struct {
 	password        string
 	connectString   string
 	configDir       string
-	externalAuth	bool
+	externalAuth    bool
 	duration, error prometheus.Gauge
 	totalScrapes    prometheus.Counter
 	scrapeErrors    *prometheus.CounterVec
@@ -56,7 +56,7 @@ type Config struct {
 	ConnectString      string
 	DbRole             string
 	ConfigDir          string
-	ExternalAuth	   bool
+	ExternalAuth       bool
 	MaxIdleConns       int
 	MaxOpenConns       int
 	CustomMetrics      string
