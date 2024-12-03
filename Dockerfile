@@ -43,7 +43,7 @@ ENV GOARCH=${GOARCH:-amd64}
 # oracle-instantclient-release-23ai-el8 and paths below s/21/23/
 RUN if [ "$GOARCH" = "amd64" ]; then \
       microdnf install -y oracle-instantclient-release-el8 && microdnf install -y oracle-instantclient-basic && \
-      microdnf install glibc-2.28-251.0.2.el8_10.4 strace \
+      microdnf install glibc-2.28-251.0.2.el8_10.4 \
     ; else \
       microdnf install wget libaio && \
       wget https://download.oracle.com/otn_software/linux/instantclient/instantclient-basic-linux-arm64.rpm && \
