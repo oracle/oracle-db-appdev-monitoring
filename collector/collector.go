@@ -266,6 +266,8 @@ func (e *Exporter) scheduledScrape(tick *time.Time) {
 func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 	e.totalScrapes.Inc()
 	var err error
+	var errmutex sync.Mutex
+
 	defer func(begun time.Time) {
 		e.duration.Set(time.Since(begun).Seconds())
 		if err == nil {
@@ -342,7 +344,12 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 			}
 
 			scrapeStart := time.Now()
-			if err = e.ScrapeMetric(e.db, ch, metric, tick); err != nil {
+			if err1 := e.ScrapeMetric(e.db, ch, metric, tick); err1 != nil {
+				errmutex.Lock()
+				{
+					err = err1
+				}
+				errmutex.Unlock()
 				if !metric.IgnoreZeroResult {
 					// do not print repetitive error messages for metrics
 					// with ignoreZeroResult set to true
@@ -611,6 +618,9 @@ func (e *Exporter) generatePrometheusMetrics(db *sql.DB, parse func(row map[stri
 	ctx, cancel := context.WithTimeout(context.Background(), queryTimeout)
 	defer cancel()
 	rows, err := db.QueryContext(ctx, query)
+
+	// debug log
+	level.Debug(e.logger).Log("msg", "generatePrometheusMetrics() - query and err", "query", query, "err", err)
 
 	if ctx.Err() == context.DeadlineExceeded {
 		return errors.New("Oracle query timed out")

@@ -62,7 +62,7 @@ SELECT
     dtum.used_percent
 FROM  dba_tablespace_usage_metrics dtum, dba_tablespaces dt
 WHERE dtum.tablespace_name = dt.tablespace_name
-and dt.tablespace_name != 'TEMP'
+and dt.contents != 'TEMPORARY'
 union
 SELECT
     dt.tablespace_name as tablespace,
@@ -72,7 +72,7 @@ SELECT
     dt.free_space as free,
     ((dt.tablespace_size - dt.free_space) / dt.tablespace_size)
 FROM  dba_temp_free_space dt
-order by tablespace;
+order by tablespace
 '''
 
 [[metric]]

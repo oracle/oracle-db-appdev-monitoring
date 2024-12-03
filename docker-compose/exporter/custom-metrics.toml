@@ -3,10 +3,9 @@ context = "test_oracle_jobs"
 metricsdesc = { last_run_duration = "Duration of Last Run"}
 labels = [ "job_name", "state", "next_run_date", "last_start_date" ]
 request = '''
-select job_name, state, next_run_date, last_start_date, last_run_duration
+select job_name, state, next_run_date, last_start_date, extract(second from last_run_duration) last_run_duration
   from DBA_SCHEDULER_JOBS
-WHERE job_name like 'EM%'
-order by last_start_date desc
+WHERE job_name like 'PURGE%'
 '''
-scrapeinterval = "15m"
+#scrapeinterval = "15m"
 
