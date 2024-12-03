@@ -480,13 +480,13 @@ docker run -it --rm \
 
 ##### Using a wallet
 
-For a mTLS connection, you must first set up the wallet.  If you are using Oracle Autonomous Database with mTLS, for example, you can download the wallet from the Oracle Cloud Infrastructure (OCI) console.  
+For a **mTLS connection**, you must first set up the wallet.  If you are using Oracle Autonomous Database with mTLS, for example, you can download the wallet from the Oracle Cloud Infrastructure (OCI) console.  
 
 1. Unzip the wallet into a new directory, e.g., called `wallet`.
 1. Edit the `sqlnet.ora` file and set the `DIRECTORY` to `/wallet`.  This is the path inside the exporter container where you will provide the wallet.
 1. Take a note of the TNS Alias name from the `tnsnames.ora` that will be used to connect to the database, e.g., `devdb_tp`.
 
-To use a wallet for authentication:
+To use a **wallet for authentication**, use `orapki` to create a wallet and secretstore.  The `orapki` utility can be found in SQLcl or in full database techstack installations.
 1. Create a wallet, for example: 
     ```bash
     orapki wallet create -wallet /wallet -auto_login -pwd <wallet_password>
@@ -503,8 +503,8 @@ To use a wallet for authentication:
 
 Now, you provide the connection details using these variables:
 
-- `DB_USERNAME` is the database username, e.g., `pdbadmin` **Note:** Do not set DB_USERNAME if using wallet authentication
-- `DB_PASSWORD` is the password for that user, e.g., `Welcome12345` **Note:** Do not set DB_PASSWORD if using wallet authentication
+- `DB_USERNAME` is the database username, e.g., `pdbadmin` **Note:** Do not set `DB_USERNAME` if using wallet authentication
+- `DB_PASSWORD` is the password for that user, e.g., `Welcome12345` **Note:** Do not set `DB_PASSWORD` if using wallet authentication
 - `DB_CONNECT_STRING` is the connection string, e.g., `devdb_tp`
 - `DB_ROLE` (Optional) can be set to `SYSDBA` or `SYSOPER` if you want to connect with one of those roles, however Oracle recommends that you connect with the lowest possible privileges and roles necessary for the exporter to run.
 - `ORACLE_HOME` is the location of the Oracle Instant Client, i.e., `/lib/oracle/21/client64/lib`.  If you built your own container image, the path may be different.
