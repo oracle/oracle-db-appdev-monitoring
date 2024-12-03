@@ -27,6 +27,18 @@ Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 
 ## Release Notes
 
+### Version 1.5.2, December 2, 2024
+
+This release includes the following changes:
+
+- x
+- Update documentation to explain how to obtain credentials from a wallet.
+- Fix race condition on err variable in scrape() func (by @valrusu).
+
+Thank you to the following people for their suggestions and contributions:
+
+- [@valrusu](https://github.com/valrusu)
+
 ### Version 1.5.1, October 28, 2024
 
 This release includes the following changes:
