@@ -48,7 +48,7 @@ RUN if [ "$GOARCH" = "amd64" ]; then \
       microdnf install wget libaio && \
       wget https://download.oracle.com/otn_software/linux/instantclient/instantclient-basic-linux-arm64.rpm && \
       rpm -ivh instantclient-basic-linux-arm64.rpm && \
-      ln -s /usr/lib/oracle/19.24 /usr/lib/oracle/23 && \
+      ln -s /usr/lib/oracle/19.24 /usr/lib/oracle/21 && \
       microdnf install glibc-2.28-251.0.2.el8_10.4 \
     ; fi
 
