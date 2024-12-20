@@ -220,6 +220,9 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 // rather than letting it be per Collect call
 func (e *Exporter) RunScheduledScrapes(ctx context.Context, si time.Duration) {
 	e.scrapeInterval = &si
+
+	e.doScrape(time.Now())
+
 	ticker := time.NewTicker(si)
 	defer ticker.Stop()
 
@@ -227,14 +230,18 @@ func (e *Exporter) RunScheduledScrapes(ctx context.Context, si time.Duration) {
 		select {
 		case tick := <-ticker.C:
 
-			e.mu.Lock() // ensure no simultaneous scrapes
-			e.scheduledScrape(&tick)
-			e.lastTick = &tick
-			e.mu.Unlock()
+			e.doScrape(tick)
 		case <-ctx.Done():
 			return
 		}
 	}
+}
+
+func (e *Exporter) doScrape(tick time.Time) {
+	e.mu.Lock() // ensure no simultaneous scrapes
+	e.scheduledScrape(&tick)
+	e.lastTick = &tick
+	e.mu.Unlock()
 }
 
 func (e *Exporter) scheduledScrape(tick *time.Time) {
@@ -387,7 +394,11 @@ func (e *Exporter) connect() error {
 		e.user = ""
 	}
 	level.Info(e.logger).Log("msg", msg)
-	P.Username, P.Password, P.ConnectString, P.ExternalAuth = e.user, godror.NewPassword(e.password), e.connectString, e.externalAuth
+	externalAuth := sql.NullBool{
+		Bool:  e.externalAuth,
+		Valid: true,
+	}
+	P.Username, P.Password, P.ConnectString, P.ExternalAuth = e.user, godror.NewPassword(e.password), e.connectString, externalAuth
 
 	// if TNS_ADMIN env var is set, set ConfigDir to that location
 	P.ConfigDir = e.configDir
