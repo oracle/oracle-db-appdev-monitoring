@@ -19,7 +19,7 @@ func newZeroResultError() error {
 	}
 }
 
-// shouldLogScrapeError returns true if the error is a zero result error and zero result errors are ignored.
+// shouldLogScrapeError returns false if the error is a zero result error and zero result errors are ignored.
 func shouldLogScrapeError(err error, isIgnoreZeroResult bool) bool {
 	return !isIgnoreZeroResult || !errors.Is(err, newZeroResultError())
 }
