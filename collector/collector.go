@@ -360,9 +360,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 					err = err1
 				}
 				errmutex.Unlock()
-				if !metric.IgnoreZeroResult {
-					// do not print repetitive error messages for metrics
-					// with ignoreZeroResult set to true
+				if shouldLogScrapeError(err, metric.IgnoreZeroResult) {
 					level.Error(e.logger).Log("msg", "Error scraping metric",
 						"Context", metric.Context,
 						"MetricsDesc", fmt.Sprint(metric.MetricsDesc),
@@ -622,7 +620,9 @@ func (e *Exporter) scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, 
 		return err
 	}
 	if !ignoreZeroResult && metricsCount == 0 {
-		return errors.New("no metrics found while parsing, query returned no rows")
+		// a zero result error is returned for caller error identification.
+		// https://github.com/oracle/oracle-db-appdev-monitoring/issues/168
+		return newZeroResultError()
 	}
 	return err
 }
