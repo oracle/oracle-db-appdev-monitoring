@@ -6,7 +6,8 @@ UPL-1.0
 
 ---------------------------------- Copyright -----------------------------------
 Copyright (c) 2016 Seth Miller <seth@sethmiller.me>
-Copyright (c) 2016, 2024, Oracle and/or its affiliates.
+Copyright (c) 2016, 2025, Oracle and/or its affiliates.
+
 
 -------------------------- Fourth Party Dependencies ---------------------------
 
@@ -388,7 +389,7 @@ SOFTWARE.
 
 
 ============================================================
-github.com/google/go-cmp 
+github.com/google/go-cmp v0.4.0
 ============================================================
 Copyright (c) 2017 The Go Authors. All rights reserved.
 
@@ -454,11 +455,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 == Copyright
 Copyright (c) 2015 go-logfmt
-Copyright (c) 2016, 2024, Oracle and/or its affiliates.
+Copyright (c) 2016, 2024 Oracle and/or its affiliates.
 Copyright (c) 2017 The Go Authors. All rights reserved.
-Copyright 2020 Tamás Gulácsi
-Copyright 2022, 2023 Tamás Gulácsi. All rights reserved.
-Copyright 2024 The Godror Authors
+Copyright 2016, 2023 Tamás Gulácsi
+Copyright 2017, 2024 The Godror Authors
 
 --------------------------------- (separator) ----------------------------------
 
@@ -512,6 +512,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Copyright (c) 2015-2020, Tim Heckman
 Copyright 2018 The Go Authors. All rights reserved.
 Copyright 2018 The Gofrs. All rights reserved.
+Copyright 2019 Tim Heckman. All rights reserved. Use of this source code is
 
 --------------------------------- (separator) ----------------------------------
 
@@ -567,9 +568,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ------------------
 
 Files: gzhttp/*
-
-Apache License Version 2.0
-SPDX:Apache-2.0
+SPDX: Apache-2.0
 
 ------------------
 
@@ -646,7 +645,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 == Copyright
 Copyright (c) 2013, Yann Collet, released under BSD License.
 Copyright (c) 2015, Pierre Curto
-Copyright (c) 2016 Caleb Spare.
+Copyright (c) 2016 Caleb Spare
 Copyright (c) 2016 Evan Huus
 Copyright (c) 2024+ Klaus Post. All rights reserved.
 Copyright 2016 The Snappy-Go Authors. All rights reserved.
@@ -783,14 +782,18 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Apache License Version 2.0
-SPDX:Apache-2.0
+
+The Apache Software License, Version 2.0
+Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+
+SPDX: Apache-2.0
+
 
 == Copyright
-Copyright (c) 2016, 2018, 2024, Oracle and/or its affiliates.  All rights reserved.
+Copyright (c) 2016, 2024, Oracle and/or its affiliates.
 
 == Notices
-Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.
+Copyright (c) 2016, 2014, Oracle and/or its affiliates.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -837,7 +840,6 @@ SPDX:Apache-2.0
 
 == Copyright
 Copyright 2012-2015 The Prometheus Authors
-Copyright 2013 Prometheus Team
 
 == Notices
 Data model artifacts for Prometheus.
@@ -856,7 +858,6 @@ github.com/prometheus/common
 SPDX:Apache-2.0
 
 == Copyright
-Copyright 2020 The Prometheus-operator Authors
 Copyright 2024 The Prometheus Authors
 
 == Notices
@@ -888,14 +889,14 @@ github.com/prometheus/procfs
 SPDX:Apache-2.0
 
 == Copyright
-Copyright 2023 Prometheus Team
-Copyright 2023 The Prometheus Authors
+Copyright 2014-2023 The Prometheus Authors
+Copyright 2017-2023 Prometheus Team
 
 == Notices
 procfs provides functions to retrieve system, kernel and process
 metrics from the pseudo-filesystem proc.
 
-Copyright 2014-2015 The Prometheus Authors
+Copyright 2014-2023 The Prometheus Authors
 
 This product includes software developed at
 SoundCloud Ltd. (http://soundcloud.com/).
@@ -921,6 +922,7 @@ github.com/xhit/go-str2duration/v2
 SPDX:BSD-3-Clause--modified-by-Google
 
 == Copyright
+Copyright (c) 2009 The Go Authors. All rights reserved.
 Copyright 2010 The Go Authors. All rights reserved.
 
 --------------------------------- (separator) ----------------------------------
@@ -1297,7 +1299,6 @@ google.golang.org/protobuf
 SPDX:BSD-3-Clause--modified-by-Google
 
 == Copyright
-Copyright 2023 Google Inc.  All rights reserved.
 Copyright 2024 The Go Authors. All rights reserved.
 
 == Patents
@@ -1354,8 +1355,10 @@ limitations under the License.
 
 
 ----------------------------------- Licenses -----------------------------------
-Apache License Version 2.0
-SPDX:Apache-2.0
+
+--------------------------------- (separator) ----------------------------------
+== SPDX:Apache-2.0
+
 
 --------------------------------- (separator) ----------------------------------
 == SPDX:BSD-3-Clause--modified-by-Google
@@ -1411,4 +1414,4 @@ SOFTWARE.
 
 === ATTRIBUTION-HELPER-GENERATED:
 === Attribution helper version: {Major:0 Minor:11 GitVersion:0.10.0-114-g3747dab9 GitCommit:3747dab92eb29c0dbe6409ffbb824b9ae3a04b87 GitTreeState:clean BuildDate:2024-05-31T13:48:06Z GoVersion:go1.21.4 Compiler:gc Platform:linux/amd64}
-=== License file based on go.mod with md5 sum:  86b1d6df6baa8b032896be53c4274d92
+=== License file based on go.mod with md5 sum:  9703204c5fd5c441310d943839abdc4b
