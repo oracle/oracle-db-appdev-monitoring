@@ -27,6 +27,23 @@ Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 
 ## Release Notes
 
+### Version 1.5.3, January 28, 2025
+
+Our current priorities are support for RAC and mutliple databases (inculding #84 and #89), and intermittent connection issues
+with ADB-S when exporter is run in a container (including #169).  We expect to address these in an upcoming release.
+
+This release includes the following changes:
+
+- Fix over-zealous supression of errors when `ignorezeroresult = true` (#168).
+- When `scrapeinterval` is set, do first scrape immediately, not after the interval (#166).
+- Updated some third-party dependencies.
+
+Thank you to the following people for their suggestions and contributions:
+
+- [@redelang](https://github.com/redelang)
+
+In this release, we also started some minor code refactoring.  
+
 ### Version 1.5.2, December 2, 2024
 
 This release includes the following changes:
@@ -442,7 +459,7 @@ docker run --name free23ai \
     -d \
     -p 1521:1521 \
     -e ORACLE_PASSWORD=Welcome12345 \
-    gvenzl/oracle-free:23.5-slim-faststart
+    gvenzl/oracle-free:23.6-slim-faststart
 ```
 
 This will pull the image and start up the database with a listener on port 1521. It will also create a pluggable database (a database container) called "FREEPDB1" and will set the admin passwords to the password you specified on this command.
@@ -489,7 +506,7 @@ docker run -it --rm \
     -e DB_PASSWORD=Welcome12345 \
     -e DB_CONNECT_STRING=free23ai:1521/freepdb \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:1.5.2
+    container-registry.oracle.com/database/observability-exporter:1.5.3
 ```
 
 ##### Using a wallet
@@ -535,7 +552,7 @@ docker run -it --rm \
     -e DB_CONNECT_STRING=devdb_tp \
     -v ./wallet:/wallet \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:1.5.2
+    container-registry.oracle.com/database/observability-exporter:1.5.3
 ```
 > **Note:** If you are using `podman` you must specify the `:z` suffix on the volume mount so that the container will be able to access the files in the volume.  For example: `-v ./wallet:/wallet:z`
 
@@ -825,7 +842,7 @@ An exmaple of [custom metrics for Transacational Event Queues](./custom-metrics-
 If you run the exporter as a container image and want to include your custom metrics in the image itself, you can use the following example `Dockerfile` to create a new image:
 
 ```Dockerfile
-FROM container-registry.oracle.com/database/observability-exporter:1.5.1
+FROM container-registry.oracle.com/database/observability-exporter:1.5.3
 COPY custom-metrics.toml /
 ENTRYPOINT ["/oracledb_exporter", "--custom.metrics", "/custom-metrics.toml"]
 ```
@@ -1010,7 +1027,7 @@ Please consult the [security guide](./SECURITY.md) for our responsible security 
 
 ## License
 
-Copyright (c) 2016, 2024, Oracle and/or its affiliates.
+Copyright (c) 2016, 2025, Oracle and/or its affiliates.
 
 Released under the Universal Permissive License v1.0 as shown at
 <https://oss.oracle.com/licenses/upl/>
