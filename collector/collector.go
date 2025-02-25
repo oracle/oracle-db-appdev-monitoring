@@ -354,12 +354,12 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 			}
 
 			scrapeStart := time.Now()
-			if err1 := e.ScrapeMetric(e.db, ch, metric, tick); err1 != nil {
-				errmutex.Lock()
-				{
-					err = err1
-				}
-				errmutex.Unlock()
+			errmutex.Lock()
+			err1 := e.ScrapeMetric(e.db, ch, metric, tick)
+			errmutex.Unlock()
+
+			if err1 != nil {
+				err = err1
 				if shouldLogScrapeError(err, metric.IgnoreZeroResult) {
 					level.Error(e.logger).Log("msg", "Error scraping metric",
 						"Context", metric.Context,
