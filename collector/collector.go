@@ -55,7 +55,7 @@ type Config struct {
 	User               string
 	Password           string
 	ConnectString      string
-	DbRole             string
+	DbRole             dsn.AdminRole
 	ConfigDir          string
 	ExternalAuth       bool
 	MaxIdleConns       int
@@ -402,7 +402,7 @@ func (e *Exporter) connect() error {
 	// if TNS_ADMIN env var is set, set ConfigDir to that location
 	P.ConfigDir = e.configDir
 
-	switch strings.ToUpper(e.config.DbRole) {
+	switch e.config.DbRole {
 	case "SYSDBA":
 		P.AdminRole = dsn.SysDBA
 	case "SYSOPER":
