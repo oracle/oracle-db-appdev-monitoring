@@ -33,7 +33,7 @@ Our current priorities are support for RAC and mutliple databases (inculding #84
 with ADB-S when exporter is run in a container (including #169).  We expect to address these in an upcoming release.
 
 - Fix malloc error (#177)
-- Add support for additional admin roles, including SYSDG (#180)
+- Add support for additional admin roles, exapnding list of options for `DB_ROILE` to `SYSDBA`, `SYSOPER`, `SYSBACKUP`, `SYSDG`, `SYSKM`, `SYSRAC` and `SYSASM` (#180)
 - Updated some third-party dependencies.
 
 Thank you to the following people for their suggestions and contributions:
@@ -519,7 +519,7 @@ For a simple connection, you will provide the details using these variables:
 - `DB_USERNAME` is the database username, e.g., `pdbadmin`
 - `DB_PASSWORD` is the password for that user, e.g., `Welcome12345`
 - `DB_CONNECT_STRING` is the connection string, e.g., `free23ai:1521/freepdb`
-- `DB_ROLE` (Optional) can be set to `SYSDBA` or `SYSOPER` if you want to connect with one of those roles, however Oracle recommends that you connect with the lowest possible privileges and roles necessary for the exporter to run.
+- `DB_ROLE` (Optional) can be set to `SYSDBA`, `SYSOPER`, `SYSBACKUP`, `SYSDG`, `SYSKM`, `SYSRAC` or `SYSASM` if you want to connect with one of those roles, however Oracle recommends that you connect with the lowest possible privileges and roles necessary for the exporter to run.
 
 To run the exporter in a container and expose the port, use a command like this, with the appropriate values for the environment variables:
 

@@ -23,6 +23,7 @@ import (
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/godror/godror"
+	"github.com/godror/godror/dsn"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -401,12 +402,23 @@ func (e *Exporter) connect() error {
 	// if TNS_ADMIN env var is set, set ConfigDir to that location
 	P.ConfigDir = e.configDir
 
-	if strings.ToUpper(e.config.DbRole) == "SYSDBA" {
-		P.IsSysDBA = true
-	}
-
-	if strings.ToUpper(e.config.DbRole) == "SYSOPER" {
-		P.IsSysOper = true
+	switch strings.ToUpper(e.config.DbRole) {
+	case "SYSDBA":
+		P.AdminRole = dsn.SysDBA
+	case "SYSOPER":
+		P.AdminRole = dsn.SysOPER
+	case "SYSBACKUP":
+		P.AdminRole = dsn.SysBACKUP
+	case "SYSDG":
+		P.AdminRole = dsn.SysDG
+	case "SYSKM":
+		P.AdminRole = dsn.SysKM
+	case "SYSRAC":
+		P.AdminRole = dsn.SysRAC
+	case "SYSASM":
+		P.AdminRole = dsn.SysASM
+	default:
+		P.AdminRole = dsn.NoRole
 	}
 
 	level.Debug(e.logger).Log("msg", "connection properties: "+fmt.Sprint(P))
