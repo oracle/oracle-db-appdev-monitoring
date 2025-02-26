@@ -27,7 +27,30 @@ Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 
 ## Release Notes
 
+### Version 1.5.4, February 27, 2025
+
+Our current priorities are support for RAC and mutliple databases (inculding #84 and #89), and intermittent connection issues
+with ADB-S when exporter is run in a container (including #169).  We expect to address these in an upcoming release.
+
+- Fix malloc error (#177)
+- Add support for additional admin roles, including SYSDG (#180)
+- Updated some third-party dependencies.
+
+Thank you to the following people for their suggestions and contributions:
+
+- [@Jman1993](https://github.com/Jman1993)
+- [@oey](https://github.com/oey)
+- [@jlembeck06](https://github.com/jlembeck06)
+- [@Jman1993](https://github.com/Jman1993)
+- [@PeterP55P](https://github.com/PeterP55P)
+- [@rlagyu0](https://github.com/rlagyu0)
+
+In this release, we also continued some minor code refactoring. 
+
 ### Version 1.5.3, January 28, 2025
+
+*Known issue*: This release has a known issue that results in the error message `malloc(): unsorted double linked list corrupted`.
+We recommend staying on 1.5.2 until a new release with a fix is available.  We hope to have a fix by early March.
 
 Our current priorities are support for RAC and mutliple databases (inculding #84 and #89), and intermittent connection issues
 with ADB-S when exporter is run in a container (including #169).  We expect to address these in an upcoming release.
