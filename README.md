@@ -27,7 +27,30 @@ Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 
 ## Release Notes
 
+### Version 1.5.4, February 27, 2025
+
+Our current priorities are support for RAC and mutliple databases (inculding #84 and #89), and intermittent connection issues
+with ADB-S when exporter is run in a container (including #169).  We expect to address these in an upcoming release.
+
+- Fix malloc error (#177)
+- Add support for additional admin roles, exapnding list of options for `DB_ROILE` to `SYSDBA`, `SYSOPER`, `SYSBACKUP`, `SYSDG`, `SYSKM`, `SYSRAC` and `SYSASM` (#180)
+- Updated some third-party dependencies.
+
+Thank you to the following people for their suggestions and contributions:
+
+- [@Jman1993](https://github.com/Jman1993)
+- [@oey](https://github.com/oey)
+- [@jlembeck06](https://github.com/jlembeck06)
+- [@Jman1993](https://github.com/Jman1993)
+- [@PeterP55P](https://github.com/PeterP55P)
+- [@rlagyu0](https://github.com/rlagyu0)
+
+In this release, we also continued some minor code refactoring. 
+
 ### Version 1.5.3, January 28, 2025
+
+*Known issue*: This release has a known issue that results in the error message `malloc(): unsorted double linked list corrupted`.
+We recommend staying on 1.5.2 until a new release with a fix is available.  We hope to have a fix by early March.
 
 Our current priorities are support for RAC and mutliple databases (inculding #84 and #89), and intermittent connection issues
 with ADB-S when exporter is run in a container (including #169).  We expect to address these in an upcoming release.
@@ -496,7 +519,7 @@ For a simple connection, you will provide the details using these variables:
 - `DB_USERNAME` is the database username, e.g., `pdbadmin`
 - `DB_PASSWORD` is the password for that user, e.g., `Welcome12345`
 - `DB_CONNECT_STRING` is the connection string, e.g., `free23ai:1521/freepdb`
-- `DB_ROLE` (Optional) can be set to `SYSDBA` or `SYSOPER` if you want to connect with one of those roles, however Oracle recommends that you connect with the lowest possible privileges and roles necessary for the exporter to run.
+- `DB_ROLE` (Optional) can be set to `SYSDBA`, `SYSOPER`, `SYSBACKUP`, `SYSDG`, `SYSKM`, `SYSRAC` or `SYSASM` if you want to connect with one of those roles, however Oracle recommends that you connect with the lowest possible privileges and roles necessary for the exporter to run.
 
 To run the exporter in a container and expose the port, use a command like this, with the appropriate values for the environment variables:
 
@@ -506,7 +529,7 @@ docker run -it --rm \
     -e DB_PASSWORD=Welcome12345 \
     -e DB_CONNECT_STRING=free23ai:1521/freepdb \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:1.5.3
+    container-registry.oracle.com/database/observability-exporter:1.5.4
 ```
 
 ##### Using a wallet
@@ -552,7 +575,7 @@ docker run -it --rm \
     -e DB_CONNECT_STRING=devdb_tp \
     -v ./wallet:/wallet \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:1.5.3
+    container-registry.oracle.com/database/observability-exporter:1.5.4
 ```
 > **Note:** If you are using `podman` you must specify the `:z` suffix on the volume mount so that the container will be able to access the files in the volume.  For example: `-v ./wallet:/wallet:z`
 
@@ -842,7 +865,7 @@ An exmaple of [custom metrics for Transacational Event Queues](./custom-metrics-
 If you run the exporter as a container image and want to include your custom metrics in the image itself, you can use the following example `Dockerfile` to create a new image:
 
 ```Dockerfile
-FROM container-registry.oracle.com/database/observability-exporter:1.5.3
+FROM container-registry.oracle.com/database/observability-exporter:1.5.4
 COPY custom-metrics.toml /
 ENTRYPOINT ["/oracledb_exporter", "--custom.metrics", "/custom-metrics.toml"]
 ```

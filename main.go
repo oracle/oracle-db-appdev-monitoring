@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/go-kit/log/level"
+	"github.com/godror/godror/dsn"
 	"github.com/prometheus/client_golang/prometheus"
 	cversion "github.com/prometheus/client_golang/prometheus/collectors/version"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -87,9 +88,9 @@ func main() {
 		User:               user,
 		Password:           password,
 		ConnectString:      connectString,
-		DbRole:             dbrole,
+		DbRole:             dsn.AdminRole(dbrole),
 		ConfigDir:          tnsadmin,
-		ExternalAuth:		externalAuth,
+		ExternalAuth:       externalAuth,
 		MaxOpenConns:       *maxOpenConns,
 		MaxIdleConns:       *maxIdleConns,
 		CustomMetrics:      *customMetrics,
