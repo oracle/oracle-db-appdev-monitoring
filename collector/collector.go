@@ -102,6 +102,13 @@ var (
 	exporterName      = "exporter"
 )
 
+// ScrapResult is container structure for error handling
+type ScrapeResult struct {
+	Err         error
+	Metric      Metric
+	ScrapeStart time.Time
+}
+
 func maskDsn(dsn string) string {
 	parts := strings.Split(dsn, "@")
 	if len(parts) > 1 {
@@ -276,15 +283,33 @@ func (e *Exporter) scheduledScrape(tick *time.Time) {
 func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 	e.totalScrapes.Inc()
 	var err error
-	var errmutex sync.Mutex
+	var scrapemutex sync.Mutex
+	errChan := make(chan ScrapeResult, len(e.metricsToScrape.Metric))
 
 	defer func(begun time.Time) {
+		// other error
 		e.duration.Set(time.Since(begun).Seconds())
 		if err == nil {
 			e.error.Set(0)
 		} else {
 			e.error.Set(1)
 		}
+
+		// scrape error
+		close(errChan)
+		for scrape := range errChan {
+			if scrape.Err != nil {
+				if shouldLogScrapeError(scrape.Err, scrape.Metric.IgnoreZeroResult) {
+					level.Error(e.logger).Log("msg", "Error scraping metric",
+						"Context", scrape.Metric.Context,
+						"MetricsDesc", fmt.Sprint(scrape.Metric.MetricsDesc),
+						"time", time.Since(scrape.ScrapeStart),
+						"error", scrape.Err)
+				}
+				e.scrapeErrors.WithLabelValues(scrape.Metric.Context).Inc()
+			}
+		}
+
 	}(time.Now())
 
 	if err = e.db.Ping(); err != nil {
@@ -354,20 +379,12 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 			}
 
 			scrapeStart := time.Now()
-			errmutex.Lock()
-			err1 := e.ScrapeMetric(e.db, ch, metric, tick)
-			errmutex.Unlock()
-
-			if err1 != nil {
-				err = err1
-				if shouldLogScrapeError(err, metric.IgnoreZeroResult) {
-					level.Error(e.logger).Log("msg", "Error scraping metric",
-						"Context", metric.Context,
-						"MetricsDesc", fmt.Sprint(metric.MetricsDesc),
-						"time", time.Since(scrapeStart),
-						"error", err)
-				}
-				e.scrapeErrors.WithLabelValues(metric.Context).Inc()
+			if err1 := func() error {
+				scrapemutex.Lock()
+				defer scrapemutex.Unlock()
+				return e.ScrapeMetric(e.db, ch, metric, tick)
+			}(); err1 != nil {
+				errChan <- ScrapeResult{Err: err1, Metric: metric, ScrapeStart: scrapeStart}
 			} else {
 				level.Debug(e.logger).Log("msg", "Successfully scraped metric",
 					"Context", metric.Context,
