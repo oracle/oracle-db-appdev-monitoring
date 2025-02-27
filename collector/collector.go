@@ -348,15 +348,15 @@ func (e *Exporter) connect() error {
 	P.Username, P.Password, P.ConnectString, P.ExternalAuth = e.user, godror.NewPassword(e.password), e.connectString, externalAuth
 
 	if e.config.PoolIncrement > 0 {
-		level.Debug(e.logger).Log("set pool increment to ", e.config.PoolIncrement)
+		level.Debug(e.logger).Log("msg", "set pool increment to ", e.config.PoolIncrement)
 		P.PoolParams.SessionIncrement = e.config.PoolIncrement
 	}
 	if e.config.PoolMaxConnections > 0 {
-		level.Debug(e.logger).Log("set pool max connections to ", e.config.PoolMaxConnections)
+		level.Debug(e.logger).Log("msg", "set pool max connections to ", e.config.PoolMaxConnections)
 		P.PoolParams.MaxSessions = e.config.PoolMaxConnections
 	}
 	if e.config.PoolMinConnections > 0 {
-		level.Debug(e.logger).Log("set pool min connections to ", e.config.PoolMinConnections)
+		level.Debug(e.logger).Log("msg", "set pool min connections to ", e.config.PoolMinConnections)
 		P.PoolParams.MinSessions = e.config.PoolMinConnections
 	}
 
@@ -389,9 +389,9 @@ func (e *Exporter) connect() error {
 	// note that this just configures the connection, it does not actually connect until later
 	// when we call db.Ping()
 	db := sql.OpenDB(godror.NewConnector(P))
-	level.Debug(e.logger).Log("set max idle connections to ", e.config.MaxIdleConns)
+	level.Debug(e.logger).Log("msg", "set max idle connections to ", e.config.MaxIdleConns)
 	db.SetMaxIdleConns(e.config.MaxIdleConns)
-	level.Debug(e.logger).Log("set max open connections to ", e.config.MaxOpenConns)
+	level.Debug(e.logger).Log("msg", "set max open connections to ", e.config.MaxOpenConns)
 	db.SetMaxOpenConns(e.config.MaxOpenConns)
 	db.SetConnMaxLifetime(0)
 	level.Debug(e.logger).Log("msg", "Successfully configured connection to "+maskDsn(e.connectString))
