@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, Oracle and/or its affiliates.
+// Copyright (c) 2021, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 // Portions Copyright (c) 2016 Seth Miller <seth@sethmiller.me>
 
@@ -26,75 +26,6 @@ import (
 	"github.com/godror/godror/dsn"
 	"github.com/prometheus/client_golang/prometheus"
 )
-
-// Exporter collects Oracle DB metrics. It implements prometheus.Collector.
-type Exporter struct {
-	config          *Config
-	mu              *sync.Mutex
-	metricsToScrape Metrics
-	scrapeInterval  *time.Duration
-	user            string
-	password        string
-	connectString   string
-	configDir       string
-	externalAuth    bool
-	duration, error prometheus.Gauge
-	totalScrapes    prometheus.Counter
-	scrapeErrors    *prometheus.CounterVec
-	scrapeResults   []prometheus.Metric
-	up              prometheus.Gauge
-	dbtype          int
-	dbtypeGauge     prometheus.Gauge
-	db              *sql.DB
-	logger          log.Logger
-	lastTick        *time.Time
-}
-
-// Config is the configuration of the exporter
-type Config struct {
-	User               string
-	Password           string
-	ConnectString      string
-	DbRole             dsn.AdminRole
-	ConfigDir          string
-	ExternalAuth       bool
-	MaxIdleConns       int
-	MaxOpenConns       int
-	CustomMetrics      string
-	QueryTimeout       int
-	DefaultMetricsFile string
-}
-
-// CreateDefaultConfig returns the default configuration of the Exporter
-// it is to be of note that the DNS will be empty when
-func CreateDefaultConfig() *Config {
-	return &Config{
-		MaxIdleConns:       0,
-		MaxOpenConns:       10,
-		CustomMetrics:      "",
-		QueryTimeout:       5,
-		DefaultMetricsFile: "",
-	}
-}
-
-// Metric is an object description
-type Metric struct {
-	Context          string
-	Labels           []string
-	MetricsDesc      map[string]string
-	MetricsType      map[string]string
-	MetricsBuckets   map[string]map[string]string
-	FieldToAppend    string
-	Request          string
-	IgnoreZeroResult bool
-	QueryTimeout     string
-	ScrapeInterval   string
-}
-
-// Metrics is a container structure for prometheus metrics
-type Metrics struct {
-	Metric []Metric
-}
 
 var (
 	additionalMetrics Metrics
@@ -415,6 +346,21 @@ func (e *Exporter) connect() error {
 		Valid: true,
 	}
 	P.Username, P.Password, P.ConnectString, P.ExternalAuth = e.user, godror.NewPassword(e.password), e.connectString, externalAuth
+
+	if e.config.PoolIncrement > 0 {
+		level.Debug(e.logger).Log("set pool increment to ", e.config.PoolIncrement)
+		P.PoolParams.SessionIncrement = e.config.PoolIncrement
+	}
+	if e.config.PoolMaxConnections > 0 {
+		level.Debug(e.logger).Log("set pool max connections to ", e.config.PoolMaxConnections)
+		P.PoolParams.MaxSessions = e.config.PoolMaxConnections
+	}
+	if e.config.PoolMinConnections > 0 {
+		level.Debug(e.logger).Log("set pool min connections to ", e.config.PoolMinConnections)
+		P.PoolParams.MinSessions = e.config.PoolMinConnections
+	}
+
+	P.PoolParams.WaitTimeout = time.Second * 5
 
 	// if TNS_ADMIN env var is set, set ConfigDir to that location
 	P.ConfigDir = e.configDir
