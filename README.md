@@ -710,27 +710,32 @@ The following command line arguments (flags) can be passed to the exporter (the 
 
 ```bash
 Usage of oracledb_exporter:
-      --web.telemetry-path="/metrics"  
+      --web.telemetry-path="/metrics"
                                  Path under which to expose metrics. (env: TELEMETRY_PATH)
-      --default.metrics="default-metrics.toml"  
+      --default.metrics="default-metrics.toml"
                                  File with default metrics in a TOML file. (env: DEFAULT_METRICS)
       --custom.metrics=""        Comma separated list of file(s) that contain various custom metrics in a TOML format. (env: CUSTOM_METRICS)
       --query.timeout=5          Query timeout (in seconds). (env: QUERY_TIMEOUT)
       --database.maxIdleConns=0  Number of maximum idle connections in the connection pool. (env: DATABASE_MAXIDLECONNS)
-      --database.maxOpenConns=10  
+      --database.maxOpenConns=10
                                  Number of maximum open connections in the connection pool. (env: DATABASE_MAXOPENCONNS)
+      --database.poolIncrement=-1
+                                 Connection increment when the connection pool reaches max capacity. (env: DATABASE_POOLINCREMENT)
+      --database.poolMaxConnections=-1
+                                 Maximum number of connections in the connection pool. (env: DATABASE_POOLMAXCONNECTIONS)
+      --database.poolMinConnections=-1
+                                 Minimum number of connections in the connection pool. (env: DATABASE_POOLMINCONNECTIONS)
       --scrape.interval=0s       Interval between each scrape. Default is to scrape on collect requests.
       --log.disable=0            Set to 1 to disable alert logs
       --log.interval=15s         Interval between log updates (e.g. 5s).
-      --log.destination="/log/alert.log"  
+      --log.destination="/log/alert.log"
                                  File to output the alert log to. (env: LOG_DESTINATION)
-      --web.listen-address=:9161 ...  
-                                 Addresses on which to expose metrics and web interface. Repeatable for multiple addresses.
+      --web.listen-address=:9161 ...
+                                 Addresses on which to expose metrics and web interface. Repeatable for multiple addresses. Examples: `:9100` or `[::1]:9100` for http, `vsock://:9100` for vsock
       --web.config.file=""       Path to configuration file that can enable TLS or authentication. See: https://github.com/prometheus/exporter-toolkit/blob/master/docs/web-configuration.md
       --log.level=info           Only log messages with the given severity or above. One of: [debug, info, warn, error]
       --log.format=logfmt        Output format of log messages. One of: [logfmt, json]
       --[no-]version             Show application version.
-
 ```
 
 You may provide the connection details using these variables:

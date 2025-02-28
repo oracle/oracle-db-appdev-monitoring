@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2024, Oracle and/or its affiliates.
+// Copyright (c) 2021, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 // Portions Copyright (c) 2016 Seth Miller <seth@sethmiller.me>
 
@@ -42,6 +42,9 @@ var (
 	queryTimeout       = kingpin.Flag("query.timeout", "Query timeout (in seconds). (env: QUERY_TIMEOUT)").Default(getEnv("QUERY_TIMEOUT", "5")).Int()
 	maxIdleConns       = kingpin.Flag("database.maxIdleConns", "Number of maximum idle connections in the connection pool. (env: DATABASE_MAXIDLECONNS)").Default(getEnv("DATABASE_MAXIDLECONNS", "0")).Int()
 	maxOpenConns       = kingpin.Flag("database.maxOpenConns", "Number of maximum open connections in the connection pool. (env: DATABASE_MAXOPENCONNS)").Default(getEnv("DATABASE_MAXOPENCONNS", "10")).Int()
+	poolIncrement      = kingpin.Flag("database.poolIncrement", "Connection increment when the connection pool reaches max capacity. (env: DATABASE_POOLINCREMENT)").Default(getEnv("DATABASE_POOLINCREMENT", "-1")).Int()
+	poolMaxConnections = kingpin.Flag("database.poolMaxConnections", "Maximum number of connections in the connection pool. (env: DATABASE_POOLMAXCONNECTIONS)").Default(getEnv("DATABASE_POOLMAXCONNECTIONS", "-1")).Int()
+	poolMinConnections = kingpin.Flag("database.poolMinConnections", "Minimum number of connections in the connection pool. (env: DATABASE_POOLMINCONNECTIONS)").Default(getEnv("DATABASE_POOLMINCONNECTIONS", "-1")).Int()
 	scrapeInterval     = kingpin.Flag("scrape.interval", "Interval between each scrape. Default is to scrape on collect requests.").Default("0s").Duration()
 	logDisable         = kingpin.Flag("log.disable", "Set to 1 to disable alert logs").Default("0").Int()
 	logInterval        = kingpin.Flag("log.interval", "Interval between log updates (e.g. 5s).").Default("15s").Duration()
@@ -93,6 +96,9 @@ func main() {
 		ExternalAuth:       externalAuth,
 		MaxOpenConns:       *maxOpenConns,
 		MaxIdleConns:       *maxIdleConns,
+		PoolIncrement:      *poolIncrement,
+		PoolMaxConnections: *poolMaxConnections,
+		PoolMinConnections: *poolMinConnections,
 		CustomMetrics:      *customMetrics,
 		QueryTimeout:       *queryTimeout,
 		DefaultMetricsFile: *defaultFileMetrics,
