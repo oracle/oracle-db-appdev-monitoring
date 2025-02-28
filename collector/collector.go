@@ -28,10 +28,9 @@ import (
 )
 
 var (
-	additionalMetrics Metrics
-	hashMap           = make(map[int][]byte)
-	namespace         = "oracledb"
-	exporterName      = "exporter"
+	hashMap      = make(map[int][]byte)
+	namespace    = "oracledb"
+	exporterName = "exporter"
 )
 
 // ScrapResult is container structure for error handling
@@ -463,13 +462,14 @@ func (e *Exporter) reloadMetrics() {
 	// If custom metrics, load it
 	if strings.Compare(e.config.CustomMetrics, "") != 0 {
 		for _, _customMetrics := range strings.Split(e.config.CustomMetrics, ",") {
-			if _, err := toml.DecodeFile(_customMetrics, &additionalMetrics); err != nil {
+			metrics := &Metrics{}
+			if _, err := toml.DecodeFile(_customMetrics, metrics); err != nil {
 				level.Error(e.logger).Log(err)
 				panic(errors.New("Error while loading " + _customMetrics))
 			} else {
 				level.Info(e.logger).Log("msg", "Successfully loaded custom metrics from "+_customMetrics)
 			}
-			e.metricsToScrape.Metric = append(e.metricsToScrape.Metric, additionalMetrics.Metric...)
+			e.metricsToScrape.Metric = append(e.metricsToScrape.Metric, metrics.Metric...)
 		}
 	} else {
 		level.Debug(e.logger).Log("msg", "No custom metrics defined.")
