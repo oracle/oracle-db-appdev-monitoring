@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.package vault
 
 package alertlog
@@ -9,11 +9,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"strings"
-
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 )
 
 type LogRecord struct {
@@ -25,10 +23,10 @@ type LogRecord struct {
 
 var queryFailures int = 0
 
-func UpdateLog(logDestination string, logger log.Logger, db *sql.DB) {
+func UpdateLog(logDestination string, logger *slog.Logger, db *sql.DB) {
 
 	if queryFailures == 3 {
-		level.Info(logger).Log("msg", "Failed to query the alert log three consecutive times, so will not try any more")
+		logger.Info("Failed to query the alert log three consecutive times, so will not try any more")
 		queryFailures++
 		return
 	}
@@ -39,10 +37,10 @@ func UpdateLog(logDestination string, logger log.Logger, db *sql.DB) {
 
 	// check if the log file exists, and if not, create it
 	if _, err := os.Stat(logDestination); errors.Is(err, os.ErrNotExist) {
-		level.Info(logger).Log("msg", "Log destination file does not exist, will try to create it: "+logDestination)
+		logger.Info("Log destination file does not exist, will try to create it: " + logDestination)
 		f, e := os.Create(logDestination)
 		if e != nil {
-			level.Error(logger).Log("msg", "Failed to create the log file: "+logDestination)
+			logger.Error("Failed to create the log file: " + logDestination)
 			return
 		}
 		f.Close()
@@ -52,7 +50,7 @@ func UpdateLog(logDestination string, logger log.Logger, db *sql.DB) {
 	file, err := os.Open(logDestination)
 
 	if err != nil {
-		level.Error(logger).Log("msg", "Could not open the alert log destination file: "+logDestination)
+		logger.Error("Could not open the alert log destination file: " + logDestination)
 		return
 	}
 
@@ -101,7 +99,7 @@ func UpdateLog(logDestination string, logger log.Logger, db *sql.DB) {
 	var lastLogRecord LogRecord
 	err = json.Unmarshal([]byte(line), &lastLogRecord)
 	if err != nil {
-		level.Error(logger).Log("msg", "Could not parse last line of log file")
+		logger.Error("Could not parse last line of log file")
 		return
 	}
 
@@ -112,7 +110,7 @@ func UpdateLog(logDestination string, logger log.Logger, db *sql.DB) {
 
 	rows, err := db.Query(stmt)
 	if err != nil {
-		level.Error(logger).Log("msg", "Error querying the alert logs")
+		logger.Error("Error querying the alert logs")
 		queryFailures++
 		return
 	}
@@ -121,7 +119,7 @@ func UpdateLog(logDestination string, logger log.Logger, db *sql.DB) {
 	// write them to the file
 	outfile, err := os.OpenFile(logDestination, os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
-		level.Error(logger).Log("msg", "Could not open log file for writing: "+logDestination)
+		logger.Error("Could not open log file for writing: " + logDestination)
 		return
 	}
 	defer outfile.Close()
@@ -130,7 +128,7 @@ func UpdateLog(logDestination string, logger log.Logger, db *sql.DB) {
 	for rows.Next() {
 		var newRecord LogRecord
 		if err := rows.Scan(&newRecord.Timestamp, &newRecord.ModuleId, &newRecord.ECID, &newRecord.Message); err != nil {
-			level.Error(logger).Log("msg", "Error reading a row from the alert logs")
+			logger.Error("Error reading a row from the alert logs")
 			return
 		}
 
@@ -139,18 +137,18 @@ func UpdateLog(logDestination string, logger log.Logger, db *sql.DB) {
 
 		jsonLogRecord, err := json.Marshal(newRecord)
 		if err != nil {
-			level.Error(logger).Log("msg", "Error marshalling alert log record")
+			logger.Error("Error marshalling alert log record")
 			return
 		}
 
 		if _, err = outfile.WriteString(string(jsonLogRecord) + "\n"); err != nil {
-			level.Error(logger).Log("msg", "Could not write to log file: "+logDestination)
+			logger.Error("Could not write to log file: " + logDestination)
 			return
 		}
 	}
 
 	if err = rows.Err(); err != nil {
-		level.Error(logger).Log("msg", "Error querying the alert logs")
+		logger.Error("Error querying the alert logs")
 		queryFailures++
 	}
 }
