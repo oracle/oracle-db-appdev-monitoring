@@ -7,7 +7,6 @@ toolchain go1.22.4
 require (
 	github.com/BurntSushi/toml v1.4.0
 	github.com/alecthomas/kingpin/v2 v2.4.0
-	github.com/go-kit/log v0.2.1
 	github.com/godror/godror v0.46.1-0.20250226074503-67aeda640090
 	github.com/oracle/oci-go-sdk/v65 v65.84.0
 	github.com/prometheus/client_golang v1.21.0
