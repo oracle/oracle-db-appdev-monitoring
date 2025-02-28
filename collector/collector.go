@@ -214,51 +214,26 @@ func (e *Exporter) scheduledScrape(tick *time.Time) {
 
 func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 	e.totalScrapes.Inc()
-	var err error
-	var scrapemutex sync.Mutex
-	errChan := make(chan ScrapeResult, len(e.metricsToScrape.Metric))
+	errChan := make(chan error, len(e.metricsToScrape.Metric))
+	begun := time.Now()
 
-	defer func(begun time.Time) {
-		// other error
-		e.duration.Set(time.Since(begun).Seconds())
-		if err == nil {
-			e.error.Set(0)
-		} else {
-			e.error.Set(1)
-		}
-
-		// scrape error
-		close(errChan)
-		for scrape := range errChan {
-			if scrape.Err != nil {
-				if shouldLogScrapeError(scrape.Err, scrape.Metric.IgnoreZeroResult) {
-					level.Error(e.logger).Log("msg", "Error scraping metric",
-						"Context", scrape.Metric.Context,
-						"MetricsDesc", fmt.Sprint(scrape.Metric.MetricsDesc),
-						"time", time.Since(scrape.ScrapeStart),
-						"error", scrape.Err)
-				}
-				e.scrapeErrors.WithLabelValues(scrape.Metric.Context).Inc()
-			}
-		}
-
-	}(time.Now())
-
-	if err = e.db.Ping(); err != nil {
-		level.Debug(e.logger).Log("msg", "error = "+err.Error())
-		if strings.Contains(err.Error(), "sql: database is closed") {
+	if connectionError := e.db.Ping(); connectionError != nil {
+		level.Debug(e.logger).Log("msg", "error = "+connectionError.Error())
+		if strings.Contains(connectionError.Error(), "sql: database is closed") {
 			level.Info(e.logger).Log("msg", "Reconnecting to DB")
-			err = e.connect()
-			if err != nil {
-				level.Error(e.logger).Log("msg", "Error reconnecting to DB", err)
+			connectionError = e.connect()
+			if connectionError != nil {
+				level.Error(e.logger).Log("msg", "Error reconnecting to DB", connectionError)
 			}
 		}
 	}
 
-	if err = e.db.Ping(); err != nil {
+	if pingError := e.db.Ping(); pingError != nil {
 		level.Error(e.logger).Log("msg", "Error pinging oracle",
-			"error", err)
+			"error", pingError)
 		e.up.Set(0)
+		e.error.Set(1)
+		e.duration.Set(time.Since(begun).Seconds())
 		return
 	}
 
@@ -271,15 +246,10 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 		e.reloadMetrics()
 	}
 
-	wg := sync.WaitGroup{}
-
 	for _, metric := range e.metricsToScrape.Metric {
-		wg.Add(1)
 		metric := metric //https://golang.org/doc/faq#closures_and_goroutines
 
 		go func() {
-			defer wg.Done()
-
 			level.Debug(e.logger).Log("msg", "About to scrape metric",
 				"Context", metric.Context,
 				"MetricsDesc", fmt.Sprint(metric.MetricsDesc),
@@ -291,11 +261,13 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 				"Request", metric.Request)
 
 			if len(metric.Request) == 0 {
+				errChan <- errors.New("scrape request not found")
 				level.Error(e.logger).Log("msg", "Error scraping for "+fmt.Sprint(metric.MetricsDesc)+". Did you forget to define request in your toml file?")
 				return
 			}
 
 			if len(metric.MetricsDesc) == 0 {
+				errChan <- errors.New("metricsdesc not found")
 				level.Error(e.logger).Log("msg", "Error scraping for query"+fmt.Sprint(metric.Request)+". Did you forget to define metricsdesc  in your toml file?")
 				return
 			}
@@ -304,6 +276,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 				if metricType == "histogram" {
 					_, ok := metric.MetricsBuckets[column]
 					if !ok {
+						errChan <- errors.New("metricsbuckets not found")
 						level.Error(e.logger).Log("msg", "Unable to find MetricsBuckets configuration key for metric. (metric="+column+")")
 						return
 					}
@@ -311,12 +284,18 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 			}
 
 			scrapeStart := time.Now()
-			if err1 := func() error {
-				scrapemutex.Lock()
-				defer scrapemutex.Unlock()
-				return e.ScrapeMetric(e.db, ch, metric, tick)
-			}(); err1 != nil {
-				errChan <- ScrapeResult{Err: err1, Metric: metric, ScrapeStart: scrapeStart}
+			scrapeError := e.ScrapeMetric(e.db, ch, metric, tick)
+			// Always send the scrapeError, nil or non-nil
+			errChan <- scrapeError
+			if scrapeError != nil {
+				if shouldLogScrapeError(scrapeError, metric.IgnoreZeroResult) {
+					level.Error(e.logger).Log("msg", "Error scraping metric",
+						"Context", metric.Context,
+						"MetricsDesc", fmt.Sprint(metric.MetricsDesc),
+						"time", time.Since(scrapeStart),
+						"error", scrapeError)
+				}
+				e.scrapeErrors.WithLabelValues(metric.Context).Inc()
 			} else {
 				level.Debug(e.logger).Log("msg", "Successfully scraped metric",
 					"Context", metric.Context,
@@ -325,7 +304,23 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 			}
 		}()
 	}
-	wg.Wait()
+
+	e.afterScrape(begun, len(e.metricsToScrape.Metric), errChan)
+}
+
+func (e *Exporter) afterScrape(begun time.Time, countMetrics int, errChan chan error) {
+	// Receive all scrape errors
+	totalErrors := 0.0
+	for i := 0; i < countMetrics; i++ {
+		scrapeError := <-errChan
+		if scrapeError != nil {
+			totalErrors++
+		}
+	}
+	close(errChan)
+
+	e.duration.Set(time.Since(begun).Seconds())
+	e.error.Set(totalErrors)
 }
 
 func (e *Exporter) connect() error {
