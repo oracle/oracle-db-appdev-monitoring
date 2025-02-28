@@ -1,4 +1,4 @@
-// Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+// Copyright (c) 2023, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package vault
@@ -6,18 +6,17 @@ package vault
 import (
 	"context"
 	b64 "encoding/base64"
+	"github.com/prometheus/common/promslog"
 	"strings"
 
-	"github.com/go-kit/log/level"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/example/helpers"
 	"github.com/oracle/oci-go-sdk/v65/secrets"
-	"github.com/prometheus/common/promlog"
 )
 
 func GetVaultSecret(vaultId string, secretName string) string {
-	promLogConfig := &promlog.Config{}
-	logger := promlog.New(promLogConfig)
+	promLogConfig := &promslog.Config{}
+	logger := promslog.New(promLogConfig)
 
 	client, err := secrets.NewSecretsClientWithConfigurationProvider(common.DefaultConfigProvider())
 	helpers.FatalIfError(err)
@@ -26,8 +25,8 @@ func GetVaultSecret(vaultId string, secretName string) string {
 	helpers.FatalIfError(err)
 	region, err := common.DefaultConfigProvider().Region()
 	helpers.FatalIfError(err)
-	level.Info(logger).Log("msg", "OCI_VAULT_ID env var is present so using OCI Vault", "Region", region)
-	level.Info(logger).Log("msg", "OCI_VAULT_ID env var is present so using OCI Vault", "tenancyOCID", tenancyID)
+	logger.Info("OCI_VAULT_ID env var is present so using OCI Vault", "Region", region)
+	logger.Info("OCI_VAULT_ID env var is present so using OCI Vault", "tenancyOCID", tenancyID)
 
 	req := secrets.GetSecretBundleByNameRequest{
 		SecretName: common.String(secretName),

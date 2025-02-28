@@ -4,9 +4,9 @@ package collector
 
 import (
 	"database/sql"
-	"github.com/go-kit/log"
 	"github.com/godror/godror/dsn"
 	"github.com/prometheus/client_golang/prometheus"
+	"log/slog"
 	"sync"
 	"time"
 )
@@ -30,7 +30,7 @@ type Exporter struct {
 	dbtype          int
 	dbtypeGauge     prometheus.Gauge
 	db              *sql.DB
-	logger          log.Logger
+	logger          *slog.Logger
 	lastTick        *time.Time
 }
 

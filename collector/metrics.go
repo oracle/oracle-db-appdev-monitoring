@@ -1,10 +1,9 @@
-// Copyright (c) 2024, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl
 
 package collector
 
 import (
-	"github.com/go-kit/log/level"
 	"strconv"
 	"time"
 )
@@ -31,7 +30,7 @@ func (e *Exporter) getScrapeInterval(context, scrapeInterval string) (time.Durat
 	if len(scrapeInterval) > 0 {
 		si, err := time.ParseDuration(scrapeInterval)
 		if err != nil {
-			level.Error(e.logger).Log("msg", "Unable to convert scrapeinterval to duration (metric="+context+")")
+			e.logger.Error("Unable to convert scrapeinterval to duration (metric=" + context + ")")
 			return 0, false
 		}
 		return si, true
@@ -43,7 +42,7 @@ func (e *Exporter) getQueryTimeout(metric Metric) time.Duration {
 	if len(metric.QueryTimeout) > 0 {
 		qt, err := time.ParseDuration(metric.QueryTimeout)
 		if err != nil {
-			level.Error(e.logger).Log("msg", "Unable to convert querytimeout to duration (metric="+metric.Context+")")
+			e.logger.Error("Unable to convert querytimeout to duration (metric=" + metric.Context + ")")
 			return time.Duration(e.config.QueryTimeout) * time.Second
 		}
 		return qt
@@ -58,8 +57,8 @@ func (e *Exporter) parseFloat(metric, metricHelp string, row map[string]string) 
 	}
 	valueFloat, err := strconv.ParseFloat(value, 64)
 	if err != nil {
-		level.Error(e.logger).Log("msg", "Unable to convert current value to float (metric="+metric+
-			",metricHelp="+metricHelp+",value=<"+row[metric]+">)")
+		e.logger.Error("Unable to convert current value to float (metric=" + metric +
+			",metricHelp=" + metricHelp + ",value=<" + row[metric] + ">)")
 		return -1, false
 	}
 	return valueFloat, true

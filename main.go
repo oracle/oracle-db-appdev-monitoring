@@ -6,13 +6,14 @@ package main
 
 import (
 	"context"
+	"github.com/prometheus/common/promslog"
+	"github.com/prometheus/common/promslog/flag"
 	"net/http"
 	"os"
 	"runtime/debug"
 	"syscall"
 	"time"
 
-	"github.com/go-kit/log/level"
 	"github.com/godror/godror/dsn"
 	"github.com/prometheus/client_golang/prometheus"
 	cversion "github.com/prometheus/client_golang/prometheus/collectors/version"
@@ -22,8 +23,6 @@ import (
 	webflag "github.com/prometheus/exporter-toolkit/web/kingpinflag"
 
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus/common/promlog"
-	"github.com/prometheus/common/promlog/flag"
 
 	// Required for debugging
 	// _ "net/http/pprof"
@@ -53,12 +52,12 @@ var (
 )
 
 func main() {
-	promLogConfig := &promlog.Config{}
+	promLogConfig := &promslog.Config{}
 	flag.AddFlags(kingpin.CommandLine, promLogConfig)
 	kingpin.HelpFlag.Short('\n')
 	kingpin.Version(version.Print("oracledb_exporter"))
 	kingpin.Parse()
-	logger := promlog.New(promLogConfig)
+	logger := promslog.New(promLogConfig)
 	user := os.Getenv("DB_USERNAME")
 	password := os.Getenv("DB_PASSWORD")
 	connectString := os.Getenv("DB_CONNECT_STRING")
@@ -69,22 +68,23 @@ func main() {
 
 	vaultID, useVault := os.LookupEnv("OCI_VAULT_ID")
 	if useVault {
-		level.Info(logger).Log("msg", "OCI_VAULT_ID env var is present so using OCI Vault", "vaultOCID", vaultID)
+
+		logger.Info("OCI_VAULT_ID env var is present so using OCI Vault", "vaultOCID", vaultID)
 		password = vault.GetVaultSecret(vaultID, os.Getenv("OCI_VAULT_SECRET_NAME"))
 	}
 
 	freeOSMemInterval, enableFree := os.LookupEnv("FREE_INTERVAL")
 	if enableFree {
-		level.Info(logger).Log("msg", "FREE_INTERVAL env var is present, so will attempt to release OS memory", "free_interval", freeOSMemInterval)
+		logger.Info("FREE_INTERVAL env var is present, so will attempt to release OS memory", "free_interval", freeOSMemInterval)
 	} else {
-		level.Info(logger).Log("msg", "FREE_INTERVAL end var is not present, will not periodically attempt to release memory")
+		logger.Info("FREE_INTERVAL end var is not present, will not periodically attempt to release memory")
 	}
 
 	restartInterval, enableRestart := os.LookupEnv("RESTART_INTERVAL")
 	if enableRestart {
-		level.Info(logger).Log("msg", "RESTART_INTERVAL env var is present, so will restart my own process periodically", "restart_interval", restartInterval)
+		logger.Info("RESTART_INTERVAL env var is present, so will restart my own process periodically", "restart_interval", restartInterval)
 	} else {
-		level.Info(logger).Log("msg", "RESTART_INTERVAL env var is not present, so will not restart myself periodically")
+		logger.Info("RESTART_INTERVAL env var is not present, so will not restart myself periodically")
 	}
 
 	config := &collector.Config{
@@ -105,7 +105,7 @@ func main() {
 	}
 	exporter, err := collector.NewExporter(logger, config)
 	if err != nil {
-		level.Error(logger).Log("msg", "unable to connect to DB", "error", err)
+		logger.Error("unable to connect to DB", "error", err)
 	}
 
 	if *scrapeInterval != 0 {
@@ -117,9 +117,9 @@ func main() {
 	prometheus.MustRegister(exporter)
 	prometheus.MustRegister(cversion.NewCollector("oracledb_exporter"))
 
-	level.Info(logger).Log("msg", "Starting oracledb_exporter", "version", Version)
-	level.Info(logger).Log("msg", "Build context", "build", version.BuildContext())
-	level.Info(logger).Log("msg", "Collect from: ", "metricPath", *metricPath)
+	logger.Info("Starting oracledb_exporter", "version", Version)
+	logger.Info("Build context", "build", version.BuildContext())
+	logger.Info("Collect from: ", "metricPath", *metricPath)
 
 	opts := promhttp.HandlerOpts{
 		ErrorHandling: promhttp.ContinueOnError,
@@ -133,14 +133,14 @@ func main() {
 	if enableRestart {
 		duration, err := time.ParseDuration(restartInterval)
 		if err != nil {
-			level.Info(logger).Log("msg", "Could not parse RESTART_INTERVAL, so ignoring it")
+			logger.Info("Could not parse RESTART_INTERVAL, so ignoring it")
 		}
 		ticker := time.NewTicker(duration)
 		defer ticker.Stop()
 
 		go func() {
 			<-ticker.C
-			level.Info(logger).Log("msg", "Restarting the process...")
+			logger.Info("Restarting the process...")
 			executable, _ := os.Executable()
 			execErr := syscall.Exec(executable, os.Args, os.Environ())
 			if execErr != nil {
@@ -153,7 +153,7 @@ func main() {
 	if enableFree {
 		duration, err := time.ParseDuration(freeOSMemInterval)
 		if err != nil {
-			level.Info(logger).Log("msg", "Could not parse FREE_INTERVAL, so ignoring it")
+			logger.Info("Could not parse FREE_INTERVAL, so ignoring it")
 		}
 		memTicker := time.NewTicker(duration)
 		defer memTicker.Stop()
@@ -161,7 +161,7 @@ func main() {
 		go func() {
 			for {
 				<-memTicker.C
-				level.Info(logger).Log("msg", "attempting to free OS memory")
+				logger.Info("attempting to free OS memory")
 				debug.FreeOSMemory()
 			}
 		}()
@@ -170,16 +170,16 @@ func main() {
 
 	// start the log exporter
 	if *logDisable == 1 {
-		level.Info(logger).Log("msg", "log.disable set to 1, so will not export the alert logs")
+		logger.Info("log.disable set to 1, so will not export the alert logs")
 	} else {
-		level.Info(logger).Log("msg", "Exporting alert logs to "+*logDestination)
+		logger.Info("Exporting alert logs to ", *logDestination)
 		logTicker := time.NewTicker(*logInterval)
 		defer logTicker.Stop()
 
 		go func() {
 			for {
 				<-logTicker.C
-				level.Debug(logger).Log("msg", "updating alert log")
+				logger.Debug("updating alert log")
 				alertlog.UpdateLog(*logDestination, logger, exporter.GetDB())
 			}
 		}()
@@ -188,7 +188,7 @@ func main() {
 	// start the main server thread
 	server := &http.Server{}
 	if err := web.ListenAndServe(server, toolkitFlags, logger); err != nil {
-		level.Error(logger).Log("msg", "Listening error", "error", err)
+		logger.Error("Listening error", "error", err)
 		os.Exit(1)
 	}
 
