@@ -266,7 +266,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 
 			if len(metric.MetricsDesc) == 0 {
 				errChan <- errors.New("metricsdesc not found")
-				e.logger.Error("Error scraping for query" + fmt.Sprint(metric.Request) + ". Did you forget to define metricsdesc  in your toml file?")
+				e.logger.Error("Error scraping for query" + fmt.Sprint(metric.Request) + ". Did you forget to define metricsdesc in your toml file?")
 				return
 			}
 
