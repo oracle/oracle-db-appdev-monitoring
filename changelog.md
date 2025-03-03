@@ -11,7 +11,7 @@ Our current priorities are support for RAC and mutliple databases (including #84
 - Fix Multiple custom metrics files overwrite one another (#179).
 - Fix intermittent connection issues with ADB-S when exporter is run in a container (#169).
 - Replace go-kit/log with log/slog, due to upstream changes in prometheus/common.
-- Add support for additional admin roles, exapnding list of options for `DB_ROLE` to `SYSDBA`, `SYSOPER`, `SYSBACKUP`, `SYSDG`, `SYSKM`, `SYSRAC` and `SYSASM` (#180).
+- Add support for additional admin roles, expanding list of options for `DB_ROLE` to `SYSDBA`, `SYSOPER`, `SYSBACKUP`, `SYSDG`, `SYSKM`, `SYSRAC` and `SYSASM` (#180).
 - Updated some third-party dependencies.
 
 Thank you to the following people for their suggestions and contributions:
