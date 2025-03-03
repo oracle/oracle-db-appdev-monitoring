@@ -28,7 +28,7 @@ func (e *Exporter) DefaultMetrics() Metrics {
 	}
 
 	if _, err := toml.Decode(defaultMetricsToml, &metricsToScrape); err != nil {
-		e.logger.Error("failed to load default metrics", err)
+		e.logger.Error("failed to load default metrics", "error", err)
 		panic(errors.New("Error while loading " + defaultMetricsToml))
 	}
 	return metricsToScrape
