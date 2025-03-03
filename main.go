@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/prometheus/common/promslog"
 	"github.com/prometheus/common/promslog/flag"
 	"net/http"
@@ -172,7 +173,7 @@ func main() {
 	if *logDisable == 1 {
 		logger.Info("log.disable set to 1, so will not export the alert logs")
 	} else {
-		logger.Info("Exporting alert logs to ", *logDestination)
+		logger.Info(fmt.Sprintf("Exporting alert logs to %s", *logDestination))
 		logTicker := time.NewTicker(*logInterval)
 		defer logTicker.Stop()
 

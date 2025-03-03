@@ -216,12 +216,12 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 	begun := time.Now()
 
 	if connectionError := e.db.Ping(); connectionError != nil {
-		e.logger.Debug("error = " + connectionError.Error())
+		e.logger.Debug("connection error", "error", connectionError)
 		if strings.Contains(connectionError.Error(), "sql: database is closed") {
 			e.logger.Info("Reconnecting to DB")
 			connectionError = e.connect()
 			if connectionError != nil {
-				e.logger.Error("Error reconnecting to DB", connectionError)
+				e.logger.Error("Error reconnecting to DB", "error", connectionError)
 			}
 		}
 	}
@@ -327,7 +327,7 @@ func (e *Exporter) connect() error {
 	var P godror.ConnectionParams
 	// If password is not specified, externalAuth will be true and we'll ignore user input
 	e.externalAuth = e.password == ""
-	e.logger.Debug("external authentication set to ", e.externalAuth)
+	e.logger.Debug(fmt.Sprintf("external authentication set to %t", e.externalAuth))
 	msg := "Using Username/Password Authentication."
 	if e.externalAuth {
 		msg = "Database Password not specified; will attempt to use external authentication (ignoring user input)."
@@ -341,15 +341,15 @@ func (e *Exporter) connect() error {
 	P.Username, P.Password, P.ConnectString, P.ExternalAuth = e.user, godror.NewPassword(e.password), e.connectString, externalAuth
 
 	if e.config.PoolIncrement > 0 {
-		e.logger.Debug("set pool increment to ", e.config.PoolIncrement)
+		e.logger.Debug(fmt.Sprintf("set pool increment to %d", e.config.PoolIncrement))
 		P.PoolParams.SessionIncrement = e.config.PoolIncrement
 	}
 	if e.config.PoolMaxConnections > 0 {
-		e.logger.Debug("set pool max connections to ", e.config.PoolMaxConnections)
+		e.logger.Debug(fmt.Sprintf("set pool max connections to %d", e.config.PoolMaxConnections))
 		P.PoolParams.MaxSessions = e.config.PoolMaxConnections
 	}
 	if e.config.PoolMinConnections > 0 {
-		e.logger.Debug("set pool min connections to ", e.config.PoolMinConnections)
+		e.logger.Debug(fmt.Sprintf("set pool min connections to %d", e.config.PoolMinConnections))
 		P.PoolParams.MinSessions = e.config.PoolMinConnections
 	}
 
@@ -377,17 +377,15 @@ func (e *Exporter) connect() error {
 		P.AdminRole = dsn.NoRole
 	}
 
-	e.logger.Debug("connection properties: " + fmt.Sprint(P))
-
 	// note that this just configures the connection, it does not actually connect until later
 	// when we call db.Ping()
 	db := sql.OpenDB(godror.NewConnector(P))
-	e.logger.Debug("set max idle connections to ", e.config.MaxIdleConns)
+	e.logger.Debug(fmt.Sprintf("set max idle connections to %d", e.config.MaxIdleConns))
 	db.SetMaxIdleConns(e.config.MaxIdleConns)
-	e.logger.Debug("set max open connections to ", e.config.MaxOpenConns)
+	e.logger.Debug(fmt.Sprintf("set max open connections to %d", e.config.MaxOpenConns))
 	db.SetMaxOpenConns(e.config.MaxOpenConns)
 	db.SetConnMaxLifetime(0)
-	e.logger.Debug("Successfully configured connection to " + maskDsn(e.connectString))
+	e.logger.Debug(fmt.Sprintf("Successfully configured connection to %d" + maskDsn(e.connectString)))
 	e.db = db
 
 	if _, err := db.Exec(`
@@ -399,13 +397,13 @@ func (e *Exporter) connect() error {
 
 	var result int
 	if err := db.QueryRow("select sys_context('USERENV', 'CON_ID') from dual").Scan(&result); err != nil {
-		e.logger.Info("dbtype err =" + string(err.Error()))
+		e.logger.Info("dbtype err", "error", err)
 	}
 	e.dbtype = result
 
 	var sysdba string
 	if err := db.QueryRow("select sys_context('USERENV', 'ISDBA') from dual").Scan(&sysdba); err != nil {
-		e.logger.Info("got error checking my database role")
+		e.logger.Error("error checking my database role", "error", err)
 	}
 	e.logger.Info("Connected as SYSDBA? " + sysdba)
 
@@ -463,7 +461,7 @@ func (e *Exporter) reloadMetrics() {
 		for _, _customMetrics := range strings.Split(e.config.CustomMetrics, ",") {
 			metrics := &Metrics{}
 			if _, err := toml.DecodeFile(_customMetrics, metrics); err != nil {
-				e.logger.Error("failed to load custom metrics", err)
+				e.logger.Error("failed to load custom metrics", "error", err)
 				panic(errors.New("Error while loading " + _customMetrics))
 			} else {
 				e.logger.Info("Successfully loaded custom metrics from " + _customMetrics)
