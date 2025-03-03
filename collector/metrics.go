@@ -5,6 +5,7 @@ package collector
 
 import (
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -52,10 +53,11 @@ func (e *Exporter) getQueryTimeout(metric Metric) time.Duration {
 
 func (e *Exporter) parseFloat(metric, metricHelp string, row map[string]string) (float64, bool) {
 	value, ok := row[metric]
-	if !ok {
-		return -1, ok
+	if !ok || value == "<nil>" {
+		// treat nil value as 0
+		return 0.0, ok
 	}
-	valueFloat, err := strconv.ParseFloat(value, 64)
+	valueFloat, err := strconv.ParseFloat(strings.TrimSpace(value), 64)
 	if err != nil {
 		e.logger.Error("Unable to convert current value to float (metric=" + metric +
 			",metricHelp=" + metricHelp + ",value=<" + row[metric] + ">)")
