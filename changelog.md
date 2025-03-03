@@ -1,14 +1,20 @@
 ## Release Notes
 
+### Unreleased
+
+Our current priorities are support for RAC and mutliple databases (including #84 and #89).  We expect to address these in an upcoming release.
+
+
 ### Version 1.5.4, March 3, 2025
 
-Our current priorities are support for RAC and mutliple databases (inculding #84 and #89), and intermittent connection issues
-with ADB-S when exporter is run in a container (including #169).  We expect to address these in an upcoming release.
+This release includes the following changes:
 
-- Fix malloc error (#177)
-- Fix Multiple custom metrics files overwrite one another (#179)
-- Replace go-kit/log with log/slog, due to upstream changes in prometheus/common 
-- Add support for additional admin roles, exapnding list of options for `DB_ROILE` to `SYSDBA`, `SYSOPER`, `SYSBACKUP`, `SYSDG`, `SYSKM`, `SYSRAC` and `SYSASM` (#180)
+- Based of this recommendation from [godror](https://github.com/godror/godror?tab=readme-ov-file#pooling), which relates to the two following items, and in discussion with the ODPI-C team, we have introduced additional parameters to allow you to set connection pool parameters, and have set defaults which will avoid fast connect cycling.  It is our expectation that a fix may be produced in the underlying ODPI-C library for the underlying issue.  In the mean time, these changes will avoid the conditions under which the error can occur.
+- Fix malloc error (#177, #181).
+- Fix intermittent connection issues with ADB-S when exporter is run in a container (#169).
+- Fix Multiple custom metrics files overwrite one another (#179).
+- Replace go-kit/log with log/slog, due to upstream changes in prometheus/common.
+- Add support for additional admin roles, expanding list of options for `DB_ROLE` to `SYSDBA`, `SYSOPER`, `SYSBACKUP`, `SYSDG`, `SYSKM`, `SYSRAC` and `SYSASM` (#180).
 - Updated some third-party dependencies.
 
 Thank you to the following people for their suggestions and contributions:
@@ -21,15 +27,14 @@ Thank you to the following people for their suggestions and contributions:
 - [@rlagyu0](https://github.com/rlagyu0)
 - [@Sycri](https://github.com/Sycri)
 
+Thank you to [@tgulacsi](https://github.com/tgulacsi) for changes in godror (https://github.com/godror/godror/issues/361, https://github.com/godror/godror/issues/360), and to [@cjbj](https://github.com/cjbj) and [@sudarshan12s](https://github.com/sudarshan12s) for support and guidance from ODPI-C (https://github.com/oracle/odpi).
+
 In this release, we also continued some minor code refactoring.
 
 ### Version 1.5.3, January 28, 2025
 
 *Known issue*: This release has a known issue that results in the error message `malloc(): unsorted double linked list corrupted`.
 We recommend staying on 1.5.2 until a new release with a fix is available.  We hope to have a fix by early March.
-
-Our current priorities are support for RAC and mutliple databases (inculding #84 and #89), and intermittent connection issues
-with ADB-S when exporter is run in a container (including #169).  We expect to address these in an upcoming release.
 
 This release includes the following changes:
 
