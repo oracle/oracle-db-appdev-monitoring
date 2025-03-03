@@ -7,9 +7,12 @@ Our current priorities are support for RAC and mutliple databases (including #84
 
 ### Version 1.5.4, March 3, 2025
 
+This release includes the following changes:
+
+- Based of this recommendation from [godror](https://github.com/godror/godror?tab=readme-ov-file#pooling), which relates to the two following items, and in discussion with the ODPI-C team, we have introduced additional parameters to allow you to set connection pool parameters, and have set defaults which will avoid fast connect cycling.  It is our expectation that a fix may be produced in the underlying ODPI-C library for the underlying issue.  In the mean time, these changes will avoid the conditions under which the error can occur.
 - Fix malloc error (#177, #181).
-- Fix Multiple custom metrics files overwrite one another (#179).
 - Fix intermittent connection issues with ADB-S when exporter is run in a container (#169).
+- Fix Multiple custom metrics files overwrite one another (#179).
 - Replace go-kit/log with log/slog, due to upstream changes in prometheus/common.
 - Add support for additional admin roles, expanding list of options for `DB_ROLE` to `SYSDBA`, `SYSOPER`, `SYSBACKUP`, `SYSDG`, `SYSKM`, `SYSRAC` and `SYSASM` (#180).
 - Updated some third-party dependencies.
