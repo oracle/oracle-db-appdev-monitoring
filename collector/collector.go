@@ -385,7 +385,7 @@ func (e *Exporter) connect() error {
 	e.logger.Debug(fmt.Sprintf("set max open connections to %d", e.config.MaxOpenConns))
 	db.SetMaxOpenConns(e.config.MaxOpenConns)
 	db.SetConnMaxLifetime(0)
-	e.logger.Debug(fmt.Sprintf("Successfully configured connection to %d", maskDsn(e.connectString)))
+	e.logger.Debug(fmt.Sprintf("Successfully configured connection to %s", maskDsn(e.connectString)))
 	e.db = db
 
 	if _, err := db.Exec(`
