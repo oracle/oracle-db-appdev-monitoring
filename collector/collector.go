@@ -290,7 +290,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 					e.logger.Error("Error scraping metric",
 						"Context", metric.Context,
 						"MetricsDesc", fmt.Sprint(metric.MetricsDesc),
-						"time", time.Since(scrapeStart),
+						"duration", time.Since(scrapeStart),
 						"error", scrapeError)
 				}
 				e.scrapeErrors.WithLabelValues(metric.Context).Inc()
@@ -298,7 +298,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 				e.logger.Debug("Successfully scraped metric",
 					"Context", metric.Context,
 					"MetricDesc", fmt.Sprint(metric.MetricsDesc),
-					"time", time.Since(scrapeStart))
+					"duration", time.Since(scrapeStart))
 			}
 		}()
 	}
@@ -500,11 +500,9 @@ func (e *Exporter) scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, 
 		}
 		// Construct Prometheus values to sent back
 		for metric, metricHelp := range metricsDesc {
-			value, err := strconv.ParseFloat(strings.TrimSpace(row[metric]), 64)
-			// If not a float, skip current metric
-			if err != nil {
-				e.logger.Error("Unable to convert current value to float (metric=" + metric +
-					",metricHelp=" + metricHelp + ",value=<" + row[metric] + ">)")
+			value, ok := e.parseFloat(metric, metricHelp, row)
+			if !ok {
+				// Skip invalid metric values
 				continue
 			}
 			e.logger.Debug("Query result",
