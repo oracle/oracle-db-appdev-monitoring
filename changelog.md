@@ -1,8 +1,11 @@
 ## Release Notes
 
-### Version 1.5.4, March 3, 2025
+### Unreleased
 
-Our current priorities are support for RAC and mutliple databases (inculding #84 and #89).  We expect to address these in an upcoming release.
+Our current priorities are support for RAC and mutliple databases (including #84 and #89).  We expect to address these in an upcoming release.
+
+
+### Version 1.5.4, March 3, 2025
 
 - Fix malloc error (#177, #181).
 - Fix Multiple custom metrics files overwrite one another (#179).
@@ -29,9 +32,6 @@ In this release, we also continued some minor code refactoring.
 
 *Known issue*: This release has a known issue that results in the error message `malloc(): unsorted double linked list corrupted`.
 We recommend staying on 1.5.2 until a new release with a fix is available.  We hope to have a fix by early March.
-
-Our current priorities are support for RAC and mutliple databases (inculding #84 and #89), and intermittent connection issues
-with ADB-S when exporter is run in a container (including #169).  We expect to address these in an upcoming release.
 
 This release includes the following changes:
 
