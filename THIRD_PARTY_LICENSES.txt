@@ -8,7 +8,6 @@ UPL-1.0
 Copyright (c) 2016 Seth Miller <seth@sethmiller.me>
 Copyright (c) 2016, 2025, Oracle and/or its affiliates.
 
-
 -------------------------- Fourth Party Dependencies ---------------------------
 
 ----------------------------------- Licenses -----------------------------------
@@ -98,19 +97,6 @@ This product includes software developed at CoreOS, Inc.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-github.com/go-kit/log
-
-== License Type
-SPDX:MIT
-
-== Copyright
-Copyright (c) 2014 Simon Eskildsen
-Copyright (c) 2021 Go kit
-Copyright 2013 The Go Authors. All rights reserved.
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
 github.com/go-logfmt/logfmt
 
 == License Type
@@ -126,12 +112,12 @@ Copyright 2010 The Go Authors. All rights reserved.
 github.com/godror/godror
 
 == License Type
-=== MIT-039067db
+=== MIT-e4e92e20
 === BSD-3-Clause--modified-by-Google
 === BSD-3-Clause--modified-by-Google
 === UPL-1.0
 godror
-=======
+========
 
 Copyright 2017, 2020 Tamás Gulácsi
 
@@ -455,10 +441,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 == Copyright
 Copyright (c) 2015 go-logfmt
-Copyright (c) 2016, 2024 Oracle and/or its affiliates.
+Copyright (c) 2016, 2018 Oracle and/or its affiliates.  All rights reserved.
+Copyright (c) 2016, 2025, Oracle and/or its affiliates.
 Copyright (c) 2017 The Go Authors. All rights reserved.
-Copyright 2016, 2023 Tamás Gulácsi
+Copyright 2016, 2020 Tamás Gulácsi
 Copyright 2017, 2024 The Godror Authors
+Copyright 2022, 2023 Tamás Gulácsi. All rights reserved.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -469,7 +457,7 @@ github.com/godror/knownpb
 SPDX:Apache-2.0
 
 == Copyright
-Copyright 2019, 2021 Tamás Gulácsi
+Copyright 2014, 2021 Tamás Gulácsi
 
 --------------------------------- (separator) ----------------------------------
 
@@ -510,6 +498,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 == Copyright
 Copyright (c) 2015-2020, Tim Heckman
+Copyright 2015 Tim Heckman. All rights reserved.
 Copyright 2018 The Go Authors. All rights reserved.
 Copyright 2018 The Gofrs. All rights reserved.
 Copyright 2019 Tim Heckman. All rights reserved. Use of this source code is
@@ -568,7 +557,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ------------------
 
 Files: gzhttp/*
-SPDX: Apache-2.0
+
+SPDX:Apache-2.0
 
 ------------------
 
@@ -782,18 +772,19 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
 The Apache Software License, Version 2.0
 Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
 
-SPDX: Apache-2.0
+Licensed under the Apache License, Version 2.0 (the "License"); You may not use this product except in compliance with the License.  You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.  A copy of the license is also reproduced below.  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the License for the specific language governing permissions and  limitations under the License.
+
+SPDX:Apache-2.0
 
 
 == Copyright
-Copyright (c) 2016, 2024, Oracle and/or its affiliates.
+Copyright (c) 2016, 2023, Oracle and/or its affiliates.  All rights reserved.
 
 == Notices
-Copyright (c) 2016, 2014, Oracle and/or its affiliates.
+Copyright (c) 2016, 2020, Oracle and/or its affiliates.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -840,6 +831,7 @@ SPDX:Apache-2.0
 
 == Copyright
 Copyright 2012-2015 The Prometheus Authors
+Copyright 2013 Prometheus Team
 
 == Notices
 Data model artifacts for Prometheus.
@@ -858,6 +850,7 @@ github.com/prometheus/common
 SPDX:Apache-2.0
 
 == Copyright
+Copyright 2020 The Prometheus-operator Authors
 Copyright 2024 The Prometheus Authors
 
 == Notices
@@ -889,14 +882,14 @@ github.com/prometheus/procfs
 SPDX:Apache-2.0
 
 == Copyright
-Copyright 2014-2023 The Prometheus Authors
-Copyright 2017-2023 Prometheus Team
+Copyright 2023 Prometheus Team
+Copyright 2023 The Prometheus Authors
 
 == Notices
 procfs provides functions to retrieve system, kernel and process
 metrics from the pseudo-filesystem proc.
 
-Copyright 2014-2023 The Prometheus Authors
+Copyright 2014-2015 The Prometheus Authors
 
 This product includes software developed at
 SoundCloud Ltd. (http://soundcloud.com/).
@@ -963,6 +956,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 == Copyright
+Copyright 2009 The Go Authors.
 Copyright 2024 The Go Authors. All rights reserved.
 
 == Patents
@@ -1028,6 +1022,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 == Copyright
+Copyright 2009 The Go Authors.
 Copyright 2024 The Go Authors. All rights reserved.
 
 == Patents
@@ -1093,6 +1088,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 == Copyright
+Copyright 2009 The Go Authors.
+Copyright 2018 The oauth2 Authors. All rights reserved.
 Copyright 2024 The Go Authors. All rights reserved.
 
 --------------------------------- (separator) ----------------------------------
@@ -1133,6 +1130,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 == Copyright
+Copyright 2009 The Go Authors.
 Copyright 2023 The Go Authors. All rights reserved.
 
 == Patents
@@ -1198,6 +1196,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 == Copyright
+Copyright 2009 The Go Authors.
 Copyright 2024 The Go Authors. All rights reserved.
 
 == Patents
@@ -1263,6 +1262,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 == Copyright
+Copyright 2009 The Go Authors.
 Copyright 2021 The Go Authors. All rights reserved.
 
 == Patents
@@ -1299,6 +1299,7 @@ google.golang.org/protobuf
 SPDX:BSD-3-Clause--modified-by-Google
 
 == Copyright
+Copyright 2024 Google Inc.  All rights reserved.
 Copyright 2024 The Go Authors. All rights reserved.
 
 == Patents
@@ -1414,4 +1415,4 @@ SOFTWARE.
 
 === ATTRIBUTION-HELPER-GENERATED:
 === Attribution helper version: {Major:0 Minor:11 GitVersion:0.10.0-114-g3747dab9 GitCommit:3747dab92eb29c0dbe6409ffbb824b9ae3a04b87 GitTreeState:clean BuildDate:2024-05-31T13:48:06Z GoVersion:go1.21.4 Compiler:gc Platform:linux/amd64}
-=== License file based on go.mod with md5 sum:  9703204c5fd5c441310d943839abdc4b
+=== License file based on go.mod with md5 sum:  771c94b3ddce81ff2e234b02d85209e4

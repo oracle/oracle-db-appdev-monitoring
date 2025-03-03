@@ -2,13 +2,13 @@
 
 ### Version 1.5.4, March 3, 2025
 
-Our current priorities are support for RAC and mutliple databases (inculding #84 and #89), and intermittent connection issues
-with ADB-S when exporter is run in a container (including #169).  We expect to address these in an upcoming release.
+Our current priorities are support for RAC and mutliple databases (inculding #84 and #89).  We expect to address these in an upcoming release.
 
-- Fix malloc error (#177)
-- Fix Multiple custom metrics files overwrite one another (#179)
-- Replace go-kit/log with log/slog, due to upstream changes in prometheus/common 
-- Add support for additional admin roles, exapnding list of options for `DB_ROILE` to `SYSDBA`, `SYSOPER`, `SYSBACKUP`, `SYSDG`, `SYSKM`, `SYSRAC` and `SYSASM` (#180)
+- Fix malloc error (#177, #181).
+- Fix Multiple custom metrics files overwrite one another (#179).
+- Fix intermittent connection issues with ADB-S when exporter is run in a container (#169).
+- Replace go-kit/log with log/slog, due to upstream changes in prometheus/common.
+- Add support for additional admin roles, exapnding list of options for `DB_ROILE` to `SYSDBA`, `SYSOPER`, `SYSBACKUP`, `SYSDG`, `SYSKM`, `SYSRAC` and `SYSASM` (#180).
 - Updated some third-party dependencies.
 
 Thank you to the following people for their suggestions and contributions:
@@ -20,6 +20,8 @@ Thank you to the following people for their suggestions and contributions:
 - [@PeterP55P](https://github.com/PeterP55P)
 - [@rlagyu0](https://github.com/rlagyu0)
 - [@Sycri](https://github.com/Sycri)
+
+Thank you to [@tgulacsi](https://github.com/tgulacsi) for changes in godror (https://github.com/godror/godror/issues/361, https://github.com/godror/godror/issues/360), and to [@cjbj](https://github.com/cjbj) and [@sudarshan12s](https://github.com/sudarshan12s) for support and guidance from ODPI-C (https://github.com/oracle/odpi).
 
 In this release, we also continued some minor code refactoring.
 
