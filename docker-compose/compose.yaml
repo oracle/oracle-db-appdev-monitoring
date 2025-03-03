@@ -45,6 +45,9 @@ services:
   exporter:
     image: container-registry.oracle.com/database/observability-exporter:1.5.4
     container_name: exporter
+    command:
+      - '--database.maxIdleConns=10'
+      - '--database.maxOpenConns=10'
     ports:
       - 9161:9161
     environment:
@@ -54,6 +57,7 @@ services:
       - CUSTOM_METRICS=/exporter/txeventq-metrics.toml,/exporter/more-txeventq-metrics.toml
     volumes:
       - ./exporter:/exporter
+
     depends_on: 
       free23ai:
         condition: service_healthy
