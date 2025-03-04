@@ -4,6 +4,14 @@
 
 Our current priorities are support for RAC and mutliple databases (including #84 and #89).  We expect to address these in an upcoming release.
 
+The following changes are in main but not yet available in a release:
+
+- [@VictorErmakov](https://github.com/VictorErmakov) updated the docker-compose sample with connection pool parameters to avoid fast connect cycling (#191).  
+
+Thank you to the following people for their suggestions and contributions:
+
+- [@VictorErmakov](https://github.com/VictorErmakov)
+
 
 ### Version 1.5.4, March 3, 2025
 
