@@ -20,8 +20,6 @@ github.com/go-logfmt/logfmt v0.6.0/go.mod h1:WYhtIu8zTZfxdn5+rREduYbwxfcBr/Vr6KE
 github.com/go-logr/logr v1.2.4 h1:g01GSCwiDw2xSZfjJ2/T9M+S6pFdcNtFYsp+Y43HYDQ=
 github.com/go-logr/logr v1.2.4/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
 github.com/godbus/dbus/v5 v5.0.4/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
-github.com/godror/godror v0.46.1-0.20250226074503-67aeda640090 h1:9/ZPRz24+4QrrU/xB0I+AAXKzLV2xtG+mn+9zb3cQCg=
-github.com/godror/godror v0.46.1-0.20250226074503-67aeda640090/go.mod h1:44hxVDzvFSwc+yGyRM+riCLNAY5SwZkUfLzVTh5MXCg=
 github.com/godror/godror v0.47.0 h1:GZsaMOIvLqgTPPVXFIavRI4mqwNIhmcFfEZbzWeabGE=
 github.com/godror/godror v0.47.0/go.mod h1:44hxVDzvFSwc+yGyRM+riCLNAY5SwZkUfLzVTh5MXCg=
 github.com/godror/knownpb v0.1.2 h1:icMyYsYVpGmzhoVA01xyd0o4EaubR31JPK1UxQWe4kM=
@@ -54,8 +52,8 @@ github.com/oracle/oci-go-sdk/v65 v65.84.0 h1:NCEiq42gwrFJPLmIMxz4QnZSM4Wmp6n+sjp
 github.com/oracle/oci-go-sdk/v65 v65.84.0/go.mod h1:IBEV9l1qBzUpo7zgGaRUhbB05BVfcDGYRFBCPlTcPp0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
-github.com/prometheus/client_golang v1.21.0 h1:DIsaGmiaBkSangBgMtWdNfxbMNdku5IK6iNhrEqWvdA=
-github.com/prometheus/client_golang v1.21.0/go.mod h1:U9NM32ykUErtVBxdvD3zfi+EuFkkaBvMb09mIfe0Zgg=
+github.com/prometheus/client_golang v1.21.1 h1:DOvXXTqVzvkIewV/CDPFdejpMCGeMcbGCQ8YOmu+Ibk=
+github.com/prometheus/client_golang v1.21.1/go.mod h1:U9NM32ykUErtVBxdvD3zfi+EuFkkaBvMb09mIfe0Zgg=
 github.com/prometheus/client_model v0.6.1 h1:ZKSh/rekM+n3CeS952MLRAdFwIKqeY8b62p8ais2e9E=
 github.com/prometheus/client_model v0.6.1/go.mod h1:OrxVMOVHjw3lKMa8+x6HeMGkHMQyHDk9E3jmP2AmGiY=
 github.com/prometheus/common v0.62.0 h1:xasJaQlnWAeyHdUBeGjXmutelfJHWMRr+Fg4QszZ2Io=
