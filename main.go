@@ -89,7 +89,7 @@ func main() {
 		logger.Info("RESTART_INTERVAL env var is not present, so will not restart myself periodically")
 	}
 
-	if maxIdleConns > 0 {
+	if *maxIdleConns > 0 {
 		logger.Info("DATABASE_MAXIDLECONNS is greater than 0, so will use go-sql connection pool and DATABASE_POOL* settings will be ignored")
 	} else {
 		logger.Info("DATABASE_MAXIDLECONNS is 0, so will use Oracle connection pool. Tune with DATABASE_POOL* settings")
