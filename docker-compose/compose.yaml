@@ -43,7 +43,7 @@ services:
       start_period: 30s
 
   exporter:
-    image: container-registry.oracle.com/database/observability-exporter:1.5.4
+    image: container-registry.oracle.com/database/observability-exporter:1.5.5
     container_name: exporter
     command:
       - '--database.maxIdleConns=10'

@@ -7,13 +7,14 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/prometheus/common/promslog"
-	"github.com/prometheus/common/promslog/flag"
 	"net/http"
 	"os"
 	"runtime/debug"
 	"syscall"
 	"time"
+
+	"github.com/prometheus/common/promslog"
+	"github.com/prometheus/common/promslog/flag"
 
 	"github.com/godror/godror/dsn"
 	"github.com/prometheus/client_golang/prometheus"
@@ -40,7 +41,7 @@ var (
 	defaultFileMetrics = kingpin.Flag("default.metrics", "File with default metrics in a TOML file. (env: DEFAULT_METRICS)").Default(getEnv("DEFAULT_METRICS", "default-metrics.toml")).String()
 	customMetrics      = kingpin.Flag("custom.metrics", "Comma separated list of file(s) that contain various custom metrics in a TOML format. (env: CUSTOM_METRICS)").Default(getEnv("CUSTOM_METRICS", "")).String()
 	queryTimeout       = kingpin.Flag("query.timeout", "Query timeout (in seconds). (env: QUERY_TIMEOUT)").Default(getEnv("QUERY_TIMEOUT", "5")).Int()
-	maxIdleConns       = kingpin.Flag("database.maxIdleConns", "Number of maximum idle connections in the connection pool. (env: DATABASE_MAXIDLECONNS)").Default(getEnv("DATABASE_MAXIDLECONNS", "0")).Int()
+	maxIdleConns       = kingpin.Flag("database.maxIdleConns", "Number of maximum idle connections in the connection pool. (env: DATABASE_MAXIDLECONNS)").Default(getEnv("DATABASE_MAXIDLECONNS", "10")).Int()
 	maxOpenConns       = kingpin.Flag("database.maxOpenConns", "Number of maximum open connections in the connection pool. (env: DATABASE_MAXOPENCONNS)").Default(getEnv("DATABASE_MAXOPENCONNS", "10")).Int()
 	poolIncrement      = kingpin.Flag("database.poolIncrement", "Connection increment when the connection pool reaches max capacity. (env: DATABASE_POOLINCREMENT)").Default(getEnv("DATABASE_POOLINCREMENT", "-1")).Int()
 	poolMaxConnections = kingpin.Flag("database.poolMaxConnections", "Maximum number of connections in the connection pool. (env: DATABASE_POOLMAXCONNECTIONS)").Default(getEnv("DATABASE_POOLMAXCONNECTIONS", "-1")).Int()
@@ -86,6 +87,12 @@ func main() {
 		logger.Info("RESTART_INTERVAL env var is present, so will restart my own process periodically", "restart_interval", restartInterval)
 	} else {
 		logger.Info("RESTART_INTERVAL env var is not present, so will not restart myself periodically")
+	}
+
+	if maxIdleConns > 0 {
+		logger.Info("DATABASE_MAXIDLECONNS is greater than 0, so will use go-sql connection pool and DATABASE_POOL* settings will be ignored")
+	} else {
+		logger.Info("DATABASE_MAXIDLECONNS is 0, so will use Oracle connection pool. Tune with DATABASE_POOL* settings")
 	}
 
 	config := &collector.Config{
