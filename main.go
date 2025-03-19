@@ -30,6 +30,7 @@ import (
 	// _ "net/http/pprof"
 
 	"github.com/oracle/oracle-db-appdev-monitoring/alertlog"
+	"github.com/oracle/oracle-db-appdev-monitoring/azvault"
 	"github.com/oracle/oracle-db-appdev-monitoring/collector"
 	"github.com/oracle/oracle-db-appdev-monitoring/ocivault"
 )
