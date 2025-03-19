@@ -34,6 +34,9 @@ func GetVaultSecret(vaultId string, secretName string) string {
 	// get the secret - empty string version means "latest"
 	version := ""
 	resp, err := client.GetSecret(context.TODO(), secretName, version, nil)
+	if err != nil {
+		logger.Error("Failed to get secret from vault", "err", err)
+	}
 
 	rawSecret := *resp.Value
 	return strings.TrimRight(rawSecret, "\r\n") // make sure a \r and/or \n didn't make it into the secret
