@@ -616,7 +616,18 @@ The exporter will read the password from a secret stored in Azure Key Vault if y
 - `AZ_VAULT_ID` should be set to the ID of the Azure Key Vault that you wish to use
 - `AZ_VAULT_SECRET_NAME` should be set to the name of the secret in the Azure Key Vault which contains the database password
 
-> Note that the process must be running under a user that has the Azure CLI installed and configured correctly to access the desired tenancy or, if running in Azure, with service principal enabled.
+#### Authentication
+
+If you are running the exporter outside Azure, we recommend using [application service principal](https://learn.microsoft.com/en-us/azure/developer/go/sdk/authentication/authentication-on-premises-apps).  
+
+If you are running the exporter inside Azure, we recommend using a [managed identity](https://learn.microsoft.com/en-us/azure/developer/go/sdk/authentication/authentication-azure-hosted-apps).
+
+You should set the following additional environment variables to allow the exporter to authenticate to Azure:
+
+- `AZURE_TENANT_ID` should be set to your tenant ID
+- `AZURE_CLIENT_ID` should be set to the client ID to authenticate to Azure
+- `AZURE_CLIENT_SECRET` should be set to the client secret to authenticate to Azure
+
 
 ## Custom metrics
 
