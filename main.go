@@ -68,11 +68,18 @@ func main() {
 	// externalAuth - Default to user/password but if no password is supplied then will automagically set to true
 	externalAuth := false
 
-	vaultID, useVault := os.LookupEnv("OCI_VAULT_ID")
-	if useVault {
+	ociVaultID, useOciVault := os.LookupEnv("OCI_VAULT_ID")
+	if useOciVault {
 
-		logger.Info("OCI_VAULT_ID env var is present so using OCI Vault", "vaultOCID", vaultID)
-		password = ocivault.GetVaultSecret(vaultID, os.Getenv("OCI_VAULT_SECRET_NAME"))
+		logger.Info("OCI_VAULT_ID env var is present so using OCI Vault", "vaultOCID", ociVaultID)
+		password = ocivault.GetVaultSecret(ociVaultID, os.Getenv("OCI_VAULT_SECRET_NAME"))
+	}
+
+	azVaultID, useAzVault := os.LookupEnv("AZ_VAULT_ID")
+	if useAzVault {
+
+		logger.Info("AZ_VAULT_ID env var is present so using Azure Key Vault", "VaultID", azVaultID)
+		password = azvault.GetVaultSecret(azVaultID, os.Getenv("AZ_VAULT_SECRET_NAME"))
 	}
 
 	freeOSMemInterval, enableFree := os.LookupEnv("FREE_INTERVAL")
