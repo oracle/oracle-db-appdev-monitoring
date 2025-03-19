@@ -18,8 +18,6 @@ func GetVaultSecret(vaultId string, secretName string) string {
 	promLogConfig := &promslog.Config{}
 	logger := promslog.New(promLogConfig)
 
-	logger.Info("AZ_VAULT_ID env var is present so using Azure Key Vault", "vaultID", vaultId)
-
 	vaultURI := fmt.Sprintf("https://%s.vault.azure.net/", vaultId)
 
 	// create a credential
@@ -33,11 +31,13 @@ func GetVaultSecret(vaultId string, secretName string) string {
 
 	// get the secret - empty string version means "latest"
 	version := ""
+	secret := ""
 	resp, err := client.GetSecret(context.TODO(), secretName, version, nil)
 	if err != nil {
 		logger.Error("Failed to get secret from vault", "err", err)
+	} else {
+		secret = *resp.Value
 	}
 
-	rawSecret := *resp.Value
-	return strings.TrimRight(rawSecret, "\r\n") // make sure a \r and/or \n didn't make it into the secret
+	return strings.TrimRight(secret, "\r\n") // make sure a \r and/or \n didn't make it into the secret
 }
