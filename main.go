@@ -80,7 +80,7 @@ func main() {
 	if useAzVault {
 
 		logger.Info("AZ_VAULT_ID env var is present so using Azure Key Vault", "VaultID", azVaultID)
-		logger.Info("If running outside Azure, set the environment variables AZURE_TENANT_ID, AZURE_CLIENT_ID, and AZURE_CLIENT_SECRET for the application service principal information to connect to Azure with.")
+		logger.Info("Using the environment variables AZURE_TENANT_ID, AZURE_CLIENT_ID, and AZURE_CLIENT_SECRET to authentication with Azure.")
 		password = azvault.GetVaultSecret(azVaultID, os.Getenv("AZ_VAULT_SECRET_NAME"))
 	}
 
