@@ -19,6 +19,7 @@ Contributions are welcome - please see [contributing](CONTRIBUTING.md).
   - [Kubernetes](#kubernetes)
   - [Standalone binary](#standalone-binary)
   - [Using OCI Vault](#using-oci-vault)
+  - [Using Azure Vault](#using-azure-vault)
 - [Custom metrics](#custom-metrics)
 - [Controlling memory usage](#controlling-memory-usage)
 - [Grafana dashboards](#grafana-dashboards)
@@ -29,7 +30,8 @@ Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 
 | Release | Date                 | Changelog                                                       |
 |---------|----------------------|-----------------------------------------------------------------|
-| 1.5.5   | March 13th, 2025     | [1.5.5 Changelog](./changelog.md#version-155-march-13-2025)      |
+| 1.6.0   | March XX, 2025       | [1.6.0 Changelog](./changelog.md#version-160-march-xx-2025)     |
+| 1.5.5   | March 13th, 2025     | [1.5.5 Changelog](./changelog.md#version-155-march-13-2025)     |
 | 1.5.4   | March 3rd, 2025      | [1.5.4 Changelog](./changelog.md#version-154-march-3-2025)      |
 | 1.5.3   | January 28th, 2025   | [1.5.3 Changelog](./changelog.md#version-153-january-28-2025)   |
 | 1.5.2   | December 2nd, 2024   | [1.5.2 Changelog](./changelog.md#version-152-december-2-2024)   |
@@ -374,7 +376,7 @@ docker run -it --rm \
     -e DB_PASSWORD=Welcome12345 \
     -e DB_CONNECT_STRING=free23ai:1521/freepdb \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:1.5.5
+    container-registry.oracle.com/database/observability-exporter:1.6.0
 ```
 
 ##### Using a wallet
@@ -420,7 +422,7 @@ docker run -it --rm \
     -e DB_CONNECT_STRING=devdb_tp \
     -v ./wallet:/wallet \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:1.5.5
+    container-registry.oracle.com/database/observability-exporter:1.6.0
 ```
 > **Note:** If you are using `podman` you must specify the `:z` suffix on the volume mount so that the container will be able to access the files in the volume.  For example: `-v ./wallet:/wallet:z`
 
@@ -607,6 +609,15 @@ The exporter will read the password from a secret stored in OCI Vault if you set
 
 > Note that the process must be running under a user that has the OCI CLI installed and configured correctly to access the desired tenancy and region. The OCI Profile used is `DEFAULT`.
 
+### Using Azure Vault
+
+The exporter will read the password from a secret stored in Azure Key Vault if you set these two environment variables:
+
+- `AZ_VAULT_ID` should be set to the ID of the Azure Key Vault that you wish to use
+- `AZ_VAULT_SECRET_NAME` should be set to the name of the secret in the Azure Key Vault which contains the database password
+
+> Note that the process must be running under a user that has the Azure CLI installed and configured correctly to access the desired tenancy or, if running in Azure, with service principal enabled.
+
 ## Custom metrics
 
 The exporter allows definition of arbitrary custom metrics in one or more TOML files. To specify this file to the
@@ -715,7 +726,7 @@ An exmaple of [custom metrics for Transacational Event Queues](./custom-metrics-
 If you run the exporter as a container image and want to include your custom metrics in the image itself, you can use the following example `Dockerfile` to create a new image:
 
 ```Dockerfile
-FROM container-registry.oracle.com/database/observability-exporter:1.5.5
+FROM container-registry.oracle.com/database/observability-exporter:1.6.0
 COPY custom-metrics.toml /
 ENTRYPOINT ["/oracledb_exporter", "--custom.metrics", "/custom-metrics.toml"]
 ```

@@ -31,7 +31,7 @@ import (
 
 	"github.com/oracle/oracle-db-appdev-monitoring/alertlog"
 	"github.com/oracle/oracle-db-appdev-monitoring/collector"
-	"github.com/oracle/oracle-db-appdev-monitoring/vault"
+	"github.com/oracle/oracle-db-appdev-monitoring/ocivault"
 )
 
 var (
@@ -72,7 +72,7 @@ func main() {
 	if useVault {
 
 		logger.Info("OCI_VAULT_ID env var is present so using OCI Vault", "vaultOCID", vaultID)
-		password = vault.GetVaultSecret(vaultID, os.Getenv("OCI_VAULT_SECRET_NAME"))
+		password = ocivault.GetVaultSecret(vaultID, os.Getenv("OCI_VAULT_SECRET_NAME"))
 	}
 
 	freeOSMemInterval, enableFree := os.LookupEnv("FREE_INTERVAL")

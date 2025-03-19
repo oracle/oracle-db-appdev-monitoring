@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: metrics-exporter
-        image: container-registry.oracle.com/database/observability-exporter:1.5.5
+        image: container-registry.oracle.com/database/observability-exporter:1.6.0
         imagePullPolicy: Always
         env:
           # uncomment and customize the next item if you want to provide custom metrics definitions
