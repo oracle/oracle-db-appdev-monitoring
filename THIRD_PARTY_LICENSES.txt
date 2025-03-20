@@ -12,10 +12,83 @@ Copyright (c) 2016, 2025, Oracle and/or its affiliates.
 
 ----------------------------------- Licenses -----------------------------------
 -  Apache-2.0
+-  BSD-2-Clause
 -  BSD-3-Clause
 -  BSD-3-Clause--modified-by-Google
 -  MIT
 -  UPL-1.0
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/Azure/azure-sdk-for-go/sdk/azcore
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) Microsoft Corporation.
+Copyright (c) Microsoft Corporation. All rights reserved.
+Copyright 2017 Microsoft Corporation. All rights reserved.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/Azure/azure-sdk-for-go/sdk/azidentity
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) Microsoft Corporation.
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/Azure/azure-sdk-for-go/sdk/internal
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) Microsoft Corporation.
+Copyright (c) Microsoft Corporation. All rights reserved.
+Copyright 2017 Microsoft Corporation. All rights reserved.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/Azure/azure-sdk-for-go/sdk/keyvault/azsecrets
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/Azure/azure-sdk-for-go/sdk/keyvault/internal
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/AzureAD/microsoft-authentication-library-for-go
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) Microsoft Corporation.
+Copyright (c) Microsoft Corporation.  All rights reserved. Licensed under the MIT License (the "License").
 
 --------------------------------- (separator) ----------------------------------
 
@@ -1415,4 +1488,4 @@ SOFTWARE.
 
 === ATTRIBUTION-HELPER-GENERATED:
 === Attribution helper version: {Major:0 Minor:11 GitVersion:0.10.0-114-g3747dab9 GitCommit:3747dab92eb29c0dbe6409ffbb824b9ae3a04b87 GitTreeState:clean BuildDate:2024-05-31T13:48:06Z GoVersion:go1.21.4 Compiler:gc Platform:linux/amd64}
-=== License file based on go.mod with md5 sum:  771c94b3ddce81ff2e234b02d85209e4
+=== License file based on go.mod with md5 sum:  1f9ef04b4e97726da4230878cc4247bc
