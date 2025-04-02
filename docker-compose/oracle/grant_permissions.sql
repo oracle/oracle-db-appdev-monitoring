@@ -9,5 +9,5 @@ grant execute on dbms_aqjms_internal to pdbadmin;
 grant execute on dbms_teqk to pdbadmin;
 grant execute on DBMS_RESOURCE_MANAGER to pdbadmin;
 grant select on sys.aq$_queue_shards to pdbadmin;
-grant select on sys.v_$diag_alert_ext TO pdbadmin;
+grant select on sys.v_$diag_alert_ext to pdbadmin;
 grant select on user_queue_partition_assignment_table to pdbadmin;
