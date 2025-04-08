@@ -4,6 +4,10 @@
 
 Our current priorities are support for RAC and mutliple databases (including #84 and #89).  We expect to address these in an upcoming release.
 
+The following changes are in the main branch but not in a release yet:
+
+- [4Aiur](https://github.com/4Aiur) added missing grants for alert log to the demo environment (#207).
+
 
 ### Version 1.5.5, March 13, 2025
 
