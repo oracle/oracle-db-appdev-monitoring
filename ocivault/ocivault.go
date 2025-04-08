@@ -1,13 +1,14 @@
 // Copyright (c) 2023, 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
-package vault
+package ocivault
 
 import (
 	"context"
 	b64 "encoding/base64"
-	"github.com/prometheus/common/promslog"
 	"strings"
+
+	"github.com/prometheus/common/promslog"
 
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/example/helpers"
