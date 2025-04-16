@@ -614,7 +614,8 @@ The exporter will read the password from a secret stored in OCI Vault if you set
 The exporter will read the password from a secret stored in Azure Key Vault if you set these two environment variables:
 
 - `AZ_VAULT_ID` should be set to the ID of the Azure Key Vault that you wish to use
-- `AZ_VAULT_SECRET_NAME` should be set to the name of the secret in the Azure Key Vault which contains the database password
+- `AZ_VAULT_USERNAME_SECRET` should be set to the name of the secret in the Azure Key Vault which contains the database username
+- `AZ_VAULT_PASSWORD_SECRET` should be set to the name of the secret in the Azure Key Vault which contains the database password
 
 #### Authentication
 

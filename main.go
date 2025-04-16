@@ -81,7 +81,8 @@ func main() {
 
 		logger.Info("AZ_VAULT_ID env var is present so using Azure Key Vault", "VaultID", azVaultID)
 		logger.Info("Using the environment variables AZURE_TENANT_ID, AZURE_CLIENT_ID, and AZURE_CLIENT_SECRET to authentication with Azure.")
-		password = azvault.GetVaultSecret(azVaultID, os.Getenv("AZ_VAULT_SECRET_NAME"))
+		user = azvault.GetVaultSecret(azVaultID, os.Getenv("AZ_VAULT_USERNAME_SECRET"))
+		password = azvault.GetVaultSecret(azVaultID, os.Getenv("AZ_VAULT_PASSWORD_SECRET"))
 	}
 
 	freeOSMemInterval, enableFree := os.LookupEnv("FREE_INTERVAL")
