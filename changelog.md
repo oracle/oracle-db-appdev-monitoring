@@ -4,6 +4,16 @@
 
 Our current priorities are support for RAC and mutliple databases (including #84 and #89).  We expect to address these in an upcoming release.
 
+### Version 1.6.0, April 17, 2025
+
+This release includes the following changes:
+
+- Added support for Azure Key Vault (#200).
+- Updated some third-party dependencies.
+
+Thank you to the following people for their suggestions and contributions: 
+
+- Brian, Damian et al.
 
 ### Version 1.5.5, March 13, 2025
 
