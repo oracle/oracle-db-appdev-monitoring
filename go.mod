@@ -7,7 +7,7 @@ toolchain go1.23.7
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.8.2
 	github.com/Azure/azure-sdk-for-go/sdk/keyvault/azsecrets v0.12.0
-	github.com/BurntSushi/toml v1.4.0
+	github.com/BurntSushi/toml v1.5.0
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/godror/godror v0.48.1
 	github.com/oracle/oci-go-sdk/v65 v65.86.0
