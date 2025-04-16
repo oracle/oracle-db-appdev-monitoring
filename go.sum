@@ -40,6 +40,8 @@ github.com/go-logr/logr v1.2.4/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbV
 github.com/godbus/dbus/v5 v5.0.4/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
 github.com/godror/godror v0.47.0 h1:GZsaMOIvLqgTPPVXFIavRI4mqwNIhmcFfEZbzWeabGE=
 github.com/godror/godror v0.47.0/go.mod h1:44hxVDzvFSwc+yGyRM+riCLNAY5SwZkUfLzVTh5MXCg=
+github.com/godror/godror v0.48.1 h1:kLC7meCy4yWvs0UzzTf0RIqeN+wp7SGXLLLbQfpooPM=
+github.com/godror/godror v0.48.1/go.mod h1:7JBa3m6g1s+5cTlZqEvydklDE30Xon3EALNrQm2iwk0=
 github.com/godror/knownpb v0.1.2 h1:icMyYsYVpGmzhoVA01xyd0o4EaubR31JPK1UxQWe4kM=
 github.com/godror/knownpb v0.1.2/go.mod h1:zs9hH+lwj7mnPHPnKCcxdOGz38Axa9uT+97Ng+Nnu5s=
 github.com/gofrs/flock v0.8.1 h1:+gYjHKf32LDeiEEFhQaotPbLuUXjY5ZqxKgXy7n59aw=
