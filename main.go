@@ -30,8 +30,9 @@ import (
 	// _ "net/http/pprof"
 
 	"github.com/oracle/oracle-db-appdev-monitoring/alertlog"
+	"github.com/oracle/oracle-db-appdev-monitoring/azvault"
 	"github.com/oracle/oracle-db-appdev-monitoring/collector"
-	"github.com/oracle/oracle-db-appdev-monitoring/vault"
+	"github.com/oracle/oracle-db-appdev-monitoring/ocivault"
 )
 
 var (
@@ -68,11 +69,20 @@ func main() {
 	// externalAuth - Default to user/password but if no password is supplied then will automagically set to true
 	externalAuth := false
 
-	vaultID, useVault := os.LookupEnv("OCI_VAULT_ID")
-	if useVault {
+	ociVaultID, useOciVault := os.LookupEnv("OCI_VAULT_ID")
+	if useOciVault {
 
-		logger.Info("OCI_VAULT_ID env var is present so using OCI Vault", "vaultOCID", vaultID)
-		password = vault.GetVaultSecret(vaultID, os.Getenv("OCI_VAULT_SECRET_NAME"))
+		logger.Info("OCI_VAULT_ID env var is present so using OCI Vault", "vaultOCID", ociVaultID)
+		password = ocivault.GetVaultSecret(ociVaultID, os.Getenv("OCI_VAULT_SECRET_NAME"))
+	}
+
+	azVaultID, useAzVault := os.LookupEnv("AZ_VAULT_ID")
+	if useAzVault {
+
+		logger.Info("AZ_VAULT_ID env var is present so using Azure Key Vault", "VaultID", azVaultID)
+		logger.Info("Using the environment variables AZURE_TENANT_ID, AZURE_CLIENT_ID, and AZURE_CLIENT_SECRET to authentication with Azure.")
+		user = azvault.GetVaultSecret(azVaultID, os.Getenv("AZ_VAULT_USERNAME_SECRET"))
+		password = azvault.GetVaultSecret(azVaultID, os.Getenv("AZ_VAULT_PASSWORD_SECRET"))
 	}
 
 	freeOSMemInterval, enableFree := os.LookupEnv("FREE_INTERVAL")

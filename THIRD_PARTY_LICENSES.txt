@@ -12,10 +12,83 @@ Copyright (c) 2016, 2025, Oracle and/or its affiliates.
 
 ----------------------------------- Licenses -----------------------------------
 -  Apache-2.0
+-  BSD-2-Clause
 -  BSD-3-Clause
 -  BSD-3-Clause--modified-by-Google
 -  MIT
 -  UPL-1.0
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/Azure/azure-sdk-for-go/sdk/azcore
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) Microsoft Corporation.
+Copyright (c) Microsoft Corporation. All rights reserved.
+Copyright 2017 Microsoft Corporation. All rights reserved.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/Azure/azure-sdk-for-go/sdk/azidentity
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) Microsoft Corporation.
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/Azure/azure-sdk-for-go/sdk/internal
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) Microsoft Corporation.
+Copyright (c) Microsoft Corporation. All rights reserved.
+Copyright 2017 Microsoft Corporation. All rights reserved.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/Azure/azure-sdk-for-go/sdk/keyvault/azsecrets
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/Azure/azure-sdk-for-go/sdk/keyvault/internal
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/AzureAD/microsoft-authentication-library-for-go
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) Microsoft Corporation.
+Copyright (c) Microsoft Corporation.  All rights reserved. Licensed under the MIT License (the "License").
 
 --------------------------------- (separator) ----------------------------------
 
@@ -506,6 +579,29 @@ Copyright 2019 Tim Heckman. All rights reserved. Use of this source code is
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
+github.com/golang-jwt/jwt/v5
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) 2012 Dave Grijalva
+Copyright (c) 2021 golang-jwt maintainers
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/google/uuid
+
+== License Type
+SPDX:BSD-3-Clause--modified-by-Google
+
+== Copyright
+Copyright 2023 Google Inc.  All rights reserved.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
 github.com/jpillora/backoff
 
 == License Type
@@ -643,6 +739,18 @@ Copyright 2016 The filepathx Authors
 Copyright 2016-2017 The New York Times Company
 Copyright 2021 The Go Authors. All rights reserved.
 Copyright 2023 Google LLC
+Copyright 2023+ Klaus Post. All rights reserved.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/kylelemons/godebug
+
+== License Type
+SPDX:Apache-2.0
+
+== Copyright
+Copyright 2013 Google Inc.  All rights reserved.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -784,7 +892,18 @@ SPDX:Apache-2.0
 Copyright (c) 2016, 2023, Oracle and/or its affiliates.  All rights reserved.
 
 == Notices
-Copyright (c) 2016, 2020, Oracle and/or its affiliates.
+Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/pkg/browser
+
+== License Type
+SPDX:BSD-2-Clause
+
+== Copyright
+Copyright (c) 2014, Dave Cheney <dave@cheney.net>
 
 --------------------------------- (separator) ----------------------------------
 
@@ -851,7 +970,7 @@ SPDX:Apache-2.0
 
 == Copyright
 Copyright 2020 The Prometheus-operator Authors
-Copyright 2024 The Prometheus Authors
+Copyright 2025 The Prometheus Authors
 
 == Notices
 Common libraries shared by Prometheus Go components.
@@ -917,6 +1036,17 @@ SPDX:BSD-3-Clause--modified-by-Google
 == Copyright
 Copyright (c) 2009 The Go Authors. All rights reserved.
 Copyright 2010 The Go Authors. All rights reserved.
+
+--------------------------------- (separator) ----------------------------------
+
+== Dependency
+github.com/youmark/pkcs8
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) 2014 youmark
 
 --------------------------------- (separator) ----------------------------------
 
@@ -1023,7 +1153,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 == Copyright
 Copyright 2009 The Go Authors.
-Copyright 2024 The Go Authors. All rights reserved.
+Copyright 2025 The Go Authors. All rights reserved.
 
 == Patents
 Additional IP Rights Grant (Patents)
@@ -1197,7 +1327,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 == Copyright
 Copyright 2009 The Go Authors.
-Copyright 2024 The Go Authors. All rights reserved.
+Copyright 2025 The Go Authors. All rights reserved.
 
 == Patents
 Additional IP Rights Grant (Patents)
@@ -1300,7 +1430,7 @@ SPDX:BSD-3-Clause--modified-by-Google
 
 == Copyright
 Copyright 2024 Google Inc.  All rights reserved.
-Copyright 2024 The Go Authors. All rights reserved.
+Copyright 2025 The Go Authors. All rights reserved.
 
 == Patents
 Additional IP Rights Grant (Patents)
@@ -1357,8 +1487,30 @@ limitations under the License.
 
 ----------------------------------- Licenses -----------------------------------
 
---------------------------------- (separator) ----------------------------------
 == SPDX:Apache-2.0
+== SPDX:BSD-2-Clause
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 
 
 --------------------------------- (separator) ----------------------------------
@@ -1414,5 +1566,5 @@ SOFTWARE.
 
 
 === ATTRIBUTION-HELPER-GENERATED:
-=== Attribution helper version: {Major:0 Minor:11 GitVersion:0.10.0-114-g3747dab9 GitCommit:3747dab92eb29c0dbe6409ffbb824b9ae3a04b87 GitTreeState:clean BuildDate:2024-05-31T13:48:06Z GoVersion:go1.21.4 Compiler:gc Platform:linux/amd64}
-=== License file based on go.mod with md5 sum:  771c94b3ddce81ff2e234b02d85209e4
+=== Attribution helper version: {Major:0 Minor:11 GitVersion:0.10.0-116-g2a434e4d GitCommit:2a434e4d7eea22d4dfd2d1cf04909239d05562b1 GitTreeState:clean BuildDate:2025-04-17T14:57:55Z GoVersion:go1.23.7 Compiler:gc Platform:linux/amd64}
+=== License file based on go.mod with md5 sum:  e3aaf1f636118d333ec243eb9788fa19
