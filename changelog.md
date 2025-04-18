@@ -5,7 +5,7 @@
 Our current priorities are support for RAC and mutliple databases (including #84 and #89).  We expect to address these in an upcoming release.
 
 
-### Version 1.6.0, April 17, 2025
+### Version 1.6.0, April 18, 2025
 
 This release includes the following changes:
 
