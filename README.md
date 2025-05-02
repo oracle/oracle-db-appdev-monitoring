@@ -377,7 +377,7 @@ docker run -it --rm \
     -e DB_PASSWORD=Welcome12345 \
     -e DB_CONNECT_STRING=free23ai:1521/freepdb \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:1.6.0
+    container-registry.oracle.com/database/observability-exporter:1.6.1
 ```
 
 ##### Using a wallet
@@ -423,7 +423,7 @@ docker run -it --rm \
     -e DB_CONNECT_STRING=devdb_tp \
     -v ./wallet:/wallet \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:1.6.0
+    container-registry.oracle.com/database/observability-exporter:1.6.1
 ```
 > **Note:** If you are using `podman` you must specify the `:z` suffix on the volume mount so that the container will be able to access the files in the volume.  For example: `-v ./wallet:/wallet:z`
 
@@ -739,7 +739,7 @@ An exmaple of [custom metrics for Transacational Event Queues](./custom-metrics-
 If you run the exporter as a container image and want to include your custom metrics in the image itself, you can use the following example `Dockerfile` to create a new image:
 
 ```Dockerfile
-FROM container-registry.oracle.com/database/observability-exporter:1.6.0
+FROM container-registry.oracle.com/database/observability-exporter:1.6.1
 COPY custom-metrics.toml /
 ENTRYPOINT ["/oracledb_exporter", "--custom.metrics", "/custom-metrics.toml"]
 ```
