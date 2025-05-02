@@ -2,8 +2,6 @@ module github.com/oracle/oracle-db-appdev-monitoring
 
 go 1.23.8
 
-toolchain go1.23.8
-
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.8.2
 	github.com/Azure/azure-sdk-for-go/sdk/keyvault/azsecrets v0.12.0
