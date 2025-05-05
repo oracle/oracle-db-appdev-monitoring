@@ -91,8 +91,10 @@ func NewExporter(logger *slog.Logger, cfg *Config) (*Exporter, error) {
 			Name:      "dbtype",
 			Help:      "Type of database the exporter is connected to (0=non-CDB, 1=CDB, >1=PDB).",
 		}),
-		logger: logger,
-		config: cfg,
+		logger:         logger,
+		config:         cfg,
+		lastScraped:    map[string]*time.Time{},
+		scrapeInterval: cfg.ScrapeInterval,
 	}
 	e.metricsToScrape = e.DefaultMetrics()
 	err := e.connect()
@@ -131,7 +133,7 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	// they are running scheduled scrapes we should only scrape new data
 	// on the interval
-	if e.scrapeInterval != nil && *e.scrapeInterval != 0 {
+	if e.scrapeInterval != 0 {
 		// read access must be checked
 		e.mu.Lock()
 		for _, r := range e.scrapeResults {
@@ -155,12 +157,10 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 
 // RunScheduledScrapes is only relevant for users of this package that want to set the scrape on a timer
 // rather than letting it be per Collect call
-func (e *Exporter) RunScheduledScrapes(ctx context.Context, si time.Duration) {
-	e.scrapeInterval = &si
-
+func (e *Exporter) RunScheduledScrapes(ctx context.Context) {
 	e.doScrape(time.Now())
 
-	ticker := time.NewTicker(si)
+	ticker := time.NewTicker(e.scrapeInterval)
 	defer ticker.Stop()
 
 	for {
@@ -177,7 +177,6 @@ func (e *Exporter) RunScheduledScrapes(ctx context.Context, si time.Duration) {
 func (e *Exporter) doScrape(tick time.Time) {
 	e.mu.Lock() // ensure no simultaneous scrapes
 	e.scheduledScrape(&tick)
-	e.lastTick = &tick
 	e.mu.Unlock()
 }
 
@@ -246,7 +245,9 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 
 	for _, metric := range e.metricsToScrape.Metric {
 		metric := metric //https://golang.org/doc/faq#closures_and_goroutines
-
+		if !e.isScrapeMetric(tick, metric) {
+			continue
+		}
 		go func() {
 			e.logger.Debug("About to scrape metric",
 				"Context", metric.Context,
@@ -476,13 +477,10 @@ func (e *Exporter) reloadMetrics() {
 // ScrapeMetric is an interface method to call scrapeGenericValues using Metric struct values
 func (e *Exporter) ScrapeMetric(db *sql.DB, ch chan<- prometheus.Metric, m Metric, tick *time.Time) error {
 	e.logger.Debug("Calling function ScrapeGenericValues()")
-	if e.isScrapeMetric(tick, m) {
-		queryTimeout := e.getQueryTimeout(m)
-		return e.scrapeGenericValues(db, ch, m.Context, m.Labels, m.MetricsDesc,
-			m.MetricsType, m.MetricsBuckets, m.FieldToAppend, m.IgnoreZeroResult,
-			m.Request, queryTimeout)
-	}
-	return nil
+	queryTimeout := e.getQueryTimeout(m)
+	return e.scrapeGenericValues(db, ch, m.Context, m.Labels, m.MetricsDesc,
+		m.MetricsType, m.MetricsBuckets, m.FieldToAppend, m.IgnoreZeroResult,
+		m.Request, queryTimeout)
 }
 
 // generic method for retrieving metrics.
