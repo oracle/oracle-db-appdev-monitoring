@@ -7,6 +7,7 @@ import (
 	"github.com/godror/godror/dsn"
 	"github.com/prometheus/client_golang/prometheus"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 )
@@ -16,7 +17,7 @@ type Exporter struct {
 	config          *Config
 	mu              *sync.Mutex
 	metricsToScrape Metrics
-	scrapeInterval  *time.Duration
+	scrapeInterval  time.Duration
 	user            string
 	password        string
 	connectString   string
@@ -31,7 +32,7 @@ type Exporter struct {
 	dbtypeGauge     prometheus.Gauge
 	db              *sql.DB
 	logger          *slog.Logger
-	lastTick        *time.Time
+	lastScraped     map[string]*time.Time
 }
 
 type Config struct {
@@ -49,6 +50,7 @@ type Config struct {
 	CustomMetrics      string
 	QueryTimeout       int
 	DefaultMetricsFile string
+	ScrapeInterval     time.Duration
 }
 
 // Metric is an object description
@@ -68,4 +70,13 @@ type Metric struct {
 // Metrics is a container structure for prometheus metrics
 type Metrics struct {
 	Metric []Metric
+}
+
+func (m Metric) id() string {
+	builder := strings.Builder{}
+	builder.WriteString(m.Context)
+	for _, d := range m.MetricsDesc {
+		builder.WriteString(d)
+	}
+	return builder.String()
 }

@@ -13,8 +13,8 @@ import (
 // and the time since the last scrape is less than the custom scrape interval.
 // If there is no tick time or last known tick, the metric is always scraped.
 func (e *Exporter) isScrapeMetric(tick *time.Time, metric Metric) bool {
-	// Always scrape the metric if we don't have a current or last known tick.
-	if tick == nil || e.lastTick == nil {
+	// Always scrape the metric if we don't have a current tick.
+	if tick == nil {
 		return true
 	}
 	// If the metric doesn't have a custom scrape interval, scrape it.
@@ -22,9 +22,16 @@ func (e *Exporter) isScrapeMetric(tick *time.Time, metric Metric) bool {
 	if !ok {
 		return true
 	}
-	// If the metric's scrape interval is less than the time elapsed since the last scrape,
-	// we should scrape the metric.
-	return interval < tick.Sub(*e.lastTick)
+	id := metric.id()
+	lastScraped := e.lastScraped[id]
+	shouldScrape := lastScraped == nil ||
+		// If the metric's scrape interval is less than the time elapsed since the last scrape,
+		// we should scrape the metric.
+		interval < tick.Sub(*lastScraped)
+	if shouldScrape {
+		e.lastScraped[id] = tick
+	}
+	return shouldScrape
 }
 
 func (e *Exporter) getScrapeInterval(context, scrapeInterval string) (time.Duration, bool) {

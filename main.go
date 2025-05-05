@@ -120,6 +120,7 @@ func main() {
 		CustomMetrics:      *customMetrics,
 		QueryTimeout:       *queryTimeout,
 		DefaultMetricsFile: *defaultFileMetrics,
+		ScrapeInterval:     *scrapeInterval,
 	}
 	exporter, err := collector.NewExporter(logger, config)
 	if err != nil {
@@ -129,7 +130,7 @@ func main() {
 	if *scrapeInterval != 0 {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		go exporter.RunScheduledScrapes(ctx, *scrapeInterval)
+		go exporter.RunScheduledScrapes(ctx)
 	}
 
 	prometheus.MustRegister(exporter)
