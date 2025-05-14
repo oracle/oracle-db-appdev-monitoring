@@ -558,6 +558,8 @@ The following command line arguments (flags) can be passed to the exporter (the 
 
 ```bash
 Usage of oracledb_exporter:
+      --config.file="example-config.yaml"
+                                 File with metrics exporter configuration.  (env: CONFIG_FILE)
       --web.telemetry-path="/metrics"
                                  Path under which to expose metrics. (env: TELEMETRY_PATH)
       --default.metrics="default-metrics.toml"
@@ -596,6 +598,69 @@ You may provide the connection details using these variables:
 - `TNS_ADMIN` is the location of your (unzipped) wallet.  The `DIRECTORY` set in the `sqlnet.ora` file must match the path that it will be mounted on inside the container.
 
 The following example puts the logfile in the current location with the filename `alert.log` and loads the default matrics file (`default-metrics,toml`) from the current location.
+
+If you prefer to provide configuration via a [config file](./example-config.yaml), you may do so with the `--config.file` argument. The use of a config file over command line arguments is preferred. If a config file is not provided, the default database connection is managed by command line arguments.
+
+```yaml
+# Example Oracle Database Metrics Exporter Configuration file.
+# Environment variables of the form ${VAR_NAME} will be expanded.
+
+databases:
+  ## Path on which metrics will be served
+  # metricsPath: /metrics
+  ## Database connection information for the "default" database.
+  default:
+    ## Database username
+    username: ${DB_USERNAME}
+    ## Database password
+    password: ${DB_PASSWORD}
+    ## Database connection url
+    url: localhost:1521/freepdb1
+    ## Metrics scrape interval for this database
+    scrapeInterval: 15s
+    ## Metrics query timeout for this database, in seconds
+    queryTimeout: 5
+
+    ## Rely on Oracle Database External Authentication by network or OS
+    # externalAuth: false
+    ## Database role
+    # role: SYSDBA
+    ## Path to Oracle Database wallet, if using wallet
+    # tnsAdmin: /path/to/database/wallet
+
+    ### Connection settings:
+    ### Either the go-sql or Oracle Database connection pool may be used.
+    ### To use the Oracle Database connection pool over the go-sql connection pool,
+    ### set maxIdleConns to zero and configure the pool* settings.
+
+    ### Connection pooling settings for the go-sql connection pool
+    ## Max open connections for this database using go-sql connection pool
+    maxOpenConns: 10
+    ## Max idle connections for this database using go-sql connection pool
+    maxIdleConns: 10
+
+    ### Connection pooling settings for the Oracle Database connection pool
+    ## Oracle Database connection pool increment.
+    # poolIncrement: 1
+    ## Oracle Database Connection pool maximum size
+    # poolMaxConnections: 15
+    ## Oracle Database Connection pool minimum size
+    # poolMinConnections: 15
+
+metrics:
+  default: default-metrics.toml
+  #
+  custom:
+    - custom-metrics-example/custom-metrics.toml
+
+log:
+  # Path of log file
+  destination: /opt/alert.log
+  # Interval of log updates
+  interval: 15s
+  ## Set disable to 1 to disable logging
+  # disable: 0
+```
 
 ```shell
 ./oracledb_exporter --log.destination="./alert.log" --default.metrics="./default-metrics.toml"

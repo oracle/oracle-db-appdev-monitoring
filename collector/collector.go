@@ -49,14 +49,14 @@ func maskDsn(dsn string) string {
 }
 
 // NewExporter creates a new Exporter instance
-func NewExporter(logger *slog.Logger, cfg *Config) (*Exporter, error) {
+func NewExporter(logger *slog.Logger, m *MetricsConfiguration) (*Exporter, error) {
+	// TODO: support multiple databases
+	var cfg DatabaseConfig
+	for _, v := range m.Databases {
+		cfg = v
+	}
 	e := &Exporter{
-		mu:            &sync.Mutex{},
-		user:          cfg.User,
-		password:      cfg.Password,
-		connectString: cfg.ConnectString,
-		configDir:     cfg.ConfigDir,
-		externalAuth:  cfg.ExternalAuth,
+		mu: &sync.Mutex{},
 		duration: prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: exporterName,
@@ -91,10 +91,10 @@ func NewExporter(logger *slog.Logger, cfg *Config) (*Exporter, error) {
 			Name:      "dbtype",
 			Help:      "Type of database the exporter is connected to (0=non-CDB, 1=CDB, >1=PDB).",
 		}),
-		logger:         logger,
-		config:         cfg,
-		lastScraped:    map[string]*time.Time{},
-		scrapeInterval: cfg.ScrapeInterval,
+		logger:               logger,
+		databaseConfig:       cfg,
+		metricsConfiguration: m,
+		lastScraped:          map[string]*time.Time{},
 	}
 	e.metricsToScrape = e.DefaultMetrics()
 	err := e.connect()
@@ -133,7 +133,7 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	// they are running scheduled scrapes we should only scrape new data
 	// on the interval
-	if e.scrapeInterval != 0 {
+	if e.databaseConfig.ScrapeInterval != 0 {
 		// read access must be checked
 		e.mu.Lock()
 		for _, r := range e.scrapeResults {
@@ -160,7 +160,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 func (e *Exporter) RunScheduledScrapes(ctx context.Context) {
 	e.doScrape(time.Now())
 
-	ticker := time.NewTicker(e.scrapeInterval)
+	ticker := time.NewTicker(e.databaseConfig.ScrapeInterval)
 	defer ticker.Stop()
 
 	for {
@@ -236,7 +236,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 
 	e.dbtypeGauge.Set(float64(e.dbtype))
 
-	e.logger.Debug("Successfully pinged Oracle database: " + maskDsn(e.connectString))
+	e.logger.Debug("Successfully pinged Oracle database: " + maskDsn(e.databaseConfig.URL))
 	e.up.Set(1)
 
 	if e.checkIfMetricsChanged() {
@@ -323,43 +323,43 @@ func (e *Exporter) afterScrape(begun time.Time, countMetrics int, errChan chan e
 }
 
 func (e *Exporter) connect() error {
-	e.logger.Debug("Launching connection to " + maskDsn(e.connectString))
+	e.logger.Debug("Launching connection to " + maskDsn(e.databaseConfig.URL))
 
 	var P godror.ConnectionParams
 	// If password is not specified, externalAuth will be true and we'll ignore user input
-	e.externalAuth = e.password == ""
-	e.logger.Debug(fmt.Sprintf("external authentication set to %t", e.externalAuth))
+	e.databaseConfig.ExternalAuth = e.databaseConfig.Password == ""
+	e.logger.Debug(fmt.Sprintf("external authentication set to %t", e.databaseConfig.ExternalAuth))
 	msg := "Using Username/Password Authentication."
-	if e.externalAuth {
+	if e.databaseConfig.ExternalAuth {
 		msg = "Database Password not specified; will attempt to use external authentication (ignoring user input)."
-		e.user = ""
+		e.databaseConfig.Username = ""
 	}
 	e.logger.Info(msg)
 	externalAuth := sql.NullBool{
-		Bool:  e.externalAuth,
+		Bool:  e.databaseConfig.ExternalAuth,
 		Valid: true,
 	}
-	P.Username, P.Password, P.ConnectString, P.ExternalAuth = e.user, godror.NewPassword(e.password), e.connectString, externalAuth
+	P.Username, P.Password, P.ConnectString, P.ExternalAuth = e.databaseConfig.Username, godror.NewPassword(e.databaseConfig.Password), e.databaseConfig.URL, externalAuth
 
-	if e.config.PoolIncrement > 0 {
-		e.logger.Debug(fmt.Sprintf("set pool increment to %d", e.config.PoolIncrement))
-		P.PoolParams.SessionIncrement = e.config.PoolIncrement
+	if e.databaseConfig.PoolIncrement > 0 {
+		e.logger.Debug(fmt.Sprintf("set pool increment to %d", e.databaseConfig.PoolIncrement))
+		P.PoolParams.SessionIncrement = e.databaseConfig.PoolIncrement
 	}
-	if e.config.PoolMaxConnections > 0 {
-		e.logger.Debug(fmt.Sprintf("set pool max connections to %d", e.config.PoolMaxConnections))
-		P.PoolParams.MaxSessions = e.config.PoolMaxConnections
+	if e.databaseConfig.PoolMaxConnections > 0 {
+		e.logger.Debug(fmt.Sprintf("set pool max connections to %d", e.databaseConfig.PoolMaxConnections))
+		P.PoolParams.MaxSessions = e.databaseConfig.PoolMaxConnections
 	}
-	if e.config.PoolMinConnections > 0 {
-		e.logger.Debug(fmt.Sprintf("set pool min connections to %d", e.config.PoolMinConnections))
-		P.PoolParams.MinSessions = e.config.PoolMinConnections
+	if e.databaseConfig.PoolMinConnections > 0 {
+		e.logger.Debug(fmt.Sprintf("set pool min connections to %d", e.databaseConfig.PoolMinConnections))
+		P.PoolParams.MinSessions = e.databaseConfig.PoolMinConnections
 	}
 
 	P.PoolParams.WaitTimeout = time.Second * 5
 
 	// if TNS_ADMIN env var is set, set ConfigDir to that location
-	P.ConfigDir = e.configDir
+	P.ConfigDir = e.databaseConfig.TNSAdmin
 
-	switch e.config.DbRole {
+	switch e.databaseConfig.Role {
 	case "SYSDBA":
 		P.AdminRole = dsn.SysDBA
 	case "SYSOPER":
@@ -381,12 +381,12 @@ func (e *Exporter) connect() error {
 	// note that this just configures the connection, it does not actually connect until later
 	// when we call db.Ping()
 	db := sql.OpenDB(godror.NewConnector(P))
-	e.logger.Debug(fmt.Sprintf("set max idle connections to %d", e.config.MaxIdleConns))
-	db.SetMaxIdleConns(e.config.MaxIdleConns)
-	e.logger.Debug(fmt.Sprintf("set max open connections to %d", e.config.MaxOpenConns))
-	db.SetMaxOpenConns(e.config.MaxOpenConns)
+	e.logger.Debug(fmt.Sprintf("set max idle connections to %d", e.databaseConfig.MaxIdleConns))
+	db.SetMaxIdleConns(e.databaseConfig.MaxIdleConns)
+	e.logger.Debug(fmt.Sprintf("set max open connections to %d", e.databaseConfig.MaxOpenConns))
+	db.SetMaxOpenConns(e.databaseConfig.MaxOpenConns)
 	db.SetConnMaxLifetime(0)
-	e.logger.Debug(fmt.Sprintf("Successfully configured connection to %s", maskDsn(e.connectString)))
+	e.logger.Debug(fmt.Sprintf("Successfully configured connection to %s", maskDsn(e.databaseConfig.URL)))
 	e.db = db
 
 	if _, err := db.Exec(`
@@ -417,7 +417,7 @@ func (e *Exporter) GetDB() *sql.DB {
 }
 
 func (e *Exporter) checkIfMetricsChanged() bool {
-	for i, _customMetrics := range strings.Split(e.config.CustomMetrics, ",") {
+	for i, _customMetrics := range e.metricsConfiguration.Metrics.Custom {
 		if len(_customMetrics) == 0 {
 			continue
 		}
@@ -458,8 +458,8 @@ func (e *Exporter) reloadMetrics() {
 	e.metricsToScrape.Metric = defaultMetrics.Metric
 
 	// If custom metrics, load it
-	if strings.Compare(e.config.CustomMetrics, "") != 0 {
-		for _, _customMetrics := range strings.Split(e.config.CustomMetrics, ",") {
+	if len(e.metricsConfiguration.Metrics.Custom) > 0 {
+		for _, _customMetrics := range e.metricsConfiguration.Metrics.Custom {
 			metrics := &Metrics{}
 			if _, err := toml.DecodeFile(_customMetrics, metrics); err != nil {
 				e.logger.Error("failed to load custom metrics", "error", err)
