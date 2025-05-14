@@ -30,14 +30,13 @@ import (
 	// _ "net/http/pprof"
 
 	"github.com/oracle/oracle-db-appdev-monitoring/alertlog"
-	"github.com/oracle/oracle-db-appdev-monitoring/azvault"
 	"github.com/oracle/oracle-db-appdev-monitoring/collector"
-	"github.com/oracle/oracle-db-appdev-monitoring/ocivault"
 )
 
 var (
 	// Version will be set at build time.
 	Version            = "0.0.0.dev"
+	configFile         = kingpin.Flag("config.file", "File with metrics exporter configuration. (env: CONFIG_FILE)").Default(getEnv("CONFIG_FILE", "")).String()
 	metricPath         = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics. (env: TELEMETRY_PATH)").Default(getEnv("TELEMETRY_PATH", "/metrics")).String()
 	defaultFileMetrics = kingpin.Flag("default.metrics", "File with default metrics in a TOML file. (env: DEFAULT_METRICS)").Default(getEnv("DEFAULT_METRICS", "default-metrics.toml")).String()
 	customMetrics      = kingpin.Flag("custom.metrics", "Comma separated list of file(s) that contain various custom metrics in a TOML format. (env: CUSTOM_METRICS)").Default(getEnv("CUSTOM_METRICS", "")).String()
@@ -69,22 +68,6 @@ func main() {
 	// externalAuth - Default to user/password but if no password is supplied then will automagically set to true
 	externalAuth := false
 
-	ociVaultID, useOciVault := os.LookupEnv("OCI_VAULT_ID")
-	if useOciVault {
-
-		logger.Info("OCI_VAULT_ID env var is present so using OCI Vault", "vaultOCID", ociVaultID)
-		password = ocivault.GetVaultSecret(ociVaultID, os.Getenv("OCI_VAULT_SECRET_NAME"))
-	}
-
-	azVaultID, useAzVault := os.LookupEnv("AZ_VAULT_ID")
-	if useAzVault {
-
-		logger.Info("AZ_VAULT_ID env var is present so using Azure Key Vault", "VaultID", azVaultID)
-		logger.Info("Using the environment variables AZURE_TENANT_ID, AZURE_CLIENT_ID, and AZURE_CLIENT_SECRET to authentication with Azure.")
-		user = azvault.GetVaultSecret(azVaultID, os.Getenv("AZ_VAULT_USERNAME_SECRET"))
-		password = azvault.GetVaultSecret(azVaultID, os.Getenv("AZ_VAULT_PASSWORD_SECRET"))
-	}
-
 	freeOSMemInterval, enableFree := os.LookupEnv("FREE_INTERVAL")
 	if enableFree {
 		logger.Info("FREE_INTERVAL env var is present, so will attempt to release OS memory", "free_interval", freeOSMemInterval)
@@ -99,13 +82,8 @@ func main() {
 		logger.Info("RESTART_INTERVAL env var is not present, so will not restart myself periodically")
 	}
 
-	if *maxIdleConns > 0 {
-		logger.Info("DATABASE_MAXIDLECONNS is greater than 0, so will use go-sql connection pool and DATABASE_POOL* settings will be ignored")
-	} else {
-		logger.Info("DATABASE_MAXIDLECONNS is 0, so will use Oracle connection pool. Tune with DATABASE_POOL* settings")
-	}
-
 	config := &collector.Config{
+		ConfigFile:         *configFile,
 		User:               user,
 		Password:           password,
 		ConnectString:      connectString,
@@ -121,10 +99,29 @@ func main() {
 		QueryTimeout:       *queryTimeout,
 		DefaultMetricsFile: *defaultFileMetrics,
 		ScrapeInterval:     *scrapeInterval,
+		LoggingConfig: collector.LoggingConfig{
+			LogDisable:     logDisable,
+			LogInterval:    logInterval,
+			LogDestination: *logDestination,
+		},
 	}
-	exporter, err := collector.NewExporter(logger, config)
+	m, err := collector.LoadMetricsConfiguration(logger, config, *metricPath)
+	if err != nil {
+		logger.Error("unable to load metrics configuration", "error", err)
+		return
+	}
+
+	for dbname, db := range m.Databases {
+		if db.MaxIdleConns > 0 {
+			logger.Info(dbname + " database max idle connections is greater than 0, so will use go-sql connection pool and pooling settings will be ignored")
+		} else {
+			logger.Info(dbname + " database max idle connections is 0, so will use Oracle connection pool. Tune with database pooling settings")
+		}
+	}
+	exporter, err := collector.NewExporter(logger, m)
 	if err != nil {
 		logger.Error("unable to connect to DB", "error", err)
+		return
 	}
 
 	if *scrapeInterval != 0 {
@@ -138,14 +135,14 @@ func main() {
 
 	logger.Info("Starting oracledb_exporter", "version", Version)
 	logger.Info("Build context", "build", version.BuildContext())
-	logger.Info("Collect from: ", "metricPath", *metricPath)
+	logger.Info("Collect from: ", "metricPath", m.MetricsPath)
 
 	opts := promhttp.HandlerOpts{
 		ErrorHandling: promhttp.ContinueOnError,
 	}
-	http.Handle(*metricPath, promhttp.HandlerFor(prometheus.DefaultGatherer, opts))
+	http.Handle(m.MetricsPath, promhttp.HandlerFor(prometheus.DefaultGatherer, opts))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("<html><head><title>Oracle DB Exporter " + Version + "</title></head><body><h1>Oracle DB Exporter " + Version + "</h1><p><a href='" + *metricPath + "'>Metrics</a></p></body></html>"))
+		w.Write([]byte("<html><head><title>Oracle DB Exporter " + Version + "</title></head><body><h1>Oracle DB Exporter " + Version + "</h1><p><a href='" + m.MetricsPath + "'>Metrics</a></p></body></html>"))
 	})
 
 	// start a ticker to cause rebirth
@@ -188,18 +185,18 @@ func main() {
 	}
 
 	// start the log exporter
-	if *logDisable == 1 {
+	if m.LogDisable() == 1 {
 		logger.Info("log.disable set to 1, so will not export the alert logs")
 	} else {
-		logger.Info(fmt.Sprintf("Exporting alert logs to %s", *logDestination))
-		logTicker := time.NewTicker(*logInterval)
+		logger.Info(fmt.Sprintf("Exporting alert logs to %s", m.LogDestination()))
+		logTicker := time.NewTicker(m.LogInterval())
 		defer logTicker.Stop()
 
 		go func() {
 			for {
 				<-logTicker.C
 				logger.Debug("updating alert log")
-				alertlog.UpdateLog(*logDestination, logger, exporter.GetDB())
+				alertlog.UpdateLog(m.LogDestination(), logger, exporter.GetDB())
 			}
 		}()
 	}

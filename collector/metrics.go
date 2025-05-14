@@ -51,11 +51,11 @@ func (e *Exporter) getQueryTimeout(metric Metric) time.Duration {
 		qt, err := time.ParseDuration(metric.QueryTimeout)
 		if err != nil {
 			e.logger.Error("Unable to convert querytimeout to duration (metric=" + metric.Context + ")")
-			return time.Duration(e.config.QueryTimeout) * time.Second
+			return time.Duration(e.databaseConfig.QueryTimeout) * time.Second
 		}
 		return qt
 	}
-	return time.Duration(e.config.QueryTimeout) * time.Second
+	return time.Duration(e.databaseConfig.QueryTimeout) * time.Second
 }
 
 func (e *Exporter) parseFloat(metric, metricHelp string, row map[string]string) (float64, bool) {
