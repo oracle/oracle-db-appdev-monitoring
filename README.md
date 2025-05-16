@@ -6,6 +6,8 @@ This project aims to provide observability for the Oracle Database so that users
 
 From the first production release, v1.0, onwards, this project provides a [Prometheus](https://prometheus.io/) exporter for Oracle Database that is based in part on a Prometheus exporter created by [Seth Miller](https://github.com/iamseth/oracledb_exporter) with changes to comply with various Oracle standards and policies.
 
+> Seth has archived his exporter as of Feb 13, 2025 and added a note encouraging people to check out ours instead.  We wanted to extend a huge "Thank You!" to Seth for all the work he did on that exporter, and his contributions to the Oracle and open source communities!
+
 Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 
 ## Table of Contents
