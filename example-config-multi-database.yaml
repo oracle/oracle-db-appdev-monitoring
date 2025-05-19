@@ -4,14 +4,54 @@
 databases:
   ## Path on which metrics will be served
   # metricsPath: /metrics
-  ## Database connection information for the "default" database.
-  default:
+
+  ## As many named database configurations may be defined as needed.
+  ## It is recommended to define your database config in the config file, rather than using CLI arguments.
+
+  ## Database connection information for the "db1" database.
+  db1:
     ## Database username
-    username: ${DB_USERNAME}
+    username: ${DB1_USERNAME}
     ## Database password
-    password: ${DB_PASSWORD}
+    password: ${DB1_PASSWORD}
     ## Database connection url
     url: localhost:1521/freepdb1
+
+    ## Metrics query timeout for this database, in seconds
+    queryTimeout: 5
+
+    ## Rely on Oracle Database External Authentication by network or OS
+    # externalAuth: false
+    ## Database role
+    # role: SYSDBA
+    ## Path to Oracle Database wallet, if using wallet
+    # tnsAdmin: /path/to/database/wallet
+
+    ### Connection settings:
+    ### Either the go-sql or Oracle Database connection pool may be used.
+    ### To use the Oracle Database connection pool over the go-sql connection pool,
+    ### set maxIdleConns to zero and configure the pool* settings.
+
+    ### Connection pooling settings for the go-sql connection pool
+    ## Max open connections for this database using go-sql connection pool
+    maxOpenConns: 10
+    ## Max idle connections for this database using go-sql connection pool
+    maxIdleConns: 10
+
+    ### Connection pooling settings for the Oracle Database connection pool
+    ## Oracle Database connection pool increment.
+    # poolIncrement: 1
+    ## Oracle Database Connection pool maximum size
+    # poolMaxConnections: 15
+    ## Oracle Database Connection pool minimum size
+    # poolMinConnections: 15
+  db2:
+    ## Database username
+    username: ${DB2_USERNAME}
+    ## Database password
+    password: ${DB2_PASSWORD}
+    ## Database connection url
+    url: localhost:1522/freepdb1
 
     ## Metrics query timeout for this database, in seconds
     queryTimeout: 5

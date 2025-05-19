@@ -4,10 +4,10 @@
 package alertlog
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/oracle/oracle-db-appdev-monitoring/collector"
 	"io"
 	"log/slog"
 	"os"
@@ -21,13 +21,14 @@ type LogRecord struct {
 	Message   string `json:"message"`
 }
 
-var queryFailures int = 0
+var databaseFailures map[string]int = map[string]int{}
 
-func UpdateLog(logDestination string, logger *slog.Logger, db *sql.DB) {
+func UpdateLog(logDestination string, logger *slog.Logger, d *collector.Database) {
 
+	queryFailures := databaseFailures[d.Name]
 	if queryFailures == 3 {
-		logger.Info("Failed to query the alert log three consecutive times, so will not try any more")
-		queryFailures++
+		logger.Info("Failed to query the alert log three consecutive times, so will not try any more", "database", d.Name)
+		databaseFailures[d.Name]++
 		return
 	}
 
@@ -37,10 +38,10 @@ func UpdateLog(logDestination string, logger *slog.Logger, db *sql.DB) {
 
 	// check if the log file exists, and if not, create it
 	if _, err := os.Stat(logDestination); errors.Is(err, os.ErrNotExist) {
-		logger.Info("Log destination file does not exist, will try to create it: " + logDestination)
+		logger.Info("Log destination file does not exist, will try to create it: "+logDestination, "database", d.Name)
 		f, e := os.Create(logDestination)
 		if e != nil {
-			logger.Error("Failed to create the log file: " + logDestination)
+			logger.Error("Failed to create the log file: "+logDestination, "database", d.Name)
 			return
 		}
 		f.Close()
@@ -50,7 +51,7 @@ func UpdateLog(logDestination string, logger *slog.Logger, db *sql.DB) {
 	file, err := os.Open(logDestination)
 
 	if err != nil {
-		logger.Error("Could not open the alert log destination file: " + logDestination)
+		logger.Error("Could not open the alert log destination file: "+logDestination, "database", d.Name)
 		return
 	}
 
@@ -108,9 +109,9 @@ func UpdateLog(logDestination string, logger *slog.Logger, db *sql.DB) {
 		from v$diag_alert_ext
 		where originating_timestamp > to_utc_timestamp_tz('%s')`, lastLogRecord.Timestamp)
 
-	rows, err := db.Query(stmt)
+	rows, err := d.Session.Query(stmt)
 	if err != nil {
-		logger.Error("Error querying the alert logs")
+		logger.Error("Error querying the alert logs", "database", d.Name)
 		queryFailures++
 		return
 	}
@@ -119,7 +120,7 @@ func UpdateLog(logDestination string, logger *slog.Logger, db *sql.DB) {
 	// write them to the file
 	outfile, err := os.OpenFile(logDestination, os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
-		logger.Error("Could not open log file for writing: " + logDestination)
+		logger.Error("Could not open log file for writing: "+logDestination, "database", d.Name)
 		return
 	}
 	defer outfile.Close()
@@ -128,7 +129,7 @@ func UpdateLog(logDestination string, logger *slog.Logger, db *sql.DB) {
 	for rows.Next() {
 		var newRecord LogRecord
 		if err := rows.Scan(&newRecord.Timestamp, &newRecord.ModuleId, &newRecord.ECID, &newRecord.Message); err != nil {
-			logger.Error("Error reading a row from the alert logs")
+			logger.Error("Error reading a row from the alert logs", "database", d.Name)
 			return
 		}
 
@@ -137,18 +138,18 @@ func UpdateLog(logDestination string, logger *slog.Logger, db *sql.DB) {
 
 		jsonLogRecord, err := json.Marshal(newRecord)
 		if err != nil {
-			logger.Error("Error marshalling alert log record")
+			logger.Error("Error marshalling alert log record", "database", d.Name)
 			return
 		}
 
 		if _, err = outfile.WriteString(string(jsonLogRecord) + "\n"); err != nil {
-			logger.Error("Could not write to log file: " + logDestination)
+			logger.Error("Could not write to log file: "+logDestination, "database", d.Name)
 			return
 		}
 	}
 
 	if err = rows.Err(); err != nil {
-		logger.Error("Error querying the alert logs")
+		logger.Error("Error querying the alert logs", "database", d.Name)
 		queryFailures++
 	}
 }

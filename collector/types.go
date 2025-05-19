@@ -14,20 +14,26 @@ import (
 
 // Exporter collects Oracle DB metrics. It implements prometheus.Collector.
 type Exporter struct {
-	databaseConfig       DatabaseConfig
-	metricsConfiguration *MetricsConfiguration
-	mu                   *sync.Mutex
-	metricsToScrape      Metrics
-	duration, error      prometheus.Gauge
-	totalScrapes         prometheus.Counter
-	scrapeErrors         *prometheus.CounterVec
-	scrapeResults        []prometheus.Metric
-	up                   prometheus.Gauge
-	dbtype               int
-	dbtypeGauge          prometheus.Gauge
-	db                   *sql.DB
-	logger               *slog.Logger
-	lastScraped          map[string]*time.Time
+	*MetricsConfiguration
+	mu              *sync.Mutex
+	metricsToScrape Metrics
+	duration, error prometheus.Gauge
+	totalScrapes    prometheus.Counter
+	scrapeErrors    *prometheus.CounterVec
+	scrapeResults   []prometheus.Metric
+	databases       []*Database
+	logger          *slog.Logger
+	lastScraped     map[string]*time.Time
+}
+
+type Database struct {
+	Name        string
+	Up          float64
+	Session     *sql.DB
+	Type        float64
+	Config      DatabaseConfig
+	UpGauge     prometheus.Gauge
+	DBtypeGauge prometheus.Gauge
 }
 
 type Config struct {
@@ -69,8 +75,12 @@ type Metrics struct {
 	Metric []Metric
 }
 
-func (m Metric) id() string {
+type ScrapeContext struct {
+}
+
+func (m Metric) id(dbname string) string {
 	builder := strings.Builder{}
+	builder.WriteString(dbname)
 	builder.WriteString(m.Context)
 	for _, d := range m.MetricsDesc {
 		builder.WriteString(d)

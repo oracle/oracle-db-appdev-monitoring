@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"database/sql"
 	"errors"
 	"fmt"
 	"hash"
@@ -21,8 +20,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/godror/godror"
-	"github.com/godror/godror/dsn"
+	_ "github.com/godror/godror"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -49,11 +47,10 @@ func maskDsn(dsn string) string {
 }
 
 // NewExporter creates a new Exporter instance
-func NewExporter(logger *slog.Logger, m *MetricsConfiguration) (*Exporter, error) {
-	// TODO: support multiple databases
-	var cfg DatabaseConfig
-	for _, v := range m.Databases {
-		cfg = v
+func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
+	var databases []*Database
+	for dbname, dbconfig := range m.Databases {
+		databases = append(databases, NewDatabase(logger, dbname, dbconfig))
 	}
 	e := &Exporter{
 		mu: &sync.Mutex{},
@@ -81,24 +78,14 @@ func NewExporter(logger *slog.Logger, m *MetricsConfiguration) (*Exporter, error
 			Name:      "last_scrape_error",
 			Help:      "Whether the last scrape of metrics from Oracle DB resulted in an error (1 for error, 0 for success).",
 		}),
-		up: prometheus.NewGauge(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Name:      "up",
-			Help:      "Whether the Oracle database server is up.",
-		}),
-		dbtypeGauge: prometheus.NewGauge(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Name:      "dbtype",
-			Help:      "Type of database the exporter is connected to (0=non-CDB, 1=CDB, >1=PDB).",
-		}),
 		logger:               logger,
-		databaseConfig:       cfg,
-		metricsConfiguration: m,
+		MetricsConfiguration: m,
+		databases:            databases,
 		lastScraped:          map[string]*time.Time{},
 	}
 	e.metricsToScrape = e.DefaultMetrics()
-	err := e.connect()
-	return e, err
+
+	return e
 }
 
 // Describe describes all the metrics exported by the Oracle DB exporter.
@@ -133,7 +120,7 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	// they are running scheduled scrapes we should only scrape new data
 	// on the interval
-	if e.databaseConfig.ScrapeInterval != 0 {
+	if e.ScrapeInterval() != 0 {
 		// read access must be checked
 		e.mu.Lock()
 		for _, r := range e.scrapeResults {
@@ -151,8 +138,10 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	ch <- e.totalScrapes
 	ch <- e.error
 	e.scrapeErrors.Collect(ch)
-	ch <- e.up
-	ch <- e.dbtypeGauge
+	for _, db := range e.databases {
+		ch <- db.DBtypeGauge
+		ch <- db.UpGauge
+	}
 }
 
 // RunScheduledScrapes is only relevant for users of this package that want to set the scrape on a timer
@@ -160,7 +149,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 func (e *Exporter) RunScheduledScrapes(ctx context.Context) {
 	e.doScrape(time.Now())
 
-	ticker := time.NewTicker(e.databaseConfig.ScrapeInterval)
+	ticker := time.NewTicker(e.ScrapeInterval())
 	defer ticker.Stop()
 
 	for {
@@ -204,50 +193,28 @@ func (e *Exporter) scheduledScrape(tick *time.Time) {
 	metricCh <- e.totalScrapes
 	metricCh <- e.error
 	e.scrapeErrors.Collect(metricCh)
-	metricCh <- e.up
+	for _, db := range e.databases {
+		metricCh <- db.UpGauge
+	}
 	close(metricCh)
 	wg.Wait()
 }
 
-func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
-	e.totalScrapes.Inc()
-	errChan := make(chan error, len(e.metricsToScrape.Metric))
-	begun := time.Now()
-
-	if connectionError := e.db.Ping(); connectionError != nil {
-		e.logger.Debug("connection error", "error", connectionError)
-		if strings.Contains(connectionError.Error(), "sql: database is closed") {
-			e.logger.Info("Reconnecting to DB")
-			connectionError = e.connect()
-			if connectionError != nil {
-				e.logger.Error("Error reconnecting to DB", "error", connectionError)
-			}
-		}
+func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- error, d *Database, tick *time.Time) int {
+	if err := d.ping(e.logger); err != nil {
+		e.logger.Error("Error pinging database", "error", err, "database", d.Name)
+		errChan <- err
+		return 1
 	}
+	e.logger.Debug("Successfully pinged Oracle database: "+maskDsn(d.Config.URL), "database", d.Name)
 
-	if pingError := e.db.Ping(); pingError != nil {
-		e.logger.Error("Error pinging oracle",
-			"error", pingError)
-		e.up.Set(0)
-		e.error.Set(1)
-		e.duration.Set(time.Since(begun).Seconds())
-		return
-	}
-
-	e.dbtypeGauge.Set(float64(e.dbtype))
-
-	e.logger.Debug("Successfully pinged Oracle database: " + maskDsn(e.databaseConfig.URL))
-	e.up.Set(1)
-
-	if e.checkIfMetricsChanged() {
-		e.reloadMetrics()
-	}
-
+	metricsToScrape := 0
 	for _, metric := range e.metricsToScrape.Metric {
 		metric := metric //https://golang.org/doc/faq#closures_and_goroutines
-		if !e.isScrapeMetric(tick, metric) {
+		if !e.isScrapeMetric(tick, metric, d) {
 			continue
 		}
+		metricsToScrape++
 		go func() {
 			e.logger.Debug("About to scrape metric",
 				"Context", metric.Context,
@@ -257,17 +224,18 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 				"Labels", fmt.Sprint(metric.Labels),
 				"FieldToAppend", metric.FieldToAppend,
 				"IgnoreZeroResult", metric.IgnoreZeroResult,
-				"Request", metric.Request)
+				"Request", metric.Request,
+				"database", d.Name)
 
 			if len(metric.Request) == 0 {
 				errChan <- errors.New("scrape request not found")
-				e.logger.Error("Error scraping for " + fmt.Sprint(metric.MetricsDesc) + ". Did you forget to define request in your toml file?")
+				e.logger.Error("Error scraping for "+fmt.Sprint(metric.MetricsDesc)+". Did you forget to define request in your toml file?", "database", d.Name)
 				return
 			}
 
 			if len(metric.MetricsDesc) == 0 {
 				errChan <- errors.New("metricsdesc not found")
-				e.logger.Error("Error scraping for query" + fmt.Sprint(metric.Request) + ". Did you forget to define metricsdesc in your toml file?")
+				e.logger.Error("Error scraping for query"+fmt.Sprint(metric.Request)+". Did you forget to define metricsdesc in your toml file?", "database", d.Name)
 				return
 			}
 
@@ -276,15 +244,14 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 					_, ok := metric.MetricsBuckets[column]
 					if !ok {
 						errChan <- errors.New("metricsbuckets not found")
-						e.logger.Error("Unable to find MetricsBuckets configuration key for metric. (metric=" + column + ")")
+						e.logger.Error("Unable to find MetricsBuckets configuration key for metric. (metric="+column+")", "database", d.Name)
 						return
 					}
 				}
 			}
 
 			scrapeStart := time.Now()
-			scrapeError := e.ScrapeMetric(e.db, ch, metric, tick)
-			// Always send the scrapeError, nil or non-nil
+			scrapeError := e.ScrapeMetric(d, ch, metric)
 			errChan <- scrapeError
 			if scrapeError != nil {
 				if shouldLogScrapeError(scrapeError, metric.IgnoreZeroResult) {
@@ -292,132 +259,66 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 						"Context", metric.Context,
 						"MetricsDesc", fmt.Sprint(metric.MetricsDesc),
 						"duration", time.Since(scrapeStart),
-						"error", scrapeError)
+						"error", scrapeError,
+						"database", d.Name)
 				}
 				e.scrapeErrors.WithLabelValues(metric.Context).Inc()
 			} else {
 				e.logger.Debug("Successfully scraped metric",
 					"Context", metric.Context,
 					"MetricDesc", fmt.Sprint(metric.MetricsDesc),
-					"duration", time.Since(scrapeStart))
+					"duration", time.Since(scrapeStart),
+					"database", d.Name)
 			}
 		}()
 	}
-
-	e.afterScrape(begun, len(e.metricsToScrape.Metric), errChan)
+	return metricsToScrape
 }
 
-func (e *Exporter) afterScrape(begun time.Time, countMetrics int, errChan chan error) {
+func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
+	e.totalScrapes.Inc()
+	errChan := make(chan error, len(e.metricsToScrape.Metric)*len(e.databases))
+	begun := time.Now()
+	if e.checkIfMetricsChanged() {
+		e.reloadMetrics()
+	}
+
+	// Scrape all databases
+	asyncTasksCh := make(chan int)
+	for _, db := range e.databases {
+		db := db
+		go func() {
+			asyncTasksCh <- e.scrapeDatabase(ch, errChan, db, tick)
+		}()
+	}
+	totalTasks := 0
+	for _ = range e.databases {
+		totalTasks += <-asyncTasksCh
+	}
+
+	e.afterScrape(begun, totalTasks, errChan)
+}
+
+func (e *Exporter) afterScrape(begun time.Time, tasks int, errChan chan error) {
 	// Receive all scrape errors
 	totalErrors := 0.0
-	for i := 0; i < countMetrics; i++ {
+	for i := 0; i < tasks; i++ {
 		scrapeError := <-errChan
 		if scrapeError != nil {
 			totalErrors++
 		}
 	}
-	close(errChan)
-
 	e.duration.Set(time.Since(begun).Seconds())
-	e.error.Set(totalErrors)
-}
-
-func (e *Exporter) connect() error {
-	e.logger.Debug("Launching connection to " + maskDsn(e.databaseConfig.URL))
-
-	var P godror.ConnectionParams
-	// If password is not specified, externalAuth will be true and we'll ignore user input
-	e.databaseConfig.ExternalAuth = e.databaseConfig.Password == ""
-	e.logger.Debug(fmt.Sprintf("external authentication set to %t", e.databaseConfig.ExternalAuth))
-	msg := "Using Username/Password Authentication."
-	if e.databaseConfig.ExternalAuth {
-		msg = "Database Password not specified; will attempt to use external authentication (ignoring user input)."
-		e.databaseConfig.Username = ""
-	}
-	e.logger.Info(msg)
-	externalAuth := sql.NullBool{
-		Bool:  e.databaseConfig.ExternalAuth,
-		Valid: true,
-	}
-	P.Username, P.Password, P.ConnectString, P.ExternalAuth = e.databaseConfig.Username, godror.NewPassword(e.databaseConfig.Password), e.databaseConfig.URL, externalAuth
-
-	if e.databaseConfig.PoolIncrement > 0 {
-		e.logger.Debug(fmt.Sprintf("set pool increment to %d", e.databaseConfig.PoolIncrement))
-		P.PoolParams.SessionIncrement = e.databaseConfig.PoolIncrement
-	}
-	if e.databaseConfig.PoolMaxConnections > 0 {
-		e.logger.Debug(fmt.Sprintf("set pool max connections to %d", e.databaseConfig.PoolMaxConnections))
-		P.PoolParams.MaxSessions = e.databaseConfig.PoolMaxConnections
-	}
-	if e.databaseConfig.PoolMinConnections > 0 {
-		e.logger.Debug(fmt.Sprintf("set pool min connections to %d", e.databaseConfig.PoolMinConnections))
-		P.PoolParams.MinSessions = e.databaseConfig.PoolMinConnections
-	}
-
-	P.PoolParams.WaitTimeout = time.Second * 5
-
-	// if TNS_ADMIN env var is set, set ConfigDir to that location
-	P.ConfigDir = e.databaseConfig.TNSAdmin
-
-	switch e.databaseConfig.Role {
-	case "SYSDBA":
-		P.AdminRole = dsn.SysDBA
-	case "SYSOPER":
-		P.AdminRole = dsn.SysOPER
-	case "SYSBACKUP":
-		P.AdminRole = dsn.SysBACKUP
-	case "SYSDG":
-		P.AdminRole = dsn.SysDG
-	case "SYSKM":
-		P.AdminRole = dsn.SysKM
-	case "SYSRAC":
-		P.AdminRole = dsn.SysRAC
-	case "SYSASM":
-		P.AdminRole = dsn.SysASM
-	default:
-		P.AdminRole = dsn.NoRole
-	}
-
-	// note that this just configures the connection, it does not actually connect until later
-	// when we call db.Ping()
-	db := sql.OpenDB(godror.NewConnector(P))
-	e.logger.Debug(fmt.Sprintf("set max idle connections to %d", e.databaseConfig.MaxIdleConns))
-	db.SetMaxIdleConns(e.databaseConfig.MaxIdleConns)
-	e.logger.Debug(fmt.Sprintf("set max open connections to %d", e.databaseConfig.MaxOpenConns))
-	db.SetMaxOpenConns(e.databaseConfig.MaxOpenConns)
-	db.SetConnMaxLifetime(0)
-	e.logger.Debug(fmt.Sprintf("Successfully configured connection to %s", maskDsn(e.databaseConfig.URL)))
-	e.db = db
-
-	if _, err := db.Exec(`
-			begin
-	       		dbms_application_info.set_client_info('oracledb_exporter');
-			end;`); err != nil {
-		e.logger.Info("Could not set CLIENT_INFO.")
-	}
-
-	var result int
-	if err := db.QueryRow("select sys_context('USERENV', 'CON_ID') from dual").Scan(&result); err != nil {
-		e.logger.Info("dbtype err", "error", err)
-	}
-	e.dbtype = result
-
-	var sysdba string
-	if err := db.QueryRow("select sys_context('USERENV', 'ISDBA') from dual").Scan(&sysdba); err != nil {
-		e.logger.Error("error checking my database role", "error", err)
-	}
-	e.logger.Info("Connected as SYSDBA? " + sysdba)
-
-	return nil
+	e.error.Set(float64(totalErrors))
 }
 
 // this is used by the log exporter to share the database connection
-func (e *Exporter) GetDB() *sql.DB {
-	return e.db
+func (e *Exporter) GetDBs() []*Database {
+	return e.databases
 }
 
 func (e *Exporter) checkIfMetricsChanged() bool {
-	for i, _customMetrics := range e.metricsConfiguration.Metrics.Custom {
+	for i, _customMetrics := range e.CustomMetricsFiles() {
 		if len(_customMetrics) == 0 {
 			continue
 		}
@@ -458,8 +359,8 @@ func (e *Exporter) reloadMetrics() {
 	e.metricsToScrape.Metric = defaultMetrics.Metric
 
 	// If custom metrics, load it
-	if len(e.metricsConfiguration.Metrics.Custom) > 0 {
-		for _, _customMetrics := range e.metricsConfiguration.Metrics.Custom {
+	if len(e.CustomMetricsFiles()) > 0 {
+		for _, _customMetrics := range e.CustomMetricsFiles() {
 			metrics := &Metrics{}
 			if _, err := toml.DecodeFile(_customMetrics, metrics); err != nil {
 				e.logger.Error("failed to load custom metrics", "error", err)
@@ -475,19 +376,20 @@ func (e *Exporter) reloadMetrics() {
 }
 
 // ScrapeMetric is an interface method to call scrapeGenericValues using Metric struct values
-func (e *Exporter) ScrapeMetric(db *sql.DB, ch chan<- prometheus.Metric, m Metric, tick *time.Time) error {
+func (e *Exporter) ScrapeMetric(d *Database, ch chan<- prometheus.Metric, m Metric) error {
 	e.logger.Debug("Calling function ScrapeGenericValues()")
-	queryTimeout := e.getQueryTimeout(m)
-	return e.scrapeGenericValues(db, ch, m.Context, m.Labels, m.MetricsDesc,
+	queryTimeout := e.getQueryTimeout(m, d)
+	return e.scrapeGenericValues(d, ch, m.Context, m.Labels, m.MetricsDesc,
 		m.MetricsType, m.MetricsBuckets, m.FieldToAppend, m.IgnoreZeroResult,
 		m.Request, queryTimeout)
 }
 
 // generic method for retrieving metrics.
-func (e *Exporter) scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, context string, labels []string,
+func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric, context string, labels []string,
 	metricsDesc map[string]string, metricsType map[string]string, metricsBuckets map[string]map[string]string,
 	fieldToAppend string, ignoreZeroResult bool, request string, queryTimeout time.Duration) error {
 	metricsCount := 0
+	constLabels := d.constLabels()
 	genericParser := func(row map[string]string) error {
 		// Construct labels value
 		labelsValues := []string{}
@@ -508,7 +410,8 @@ func (e *Exporter) scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, 
 				desc := prometheus.NewDesc(
 					prometheus.BuildFQName(namespace, context, metric),
 					metricHelp,
-					labels, nil,
+					labels,
+					constLabels,
 				)
 				if metricsType[strings.ToLower(metric)] == "histogram" {
 					count, err := strconv.ParseUint(strings.TrimSpace(row["count"]), 10, 64)
@@ -542,7 +445,7 @@ func (e *Exporter) scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, 
 				desc := prometheus.NewDesc(
 					prometheus.BuildFQName(namespace, context, cleanName(row[fieldToAppend])),
 					metricHelp,
-					nil, nil,
+					nil, constLabels,
 				)
 				if metricsType[strings.ToLower(metric)] == "histogram" {
 					count, err := strconv.ParseUint(strings.TrimSpace(row["count"]), 10, 64)
@@ -577,7 +480,7 @@ func (e *Exporter) scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, 
 		return nil
 	}
 	e.logger.Debug("Calling function GeneratePrometheusMetrics()")
-	err := e.generatePrometheusMetrics(db, genericParser, request, queryTimeout)
+	err := e.generatePrometheusMetrics(d, genericParser, request, queryTimeout)
 	e.logger.Debug("ScrapeGenericValues() - metricsCount: " + strconv.Itoa(metricsCount))
 	if err != nil {
 		return err
@@ -592,10 +495,10 @@ func (e *Exporter) scrapeGenericValues(db *sql.DB, ch chan<- prometheus.Metric, 
 
 // inspired by https://kylewbanks.com/blog/query-result-to-map-in-golang
 // Parse SQL result and call parsing function to each row
-func (e *Exporter) generatePrometheusMetrics(db *sql.DB, parse func(row map[string]string) error, query string, queryTimeout time.Duration) error {
+func (e *Exporter) generatePrometheusMetrics(d *Database, parse func(row map[string]string) error, query string, queryTimeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), queryTimeout)
 	defer cancel()
-	rows, err := db.QueryContext(ctx, query)
+	rows, err := d.Session.QueryContext(ctx, query)
 
 	if ctx.Err() == context.DeadlineExceeded {
 		return errors.New("Oracle query timed out")
