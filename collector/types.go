@@ -68,6 +68,7 @@ type Metric struct {
 	IgnoreZeroResult bool
 	QueryTimeout     string
 	ScrapeInterval   string
+	Databases        []string
 }
 
 // Metrics is a container structure for prometheus metrics

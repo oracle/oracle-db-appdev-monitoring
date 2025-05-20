@@ -781,6 +781,23 @@ log:
 ./oracledb_exporter --log.destination="./alert.log" --default.metrics="./default-metrics.toml"
 ```
 
+#### Scraping metrics from specific databases
+
+By default, metrics are scraped from every connected database. To expose only certain metrics on specific databases, configure the `databases` property of a metric. The following metric definition will only be scraped from databases "db2" and "db3":
+
+```toml
+[[metric]]
+context = "db_platform"
+labels = [ "platform_name" ]
+metricsdesc = { value = "Database platform" }
+request = '''
+SELECT platform_name, 1 as value FROM v$database
+'''
+databases = [ "db2", "db3" ]
+```
+
+If the `databases` array is empty or not provided for a metric, that metric will be scraped from all connected databases.
+
 ### Using OCI Vault
 
 The exporter will read the password from a secret stored in OCI Vault if you set these two environment variables:

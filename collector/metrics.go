@@ -4,6 +4,7 @@
 package collector
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -13,6 +14,11 @@ import (
 // and the time since the last scrape is less than the custom scrape interval.
 // If there is no tick time or last known tick, the metric is always scraped.
 func (e *Exporter) isScrapeMetric(tick *time.Time, metric Metric, d *Database) bool {
+	if len(metric.Databases) > 0 {
+		if !slices.Contains(metric.Databases, d.Name) {
+			return false
+		}
+	}
 	// Always scrape the metric if we don't have a current tick.
 	if tick == nil {
 		return true
