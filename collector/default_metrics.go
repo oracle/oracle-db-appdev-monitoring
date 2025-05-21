@@ -19,9 +19,9 @@ var defaultMetricsToml string
 // DefaultMetrics is a somewhat hacky way to load the default metrics
 func (e *Exporter) DefaultMetrics() Metrics {
 	var metricsToScrape Metrics
-	if e.metricsConfiguration.Metrics.Default != "" {
-		if _, err := toml.DecodeFile(filepath.Clean(e.metricsConfiguration.Metrics.Default), &metricsToScrape); err != nil {
-			e.logger.Error(fmt.Sprintf("there was an issue while loading specified default metrics file at: "+e.metricsConfiguration.Metrics.Default+", proceeding to run with default metrics."),
+	if e.Metrics.Default != "" {
+		if _, err := toml.DecodeFile(filepath.Clean(e.Metrics.Default), &metricsToScrape); err != nil {
+			e.logger.Error(fmt.Sprintf("there was an issue while loading specified default metrics file at: "+e.Metrics.Default+", proceeding to run with default metrics."),
 				"error", err)
 		}
 		return metricsToScrape

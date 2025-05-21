@@ -4,6 +4,7 @@
 package collector
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -12,7 +13,12 @@ import (
 // isScrapeMetric returns true if a metric should be scraped. Metrics may not be scraped if they have a custom scrape interval,
 // and the time since the last scrape is less than the custom scrape interval.
 // If there is no tick time or last known tick, the metric is always scraped.
-func (e *Exporter) isScrapeMetric(tick *time.Time, metric Metric) bool {
+func (e *Exporter) isScrapeMetric(tick *time.Time, metric Metric, d *Database) bool {
+	if len(metric.Databases) > 0 {
+		if !slices.Contains(metric.Databases, d.Name) {
+			return false
+		}
+	}
 	// Always scrape the metric if we don't have a current tick.
 	if tick == nil {
 		return true
@@ -22,7 +28,7 @@ func (e *Exporter) isScrapeMetric(tick *time.Time, metric Metric) bool {
 	if !ok {
 		return true
 	}
-	id := metric.id()
+	id := metric.id(d.Name)
 	lastScraped := e.lastScraped[id]
 	shouldScrape := lastScraped == nil ||
 		// If the metric's scrape interval is less than the time elapsed since the last scrape,
@@ -46,16 +52,16 @@ func (e *Exporter) getScrapeInterval(context, scrapeInterval string) (time.Durat
 	return 0, false
 }
 
-func (e *Exporter) getQueryTimeout(metric Metric) time.Duration {
+func (e *Exporter) getQueryTimeout(metric Metric, d *Database) time.Duration {
 	if len(metric.QueryTimeout) > 0 {
 		qt, err := time.ParseDuration(metric.QueryTimeout)
 		if err != nil {
 			e.logger.Error("Unable to convert querytimeout to duration (metric=" + metric.Context + ")")
-			return time.Duration(e.databaseConfig.QueryTimeout) * time.Second
+			return time.Duration(d.Config.GetQueryTimeout()) * time.Second
 		}
 		return qt
 	}
-	return time.Duration(e.databaseConfig.QueryTimeout) * time.Second
+	return time.Duration(d.Config.GetQueryTimeout()) * time.Second
 }
 
 func (e *Exporter) parseFloat(metric, metricHelp string, row map[string]string) (float64, bool) {

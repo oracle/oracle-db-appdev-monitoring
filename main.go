@@ -112,19 +112,14 @@ func main() {
 	}
 
 	for dbname, db := range m.Databases {
-		if db.MaxIdleConns > 0 {
+		if db.GetMaxOpenConns() > 0 {
 			logger.Info(dbname + " database max idle connections is greater than 0, so will use go-sql connection pool and pooling settings will be ignored")
 		} else {
 			logger.Info(dbname + " database max idle connections is 0, so will use Oracle connection pool. Tune with database pooling settings")
 		}
 	}
-	exporter, err := collector.NewExporter(logger, m)
-	if err != nil {
-		logger.Error("unable to connect to DB", "error", err)
-		return
-	}
-
-	if *scrapeInterval != 0 {
+	exporter := collector.NewExporter(logger, m)
+	if exporter.ScrapeInterval() != 0 {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		go exporter.RunScheduledScrapes(ctx)
@@ -196,11 +191,14 @@ func main() {
 			for {
 				<-logTicker.C
 				logger.Debug("updating alert log")
-				alertlog.UpdateLog(m.LogDestination(), logger, exporter.GetDB())
+				for _, db := range exporter.GetDBs() {
+					alertlog.UpdateLog(m.LogDestination(), logger, db)
+				}
+
 			}
 		}()
 	}
-
+	
 	// start the main server thread
 	server := &http.Server{}
 	if err := web.ListenAndServe(server, toolkitFlags, logger); err != nil {

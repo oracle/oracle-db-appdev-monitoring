@@ -8,7 +8,6 @@ import (
 	"github.com/oracle/oracle-db-appdev-monitoring/azvault"
 	"github.com/oracle/oracle-db-appdev-monitoring/ocivault"
 	"gopkg.in/yaml.v2"
-	"log"
 	"log/slog"
 	"maps"
 	"os"
@@ -32,20 +31,20 @@ type DatabaseConfig struct {
 
 type ConnectConfig struct {
 	Role               dsn.AdminRole
-	TNSAdmin           string        `yaml:"tnsAdmin"`
-	ExternalAuth       bool          `yaml:"externalAuth"`
-	MaxOpenConns       int           `yaml:"maxOpenConns"`
-	MaxIdleConns       int           `yaml:"maxIdleConns"`
-	PoolIncrement      int           `yaml:"poolIncrement"`
-	PoolMaxConnections int           `yaml:"poolMaxConnections"`
-	PoolMinConnections int           `yaml:"poolMinConnections"`
-	QueryTimeout       int           `yaml:"queryTimeout"`
-	ScrapeInterval     time.Duration `yaml:"scrapeInterval"`
+	TNSAdmin           string `yaml:"tnsAdmin"`
+	ExternalAuth       bool   `yaml:"externalAuth"`
+	MaxOpenConns       *int   `yaml:"maxOpenConns"`
+	MaxIdleConns       *int   `yaml:"maxIdleConns"`
+	PoolIncrement      *int   `yaml:"poolIncrement"`
+	PoolMaxConnections *int   `yaml:"poolMaxConnections"`
+	PoolMinConnections *int   `yaml:"poolMinConnections"`
+	QueryTimeout       *int   `yaml:"queryTimeout"`
 }
 
 type MetricsFilesConfig struct {
-	Default string
-	Custom  []string
+	Default        string
+	Custom         []string
+	ScrapeInterval *time.Duration `yaml:"scrapeInterval"`
 }
 
 type LoggingConfig struct {
@@ -66,6 +65,56 @@ func (m *MetricsConfiguration) LogDisable() int {
 	return *m.Logging.LogDisable
 }
 
+func (m *MetricsConfiguration) ScrapeInterval() time.Duration {
+	return *m.Metrics.ScrapeInterval
+}
+
+func (m *MetricsConfiguration) CustomMetricsFiles() []string {
+	return m.Metrics.Custom
+}
+
+func (c ConnectConfig) GetMaxOpenConns() int {
+	if c.MaxOpenConns == nil {
+		return 10
+	}
+	return *c.MaxOpenConns
+}
+
+func (c ConnectConfig) GetMaxIdleConns() int {
+	if c.MaxIdleConns == nil {
+		return 10
+	}
+	return *c.MaxIdleConns
+}
+
+func (c ConnectConfig) GetPoolMaxConnections() int {
+	if c.PoolMaxConnections == nil {
+		return -1
+	}
+	return *c.PoolMaxConnections
+}
+
+func (c ConnectConfig) GetPoolMinConnections() int {
+	if c.PoolMinConnections == nil {
+		return -1
+	}
+	return *c.PoolMinConnections
+}
+
+func (c ConnectConfig) GetPoolIncrement() int {
+	if c.PoolIncrement == nil {
+		return -1
+	}
+	return *c.PoolIncrement
+}
+
+func (c ConnectConfig) GetQueryTimeout() int {
+	if c.QueryTimeout == nil {
+		return 5
+	}
+	return *c.QueryTimeout
+}
+
 func LoadMetricsConfiguration(logger *slog.Logger, cfg *Config, path string) (*MetricsConfiguration, error) {
 	m := &MetricsConfiguration{}
 	if len(cfg.ConfigFile) > 0 {
@@ -83,11 +132,10 @@ func LoadMetricsConfiguration(logger *slog.Logger, cfg *Config, path string) (*M
 	}
 
 	m.merge(cfg, path)
-	// TODO: support multiple databases
-	if len(m.Databases) > 1 {
-		log.Fatalf("configuring multiple database is not currently supported")
-	}
 
+	// TODO: rework vault support for multi-database.
+	// Currently, the vault user/password is applied for every database.
+	// It must be configurable at the database level for true multi-database support.
 	m.setKeyVaultUserPassword(logger)
 	return m, nil
 }
@@ -98,6 +146,9 @@ func (m *MetricsConfiguration) merge(cfg *Config, path string) {
 	}
 	m.mergeLoggingConfig(cfg)
 	m.mergeMetricsConfig(cfg)
+	if m.Metrics.ScrapeInterval == nil {
+		m.Metrics.ScrapeInterval = &cfg.ScrapeInterval
+	}
 }
 
 func (m *MetricsConfiguration) mergeLoggingConfig(cfg *Config) {
@@ -130,13 +181,12 @@ func (m *MetricsConfiguration) defaultDatabase(cfg *Config) DatabaseConfig {
 			Role:               cfg.DbRole,
 			TNSAdmin:           cfg.ConfigDir,
 			ExternalAuth:       cfg.ExternalAuth,
-			MaxOpenConns:       cfg.MaxOpenConns,
-			MaxIdleConns:       cfg.MaxIdleConns,
-			PoolIncrement:      cfg.PoolIncrement,
-			PoolMaxConnections: cfg.PoolMaxConnections,
-			PoolMinConnections: cfg.PoolMinConnections,
-			QueryTimeout:       cfg.QueryTimeout,
-			ScrapeInterval:     cfg.ScrapeInterval,
+			MaxOpenConns:       &cfg.MaxOpenConns,
+			MaxIdleConns:       &cfg.MaxIdleConns,
+			PoolIncrement:      &cfg.PoolIncrement,
+			PoolMaxConnections: &cfg.PoolMaxConnections,
+			PoolMinConnections: &cfg.PoolMinConnections,
+			QueryTimeout:       &cfg.QueryTimeout,
 		},
 	}
 }
