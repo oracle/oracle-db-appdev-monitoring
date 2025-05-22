@@ -42,8 +42,10 @@ type ConnectConfig struct {
 }
 
 type VaultConfig struct {
-	OCI   *OCIVault `yaml:"oci"`
-	Azure *AZVault  `yaml:"azure"`
+	// OCI if present, OCI vault will be used to load username and/or password.
+	OCI *OCIVault `yaml:"oci"`
+	// Azure if present, Azure vault will be used to load username and/or password.
+	Azure *AZVault `yaml:"azure"`
 }
 
 type OCIVault struct {
@@ -235,7 +237,9 @@ func (m *MetricsConfiguration) defaultDatabase(cfg *Config) DatabaseConfig {
 	if ociVaultID, useOciVault := os.LookupEnv("OCI_VAULT_ID"); useOciVault {
 		dbconfig.Vault = &VaultConfig{
 			OCI: &OCIVault{
-				ID:             ociVaultID,
+				ID: ociVaultID,
+				// For the CLI, only the password may be loaded from a secret. If you need to load
+				// both the username and password from OCI Vault, use the exporter configuration file.
 				PasswordSecret: os.Getenv("OCI_VAULT_SECRET_NAME"),
 			},
 		}

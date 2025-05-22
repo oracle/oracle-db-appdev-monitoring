@@ -67,9 +67,9 @@ func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.
 	logger.Debug("Launching connection to "+maskDsn(dbconfig.URL), "database", dbname)
 
 	var P godror.ConnectionParams
-	// If password is not specified, externalAuth will be true and we'll ignore user input
 	password := dbconfig.GetPassword()
 	username := dbconfig.GetUsername()
+	// If password is not specified, externalAuth will be true, and we'll ignore user input
 	dbconfig.ExternalAuth = password == ""
 	logger.Debug(fmt.Sprintf("external authentication set to %t", dbconfig.ExternalAuth), "database", dbname)
 	msg := "Using Username/Password Authentication."
