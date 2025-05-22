@@ -198,7 +198,7 @@ func main() {
 			}
 		}()
 	}
-	
+
 	// start the main server thread
 	server := &http.Server{}
 	if err := web.ListenAndServe(server, toolkitFlags, logger); err != nil {

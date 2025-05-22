@@ -9,7 +9,6 @@ import (
 	"github.com/oracle/oracle-db-appdev-monitoring/ocivault"
 	"gopkg.in/yaml.v2"
 	"log/slog"
-	"maps"
 	"os"
 	"strings"
 	"time"
@@ -27,6 +26,7 @@ type DatabaseConfig struct {
 	Password      string
 	URL           string `yaml:"url"`
 	ConnectConfig `yaml:",inline"`
+	Vault         *VaultConfig `yaml:"vault,omitempty"`
 }
 
 type ConnectConfig struct {
@@ -39,6 +39,23 @@ type ConnectConfig struct {
 	PoolMaxConnections *int   `yaml:"poolMaxConnections"`
 	PoolMinConnections *int   `yaml:"poolMinConnections"`
 	QueryTimeout       *int   `yaml:"queryTimeout"`
+}
+
+type VaultConfig struct {
+	OCI   *OCIVault `yaml:"oci"`
+	Azure *AZVault  `yaml:"azure"`
+}
+
+type OCIVault struct {
+	ID             string `yaml:"id"`
+	UsernameSecret string `yaml:"usernameSecret"`
+	PasswordSecret string `yaml:"passwordSecret"`
+}
+
+type AZVault struct {
+	ID             string `yaml:"id"`
+	UsernameSecret string `yaml:"usernameSecret"`
+	PasswordSecret string `yaml:"passwordSecret"`
 }
 
 type MetricsFilesConfig struct {
@@ -115,6 +132,32 @@ func (c ConnectConfig) GetQueryTimeout() int {
 	return *c.QueryTimeout
 }
 
+func (d DatabaseConfig) GetUsername() string {
+	if d.Vault == nil {
+		return d.Username
+	}
+	if d.Vault.OCI != nil {
+		return ocivault.GetVaultSecret(d.Vault.OCI.ID, d.Vault.OCI.UsernameSecret)
+	}
+	if d.Vault.Azure != nil {
+		return azvault.GetVaultSecret(d.Vault.Azure.ID, d.Vault.Azure.UsernameSecret)
+	}
+	return ""
+}
+
+func (d DatabaseConfig) GetPassword() string {
+	if d.Vault == nil {
+		return d.Password
+	}
+	if d.Vault.OCI != nil {
+		return ocivault.GetVaultSecret(d.Vault.OCI.ID, d.Vault.OCI.PasswordSecret)
+	}
+	if d.Vault.Azure != nil {
+		return azvault.GetVaultSecret(d.Vault.Azure.ID, d.Vault.Azure.PasswordSecret)
+	}
+	return ""
+}
+
 func LoadMetricsConfiguration(logger *slog.Logger, cfg *Config, path string) (*MetricsConfiguration, error) {
 	m := &MetricsConfiguration{}
 	if len(cfg.ConfigFile) > 0 {
@@ -127,16 +170,12 @@ func LoadMetricsConfiguration(logger *slog.Logger, cfg *Config, path string) (*M
 			return m, yerr
 		}
 	} else {
+		logger.Warn("Configuring default database from CLI parameters is deprecated. Use of the '--config.file' argument is preferred. See https://github.com/oracle/oracle-db-appdev-monitoring?tab=readme-ov-file#standalone-binary")
 		m.Databases = make(map[string]DatabaseConfig)
 		m.Databases["default"] = m.defaultDatabase(cfg)
 	}
 
 	m.merge(cfg, path)
-
-	// TODO: rework vault support for multi-database.
-	// Currently, the vault user/password is applied for every database.
-	// It must be configurable at the database level for true multi-database support.
-	m.setKeyVaultUserPassword(logger)
 	return m, nil
 }
 
@@ -172,8 +211,10 @@ func (m *MetricsConfiguration) mergeMetricsConfig(cfg *Config) {
 	}
 }
 
+// defaultDatabase creates a database named "default" if CLI arguments are used. It is for backwards compatibility when the exporter
+// was only configurable through CLI arguments for a single database instance.
 func (m *MetricsConfiguration) defaultDatabase(cfg *Config) DatabaseConfig {
-	return DatabaseConfig{
+	dbconfig := DatabaseConfig{
 		Username: cfg.User,
 		Password: cfg.Password,
 		URL:      cfg.ConnectString,
@@ -189,38 +230,23 @@ func (m *MetricsConfiguration) defaultDatabase(cfg *Config) DatabaseConfig {
 			QueryTimeout:       &cfg.QueryTimeout,
 		},
 	}
-}
-
-func (m *MetricsConfiguration) setKeyVaultUserPassword(logger *slog.Logger) {
-	if user, password, ok := getKeyVaultUserPassword(logger); ok {
-		for dbname := range maps.Keys(m.Databases) {
-			db := m.Databases[dbname]
-			db.Password = password
-			if len(user) > 0 {
-				db.Username = user
-			}
-			m.Databases[dbname] = db
+	// Vault ID lookup through environment variables is the historic method of loading vault metadata.
+	// These semantics are preserved if the "default" database from CLI config is requested.
+	if ociVaultID, useOciVault := os.LookupEnv("OCI_VAULT_ID"); useOciVault {
+		dbconfig.Vault = &VaultConfig{
+			OCI: &OCIVault{
+				ID:             ociVaultID,
+				PasswordSecret: os.Getenv("OCI_VAULT_SECRET_NAME"),
+			},
+		}
+	} else if azVaultID, useAzVault := os.LookupEnv("AZ_VAULT_ID"); useAzVault {
+		dbconfig.Vault = &VaultConfig{
+			Azure: &AZVault{
+				ID:             azVaultID,
+				UsernameSecret: os.Getenv("AZ_VAULT_USERNAME_SECRET"),
+				PasswordSecret: os.Getenv("AZ_VAULT_PASSWORD_SECRET"),
+			},
 		}
 	}
-}
-
-func getKeyVaultUserPassword(logger *slog.Logger) (user string, password string, ok bool) {
-	ociVaultID, useOciVault := os.LookupEnv("OCI_VAULT_ID")
-	if useOciVault {
-
-		logger.Info("OCI_VAULT_ID env var is present so using OCI Vault", "vaultOCID", ociVaultID)
-		password = ocivault.GetVaultSecret(ociVaultID, os.Getenv("OCI_VAULT_SECRET_NAME"))
-		return "", password, true
-	}
-
-	azVaultID, useAzVault := os.LookupEnv("AZ_VAULT_ID")
-	if useAzVault {
-
-		logger.Info("AZ_VAULT_ID env var is present so using Azure Key Vault", "VaultID", azVaultID)
-		logger.Info("Using the environment variables AZURE_TENANT_ID, AZURE_CLIENT_ID, and AZURE_CLIENT_SECRET to authentication with Azure.")
-		user = azvault.GetVaultSecret(azVaultID, os.Getenv("AZ_VAULT_USERNAME_SECRET"))
-		password = azvault.GetVaultSecret(azVaultID, os.Getenv("AZ_VAULT_PASSWORD_SECRET"))
-		return user, password, true
-	}
-	return user, password, ok
+	return dbconfig
 }

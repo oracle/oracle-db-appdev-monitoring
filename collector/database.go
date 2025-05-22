@@ -68,7 +68,9 @@ func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.
 
 	var P godror.ConnectionParams
 	// If password is not specified, externalAuth will be true and we'll ignore user input
-	dbconfig.ExternalAuth = dbconfig.Password == ""
+	password := dbconfig.GetPassword()
+	username := dbconfig.GetUsername()
+	dbconfig.ExternalAuth = password == ""
 	logger.Debug(fmt.Sprintf("external authentication set to %t", dbconfig.ExternalAuth), "database", dbname)
 	msg := "Using Username/Password Authentication."
 	if dbconfig.ExternalAuth {
@@ -80,7 +82,7 @@ func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.
 		Bool:  dbconfig.ExternalAuth,
 		Valid: true,
 	}
-	P.Username, P.Password, P.ConnectString, P.ExternalAuth = dbconfig.Username, godror.NewPassword(dbconfig.Password), dbconfig.URL, externalAuth
+	P.Username, P.Password, P.ConnectString, P.ExternalAuth = username, godror.NewPassword(password), dbconfig.URL, externalAuth
 
 	if dbconfig.GetPoolIncrement() > 0 {
 		logger.Debug(fmt.Sprintf("set pool increment to %d", dbconfig.PoolIncrement), "database", dbname)

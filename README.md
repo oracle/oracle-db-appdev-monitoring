@@ -802,7 +802,21 @@ If the `databases` array is empty or not provided for a metric, that metric will
 
 ### Using OCI Vault
 
-The exporter will read the password from a secret stored in OCI Vault if you set these two environment variables:
+Each database in the config file may be configured to use OCI Vault. To load the database username and/or password from OCI Vault, set the `vault.oci` property to contain the OCI Vault OCID, and secret names for the database username/password:
+
+```yaml
+databases:
+  mydb:
+    vault:
+      oci:
+        id: <VAULT OCID>
+        usernameSecret: <Secret containing DB username>
+        password: <Secret containing DB password>
+```
+
+#### OCI Vault CLI Configuration
+
+If using the default database with CLI parameters, the exporter will read the password from a secret stored in OCI Vault if you set these two environment variables:
 
 - `OCI_VAULT_ID` should be set to the OCID of the OCI vault that you wish to use
 - `OCI_VAULT_SECRET_NAME` should be set to the name of the secret in the OCI vault which contains the database password
@@ -811,7 +825,21 @@ The exporter will read the password from a secret stored in OCI Vault if you set
 
 ### Using Azure Vault
 
-The exporter will read the database username and password from secrets stored in Azure Key Vault if you set these environment variables:
+Each database in the config file may be configured to use Azure Vault. To load the database username and/or password from Azure Vault, set the `vault.azure` property to contain the Azure Vault ID, and secret names for the database username/password:
+
+```yaml
+databases:
+  mydb:
+    vault:
+      azure:
+        id: <VAULT ID>
+        usernameSecret: <Secret containing DB username>
+        password: <Secret containing DB password>
+```
+
+#### Azure Vault CLI Configuration
+
+If using the default database with CLI parameters, t, the exporter will read the database username and password from secrets stored in Azure Key Vault if you set these environment variables:
 
 - `AZ_VAULT_ID` should be set to the ID of the Azure Key Vault that you wish to use
 - `AZ_VAULT_USERNAME_SECRET` should be set to the name of the secret in the Azure Key Vault which contains the database username
