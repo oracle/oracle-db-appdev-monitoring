@@ -811,7 +811,7 @@ databases:
       oci:
         id: <VAULT OCID>
         usernameSecret: <Secret containing DB username>
-        password: <Secret containing DB password>
+        passwordSecret: <Secret containing DB password>
 ```
 
 #### OCI Vault CLI Configuration
@@ -834,12 +834,12 @@ databases:
       azure:
         id: <VAULT ID>
         usernameSecret: <Secret containing DB username>
-        password: <Secret containing DB password>
+        passwordSecret: <Secret containing DB password>
 ```
 
 #### Azure Vault CLI Configuration
 
-If using the default database with CLI parameters, t, the exporter will read the database username and password from secrets stored in Azure Key Vault if you set these environment variables:
+If using the default database with CLI parameters, the exporter will read the database username and password from secrets stored in Azure Key Vault if you set these environment variables:
 
 - `AZ_VAULT_ID` should be set to the ID of the Azure Key Vault that you wish to use
 - `AZ_VAULT_USERNAME_SECRET` should be set to the name of the secret in the Azure Key Vault which contains the database username
