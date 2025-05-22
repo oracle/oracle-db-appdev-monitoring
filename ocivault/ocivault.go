@@ -8,34 +8,20 @@ import (
 	b64 "encoding/base64"
 	"strings"
 
-	"github.com/prometheus/common/promslog"
-
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/example/helpers"
 	"github.com/oracle/oci-go-sdk/v65/secrets"
 )
 
 func GetVaultSecret(vaultId string, secretName string) string {
-	promLogConfig := &promslog.Config{}
-	logger := promslog.New(promLogConfig)
-
 	client, err := secrets.NewSecretsClientWithConfigurationProvider(common.DefaultConfigProvider())
 	helpers.FatalIfError(err)
-
-	tenancyID, err := common.DefaultConfigProvider().TenancyOCID()
-	helpers.FatalIfError(err)
-	region, err := common.DefaultConfigProvider().Region()
-	helpers.FatalIfError(err)
-	logger.Info("OCI_VAULT_ID env var is present so using OCI Vault", "Region", region)
-	logger.Info("OCI_VAULT_ID env var is present so using OCI Vault", "tenancyOCID", tenancyID)
 
 	req := secrets.GetSecretBundleByNameRequest{
 		SecretName: common.String(secretName),
 		VaultId:    common.String(vaultId)}
-
 	resp, err := client.GetSecretBundleByName(context.Background(), req)
 	helpers.FatalIfError(err)
-
 	rawSecret := getSecretFromBase64(resp)
 	return strings.TrimRight(rawSecret, "\r\n") // make sure a \r and/or \n didn't make it into the secret
 }
