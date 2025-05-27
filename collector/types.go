@@ -27,13 +27,11 @@ type Exporter struct {
 }
 
 type Database struct {
-	Name        string
-	Up          float64
-	Session     *sql.DB
-	Type        float64
-	Config      DatabaseConfig
-	UpGauge     prometheus.Gauge
-	DBtypeGauge prometheus.Gauge
+	Name    string
+	Up      float64
+	Session *sql.DB
+	Type    float64
+	Config  DatabaseConfig
 }
 
 type Config struct {
