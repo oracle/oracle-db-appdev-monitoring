@@ -102,6 +102,8 @@ github.com/oracle/oci-go-sdk/v65 v65.89.1 h1:8sVjxYPNQ83yqUgZKkdeUA0CnSodmL1Bme2
 github.com/oracle/oci-go-sdk/v65 v65.89.1/go.mod h1:u6XRPsw9tPziBh76K7GrrRXPa8P8W3BQeqJ6ZZt9VLA=
 github.com/oracle/oci-go-sdk/v65 v65.89.3 h1:KSUykb5Ou54jF4SeJNjBwcDg+umbAwcvT+xhrvNDog0=
 github.com/oracle/oci-go-sdk/v65 v65.89.3/go.mod h1:u6XRPsw9tPziBh76K7GrrRXPa8P8W3BQeqJ6ZZt9VLA=
+github.com/oracle/oci-go-sdk/v65 v65.91.1 h1:jRE4jUiJd+sDhJTyTCXIJdzLjTx+99gA3PgzpVTaF/I=
+github.com/oracle/oci-go-sdk/v65 v65.91.1/go.mod h1:u6XRPsw9tPziBh76K7GrrRXPa8P8W3BQeqJ6ZZt9VLA=
 github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c h1:+mdjkGKdHQG3305AYmdv1U2eRNDiU2ErMBj1gwrq8eQ=
 github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c/go.mod h1:7rwL4CYBLnjLxUqIJNnCWiEdr3bn6IUYi15bNlnbCCU=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
