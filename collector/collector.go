@@ -139,8 +139,8 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	ch <- e.error
 	e.scrapeErrors.Collect(ch)
 	for _, db := range e.databases {
-		ch <- db.DBtypeGauge
-		ch <- db.UpGauge
+		ch <- db.DBTypeMetric()
+		ch <- db.UpMetric()
 	}
 }
 
@@ -194,7 +194,7 @@ func (e *Exporter) scheduledScrape(tick *time.Time) {
 	metricCh <- e.error
 	e.scrapeErrors.Collect(metricCh)
 	for _, db := range e.databases {
-		metricCh <- db.UpGauge
+		metricCh <- db.UpMetric()
 	}
 	close(metricCh)
 	wg.Wait()

@@ -14,6 +14,32 @@ import (
 	"time"
 )
 
+func (d *Database) UpMetric() prometheus.Metric {
+	desc := prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "up"),
+		"Whether the Oracle database server is up.",
+		nil,
+		d.constLabels(),
+	)
+	return prometheus.MustNewConstMetric(desc,
+		prometheus.GaugeValue,
+		d.Up,
+	)
+}
+
+func (d *Database) DBTypeMetric() prometheus.Metric {
+	desc := prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "dbtype"),
+		"Type of database the exporter is connected to (0=non-CDB, 1=CDB, >1=PDB).",
+		nil,
+		d.constLabels(),
+	)
+	return prometheus.MustNewConstMetric(desc,
+		prometheus.GaugeValue,
+		d.Type,
+	)
+}
+
 func (d *Database) ping(logger *slog.Logger) error {
 	err := d.Session.Ping()
 	if err != nil {
@@ -27,9 +53,6 @@ func (d *Database) ping(logger *slog.Logger) error {
 	} else {
 		d.Up = 1
 	}
-
-	d.UpGauge.Set(d.Up)
-	d.DBtypeGauge.Set(d.Type)
 	return err
 }
 
@@ -48,18 +71,6 @@ func NewDatabase(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) *D
 		Session: db,
 		Type:    dbtype,
 		Config:  dbconfig,
-		UpGauge: prometheus.NewGauge(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Subsystem: dbname,
-			Name:      "up",
-			Help:      "Whether the Oracle database server is up.",
-		}),
-		DBtypeGauge: prometheus.NewGauge(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Subsystem: dbname,
-			Name:      "dbtype",
-			Help:      "Type of database the exporter is connected to (0=non-CDB, 1=CDB, >1=PDB).",
-		}),
 	}
 }
 
