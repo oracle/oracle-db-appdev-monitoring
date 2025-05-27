@@ -2,7 +2,17 @@
 
 ### Unreleased
 
-Our current priorities are support for RAC and mutliple databases (including #84 and #89).  We expect to address these in an upcoming release.
+Our current priorities are support for RAC and Exadata.  We expect to address these in an upcoming release.
+
+### Version 2.0.0, May 27, 2025
+
+This release includes the following changes:
+
+- Fixed an issue with `scrapeinterval` that could cause metrics not to be scraped (#172, #176).
+- Added configuration through a YAML file, passed using the `--config.file` command-line argument. Backwards compatibility is maintained for the command-line arguments, through it is recommended to use the configuration file from the 2.0.0 release onward. It is not recommended to use a combination of command-line arguments and the configuration file.
+- Added support for multiple databases through the configuration file. As many database instances may be specified as needed, which will be scraped concurrently (#89).
+- Updated provided dashboards.
+- Updated some third-party dependencies.
 
 ### Version 1.6.1, May 2, 2025
 
