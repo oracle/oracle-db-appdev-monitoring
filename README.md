@@ -34,6 +34,7 @@ Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 
 | Release | Date                 | Changelog                                                       |
 |---------|----------------------|-----------------------------------------------------------------|
+| 2.0.0   | May 27, 2025         | [2.0.0 Changelog](./changelog.md#version-200-may-27-2025)       |
 | 1.6.1   | May 2, 2025          | [1.6.1 Changelog](./changelog.md#version-161-may-2-2025)        |
 | 1.6.0   | April 18, 2025       | [1.6.0 Changelog](./changelog.md#version-160-april-18-2025)     |
 | 1.5.5   | March 13th, 2025     | [1.5.5 Changelog](./changelog.md#version-155-march-13-2025)     |
@@ -51,7 +52,7 @@ We always welcome input on features you would like to see supported.  Please ope
 
 Currently, we plan to address the following key features:
 
-- Implement multiple database support - allow the exporter to publish metrics for multiple database instances,
+- Implement support for RAC - allow the exporter to collect metrics for instances in a RAC cluster,
 - Implement connection storm protection - prevent the exporter from repeatedly connecting when the credentials fail, to prevent a storm of connections causing accounts to be locked across a large number of databases,
 - Provide the option to have the Oracle client outside of the container image, e.g., on a shared volume,
 - Implement the ability to update the configuration dynamically, i.e., without a restart,
