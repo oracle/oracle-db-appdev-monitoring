@@ -16,7 +16,7 @@ scrapeinterval = "30s"
 [[metric]]
 context = "teq"
 metricsdesc = { curr_inst_id = "ID of current instance" }
-request = "SELECT instance_number AS curr_inst_id FROM v$instance"
+request = "SELECT instance_number AS curr_inst_id FROM gv$instance"
 ignorezeroresult = true
 
 [[metric]]
