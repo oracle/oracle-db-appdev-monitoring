@@ -66,16 +66,16 @@ Currently, we plan to address the following key features:
 The following metrics are exposed by default:
 
 ```text
-# HELP oracledb_activity_execute_count Generic counter metric from v$sysstat view in Oracle.
+# HELP oracledb_activity_execute_count Generic counter metric from gv$sysstat view in Oracle.
 # TYPE oracledb_activity_execute_count gauge
 oracledb_activity_execute_count 64469
-# HELP oracledb_activity_parse_count_total Generic counter metric from v$sysstat view in Oracle.
+# HELP oracledb_activity_parse_count_total Generic counter metric from gv$sysstat view in Oracle.
 # TYPE oracledb_activity_parse_count_total gauge
 oracledb_activity_parse_count_total 25883
-# HELP oracledb_activity_user_commits Generic counter metric from v$sysstat view in Oracle.
+# HELP oracledb_activity_user_commits Generic counter metric from gv$sysstat view in Oracle.
 # TYPE oracledb_activity_user_commits gauge
 oracledb_activity_user_commits 158
-# HELP oracledb_activity_user_rollbacks Generic counter metric from v$sysstat view in Oracle.
+# HELP oracledb_activity_user_rollbacks Generic counter metric from gv$sysstat view in Oracle.
 # TYPE oracledb_activity_user_rollbacks gauge
 oracledb_activity_user_rollbacks 2
 # HELP oracledb_db_platform_value Database platform
@@ -104,7 +104,7 @@ oracledb_exporter_scrapes_total 3
 # HELP oracledb_process_count Gauge metric with count of processes.
 # TYPE oracledb_process_count gauge
 oracledb_process_count 79
-# HELP oracledb_resource_current_utilization Generic counter metric from v$resource_limit view in Oracle (current value).
+# HELP oracledb_resource_current_utilization Generic counter metric from gv$resource_limit view in Oracle (current value).
 # TYPE oracledb_resource_current_utilization gauge
 oracledb_resource_current_utilization{resource_name="branches"} 0
 oracledb_resource_current_utilization{resource_name="cmtcallbk"} 0
@@ -133,7 +133,7 @@ oracledb_resource_current_utilization{resource_name="smartio_sessions"} 0
 oracledb_resource_current_utilization{resource_name="sort_segment_locks"} 2
 oracledb_resource_current_utilization{resource_name="temporary_table_locks"} 0
 oracledb_resource_current_utilization{resource_name="transactions"} 0
-# HELP oracledb_resource_limit_value Generic counter metric from v$resource_limit view in Oracle (UNLIMITED: -1).
+# HELP oracledb_resource_limit_value Generic counter metric from gv$resource_limit view in Oracle (UNLIMITED: -1).
 # TYPE oracledb_resource_limit_value gauge
 oracledb_resource_limit_value{resource_name="branches"} -1
 oracledb_resource_limit_value{resource_name="cmtcallbk"} -1
@@ -262,18 +262,18 @@ For the built-in default metrics, the database user that the exporter uses to co
 
 - dba_tablespace_usage_metrics
 - dba_tablespaces
-- v$system_wait_class
-- v$asm_diskgroup_stat
-- v$datafile
-- v$sysstat
-- v$process
-- v$waitclassmetric
-- v$session
-- v$resource_limit
-- v$parameter
-- v$database
-- v$sqlstats
-- v$sysmetric
+- gv$system_wait_class
+- gv$asm_diskgroup_stat
+- gv$datafile
+- gv$sysstat
+- gv$process
+- gv$waitclassmetric
+- gv$session
+- gv$resource_limit
+- gv$parameter
+- gv$database
+- gv$sqlstats
+- gv$sysmetric
 - v$diag_alert_ext (for alert logs only)
 
 ## Alert logs
@@ -794,7 +794,7 @@ context = "db_platform"
 labels = [ "platform_name" ]
 metricsdesc = { value = "Database platform" }
 request = '''
-SELECT platform_name, 1 as value FROM v$database
+SELECT platform_name, 1 as value FROM gv$database
 '''
 databases = [ "db2", "db3" ]
 ```
