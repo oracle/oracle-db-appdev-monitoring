@@ -6,12 +6,13 @@ package collector
 import (
 	"database/sql"
 	"fmt"
-	"github.com/godror/godror"
-	"github.com/godror/godror/dsn"
-	"github.com/prometheus/client_golang/prometheus"
 	"log/slog"
 	"strings"
 	"time"
+
+	"github.com/godror/godror"
+	"github.com/godror/godror/dsn"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func (d *Database) UpMetric() prometheus.Metric {
@@ -43,10 +44,12 @@ func (d *Database) DBTypeMetric() prometheus.Metric {
 func (d *Database) ping(logger *slog.Logger) error {
 	err := d.Session.Ping()
 	if err != nil {
-
 		d.Up = 0
 		if strings.Contains(err.Error(), "sql: database is closed") {
-			db, dbtype := connect(logger, d.Name, d.Config)
+			db, dbtype, err := connect(logger, d.Name, d.Config)
+			if err != nil {
+				return err
+			}
 			d.Session = db
 			d.Type = dbtype
 		}
@@ -62,8 +65,11 @@ func (d *Database) constLabels() map[string]string {
 	}
 }
 
-func NewDatabase(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) *Database {
-	db, dbtype := connect(logger, dbname, dbconfig)
+func NewDatabase(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*Database, error) {
+	db, dbtype, err := connect(logger, dbname, dbconfig)
+	if err != nil {
+		return nil, err
+	}
 
 	return &Database{
 		Name:    dbname,
@@ -71,10 +77,10 @@ func NewDatabase(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) *D
 		Session: db,
 		Type:    dbtype,
 		Config:  dbconfig,
-	}
+	}, nil
 }
 
-func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.DB, float64) {
+func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.DB, float64, error) {
 	logger.Debug("Launching connection to "+maskDsn(dbconfig.URL), "database", dbname)
 
 	var P godror.ConnectionParams
@@ -147,18 +153,21 @@ func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.
 	       		dbms_application_info.set_client_info('oracledb_exporter');
 			end;`); err != nil {
 		logger.Info("Could not set CLIENT_INFO.", "database", dbname)
+		return nil, 0, err
 	}
 
 	var result int
 	if err := db.QueryRow("select sys_context('USERENV', 'CON_ID') from dual").Scan(&result); err != nil {
 		logger.Info("dbtype err", "error", err, "database", dbname)
+		return nil, 0, err
 	}
 
 	var sysdba string
 	if err := db.QueryRow("select sys_context('USERENV', 'ISDBA') from dual").Scan(&sysdba); err != nil {
 		logger.Error("error checking my database role", "error", err, "database", dbname)
+		return nil, 0, err
 	}
 	logger.Info("Connected as SYSDBA? "+sysdba, "database", dbname)
 
-	return db, float64(result)
+	return db, float64(result), nil
 }

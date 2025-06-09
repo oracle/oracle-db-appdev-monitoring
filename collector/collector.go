@@ -47,11 +47,21 @@ func maskDsn(dsn string) string {
 }
 
 // NewExporter creates a new Exporter instance
-func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
+func NewExporter(logger *slog.Logger, m *MetricsConfiguration) (*Exporter, error) {
 	var databases []*Database
 	for dbname, dbconfig := range m.Databases {
-		databases = append(databases, NewDatabase(logger, dbname, dbconfig))
+		db, err := NewDatabase(logger, dbname, dbconfig)
+		if err != nil {
+			logger.Error("Failed to connect to database, skipping", "database", dbname, "error", err)
+			continue
+		}
+		databases = append(databases, db)
 	}
+
+	if len(databases) == 0 {
+		return nil, errors.New("no databases connected successfully")
+	}
+
 	e := &Exporter{
 		mu: &sync.Mutex{},
 		duration: prometheus.NewGauge(prometheus.GaugeOpts{
@@ -85,7 +95,7 @@ func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
 	}
 	e.metricsToScrape = e.DefaultMetrics()
 
-	return e
+	return e, nil
 }
 
 // Describe describes all the metrics exported by the Oracle DB exporter.

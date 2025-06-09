@@ -118,7 +118,11 @@ func main() {
 			logger.Info(dbname + " database max idle connections is 0, so will use Oracle connection pool. Tune with database pooling settings")
 		}
 	}
-	exporter := collector.NewExporter(logger, m)
+	exporter, err := collector.NewExporter(logger, m)
+	if err != nil {
+		logger.Error("unable to create exporter", "error", err)
+		return
+	}
 	if exporter.ScrapeInterval() != 0 {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
