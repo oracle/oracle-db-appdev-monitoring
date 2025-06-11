@@ -34,6 +34,7 @@ Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 
 | Release | Date                 | Changelog                                                       |
 |---------|----------------------|-----------------------------------------------------------------|
+| 2.0.1   | June XX, 2025        | [2.0.1 Changelog](./changelog.md#version-201-june-XX-2025)      |
 | 2.0.0   | May 27, 2025         | [2.0.0 Changelog](./changelog.md#version-200-may-27-2025)       |
 | 1.6.1   | May 2, 2025          | [1.6.1 Changelog](./changelog.md#version-161-may-2-2025)        |
 | 1.6.0   | April 18, 2025       | [1.6.0 Changelog](./changelog.md#version-160-april-18-2025)     |
