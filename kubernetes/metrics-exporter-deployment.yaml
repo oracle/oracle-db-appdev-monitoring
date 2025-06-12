@@ -17,8 +17,10 @@ spec:
     spec:
       containers:
       - name: metrics-exporter
-        image: container-registry.oracle.com/database/observability-exporter:1.6.1
+        image: container-registry.oracle.com/database/observability-exporter:2.0.1
         imagePullPolicy: Always
+        command: ["/oracledb_exporter"]
+        args: ["--config.file=/config/metrics-exporter-config.yaml"]
         env:
           # uncomment and customize the next item if you want to provide custom metrics definitions
           #- name: CUSTOM_METRICS
@@ -41,6 +43,8 @@ spec:
           - name: DB_CONNECT_STRING
             value: "DEVDB_TP?TNS_ADMIN=$(TNS_ADMIN)"
         volumeMounts:
+          - name: exporter-config
+            mountPath: /config
           - name: tns-admin
             mountPath: /oracle/tns_admin
           # uncomment and customize the next item if you want to provide custom metrics definitions
@@ -61,6 +65,9 @@ spec:
         - name: tns-admin
           configMap:
             name: db-metrics-tns-admin
+        - name: exporter-config
+          configMap:
+            name: metrics-exporter-config
         # uncomment and customize the next item if you want to provide custom metrics definitions
         #- name: config-volume
         #  configMap:
