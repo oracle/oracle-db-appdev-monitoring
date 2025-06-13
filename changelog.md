@@ -4,6 +4,13 @@
 
 Our current priorities are support for RAC and Exadata.  We expect to address these in an upcoming release.
 
+### Version 2.0.1, June 12, 2025
+
+This release includes the following changes:
+
+- Use gv$ views instead of v$ views to allow collection of metrics from all instances in a cluster. (In preparation for RAC support).
+- Update some third-party dependencies.
+
 ### Version 2.0.0, May 27, 2025
 
 This release includes the following changes:

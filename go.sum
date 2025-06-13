@@ -8,6 +8,8 @@ github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.9.0 h1:OVoM452qUFBrX+URdH3Vp
 github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.9.0/go.mod h1:kUjrAo8bgEwLeZ/CmHqNl3Z/kPm7y6FKfxxK0izYUg4=
 github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.10.0 h1:j8BorDEigD8UFOSZQiSqAMOOleyQOOQPnUAwV+Ls1gA=
 github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.10.0/go.mod h1:JdM5psgjfBf5fo2uWOZhflPWyDBZ/O/CNAH9CtsuZE4=
+github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.10.1 h1:B+blDbyVIG3WaikNxPnhPiJ1MThR03b3vKGtER95TP4=
+github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.10.1/go.mod h1:JdM5psgjfBf5fo2uWOZhflPWyDBZ/O/CNAH9CtsuZE4=
 github.com/Azure/azure-sdk-for-go/sdk/azidentity/cache v0.3.2 h1:yz1bePFlP5Vws5+8ez6T3HWXPmwOK7Yvq8QxDBD3SKY=
 github.com/Azure/azure-sdk-for-go/sdk/azidentity/cache v0.3.2/go.mod h1:Pa9ZNPuoNu/GztvBSKk9J1cDJW6vk/n0zLtV4mgd8N8=
 github.com/Azure/azure-sdk-for-go/sdk/internal v1.10.0 h1:ywEEhmNahHBihViHepv3xPBn1663uRv2t2q/ESv9seY=
@@ -106,6 +108,8 @@ github.com/oracle/oci-go-sdk/v65 v65.89.3 h1:KSUykb5Ou54jF4SeJNjBwcDg+umbAwcvT+x
 github.com/oracle/oci-go-sdk/v65 v65.89.3/go.mod h1:u6XRPsw9tPziBh76K7GrrRXPa8P8W3BQeqJ6ZZt9VLA=
 github.com/oracle/oci-go-sdk/v65 v65.91.1 h1:jRE4jUiJd+sDhJTyTCXIJdzLjTx+99gA3PgzpVTaF/I=
 github.com/oracle/oci-go-sdk/v65 v65.91.1/go.mod h1:u6XRPsw9tPziBh76K7GrrRXPa8P8W3BQeqJ6ZZt9VLA=
+github.com/oracle/oci-go-sdk/v65 v65.93.1 h1:lIvy/6aQOUenQI+cxXH1wDBJeXFPO9Du3CaomXeYFaY=
+github.com/oracle/oci-go-sdk/v65 v65.93.1/go.mod h1:u6XRPsw9tPziBh76K7GrrRXPa8P8W3BQeqJ6ZZt9VLA=
 github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c h1:+mdjkGKdHQG3305AYmdv1U2eRNDiU2ErMBj1gwrq8eQ=
 github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c/go.mod h1:7rwL4CYBLnjLxUqIJNnCWiEdr3bn6IUYi15bNlnbCCU=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
