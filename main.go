@@ -110,14 +110,7 @@ func main() {
 		logger.Error("unable to load metrics configuration", "error", err)
 		return
 	}
-
-	for dbname, db := range m.Databases {
-		if db.GetMaxOpenConns() > 0 {
-			logger.Info(dbname + " database max idle connections is greater than 0, so will use go-sql connection pool and pooling settings will be ignored")
-		} else {
-			logger.Info(dbname + " database max idle connections is 0, so will use Oracle connection pool. Tune with database pooling settings")
-		}
-	}
+	
 	exporter := collector.NewExporter(logger, m)
 	if exporter.ScrapeInterval() != 0 {
 		ctx, cancel := context.WithCancel(context.Background())
