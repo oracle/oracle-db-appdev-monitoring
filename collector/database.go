@@ -74,6 +74,9 @@ func NewDatabase(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) *D
 	}
 }
 
+// WarmupConnectionPool serially acquires connections to "warm up" the connection pool.
+// This is a workaround for a perceived bug in ODPI_C where rapid acquisition of connections
+// results in a SIGABRT.
 func (d *Database) WarmupConnectionPool(logger *slog.Logger) {
 	var connections []*sql.Conn
 	poolSize := d.Config.GetMaxOpenConns()
