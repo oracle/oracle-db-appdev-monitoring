@@ -2,7 +2,9 @@
 
 ### Unreleased
 
-Our current priorities are support for RAC and Exadata.  We expect to address these in an upcoming release.
+Our current priorities are support for Exadata metrics.  We expect to address these in an upcoming release.
+
+- Fixed a case-sensitive issue with resource name in the default metrics file.
 
 ### Version 2.0.1, June 12, 2025
 
