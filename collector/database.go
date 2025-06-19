@@ -4,6 +4,7 @@
 package collector
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"github.com/godror/godror"
@@ -64,13 +65,48 @@ func (d *Database) constLabels() map[string]string {
 
 func NewDatabase(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) *Database {
 	db, dbtype := connect(logger, dbname, dbconfig)
-
 	return &Database{
 		Name:    dbname,
 		Up:      0,
 		Session: db,
 		Type:    dbtype,
 		Config:  dbconfig,
+	}
+}
+
+// WarmupConnectionPool serially acquires connections to "warm up" the connection pool.
+// This is a workaround for a perceived bug in ODPI_C where rapid acquisition of connections
+// results in a SIGABRT.
+func (d *Database) WarmupConnectionPool(logger *slog.Logger) {
+	var connections []*sql.Conn
+	poolSize := d.Config.GetMaxOpenConns()
+	if poolSize < 1 {
+		poolSize = d.Config.GetPoolMaxConnections()
+	}
+	if poolSize > 100 { // defensively cap poolsize
+		poolSize = 100
+	}
+	warmup := func(i int) {
+		time.Sleep(100 * time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		conn, err := d.Session.Conn(ctx)
+		if err != nil {
+			logger.Debug("Failed to open database connection on warmup", "conn", i, "error", err, "database", d.Name)
+			return
+		}
+		connections = append(connections, conn)
+	}
+	for i := 0; i < poolSize; i++ {
+		warmup(i + 1)
+	}
+
+	logger.Debug("Warmed connection pool", "total", len(connections), "database", d.Name)
+	for i, conn := range connections {
+		if err := conn.Close(); err != nil {
+			logger.Debug("Failed to return database connection to pool on warmup", "conn", i+1, "error", err, "database", d.Name)
+		}
 	}
 }
 

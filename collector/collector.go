@@ -49,9 +49,18 @@ func maskDsn(dsn string) string {
 // NewExporter creates a new Exporter instance
 func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
 	var databases []*Database
+	wg := &sync.WaitGroup{}
 	for dbname, dbconfig := range m.Databases {
-		databases = append(databases, NewDatabase(logger, dbname, dbconfig))
+		logger.Info("Initializing database", "database", dbname)
+		database := NewDatabase(logger, dbname, dbconfig)
+		databases = append(databases, database)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			database.WarmupConnectionPool(logger)
+		}()
 	}
+	wg.Wait()
 	e := &Exporter{
 		mu: &sync.Mutex{},
 		duration: prometheus.NewGauge(prometheus.GaugeOpts{
