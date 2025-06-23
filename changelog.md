@@ -13,6 +13,13 @@ This release includes the following changes:
 - Fix an issue where rapidly acquiring connections could cause the exporter to crash. This was more common in multi-database configurations, due to the increased number of connection pools. 
 - Update some third-party dependencies.
 
+Thank you to the following people for their suggestions and contributions:
+
+- [@rfrozza](https://github.com/rfrozza)
+- [@neilschelly](https://github.com/neilschelly)
+- [@rafal-szypulka](https://github.com/rafal-szypulka)
+- [@darkelfit](https://github.com/darkelfit)
+
 ### Version 2.0.1, June 12, 2025
 
 This release includes the following changes:
