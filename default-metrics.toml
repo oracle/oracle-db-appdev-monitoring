@@ -13,7 +13,7 @@ context = "resource"
 labels = [ "resource_name" ]
 metricsdesc = { current_utilization= "Generic counter metric from v$resource_limit view in Oracle (current value).", limit_value="Generic counter metric from v$resource_limit view in Oracle (UNLIMITED: -1)." }
 request = '''
-select resource_name, current_utilization, case when trim(limit_value) like 'unlimited' then '-1' else trim(limit_value) end as limit_value
+select resource_name, current_utilization, case when trim(limit_value) like 'UNLIMITED' then '-1' else trim(limit_value) end as limit_value
 from gv$resource_limit
 '''
 ignorezeroresult = true
