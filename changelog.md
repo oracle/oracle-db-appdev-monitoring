@@ -4,9 +4,14 @@
 
 Our current priorities are support for Exadata metrics.  We expect to address these in an upcoming release.
 
+### Version 2.0.2, June 24, 2025
+
+This release includes the following changes:
+
 - Fixed a case-sensitive issue with resource name in the default metrics file.
 - Add query timeouts to initial database connections, which could cause the exporter to hang in multi-database configurations
 - Fix an issue where rapidly acquiring connections could cause the exporter to crash. This was more common in multi-database configurations, due to the increased number of connection pools. 
+- Update some third-party dependencies.
 
 ### Version 2.0.1, June 12, 2025
 
