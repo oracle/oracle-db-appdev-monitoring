@@ -31,23 +31,57 @@ Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 
 ## Table of Contents
 
-- [Release Notes](#release-notes)
-- [Roadmap](#roadmap)
-- [Standard metrics](#standard-metrics)
-- [Database permissions required](#database-permissions-required)
-- [Alert logs](#alert-logs)
-- [Installation](#installation)
-  - [Docker, podman, etc.](#docker-podman-etc)
-  - [Test/demo environment using Docker Compose](#testdemo-environment-with-docker-compose)
-  - [Kubernetes](#kubernetes)
-  - [Standalone binary](#standalone-binary)
-  - [Using OCI Vault](#using-oci-vault)
-  - [Using Azure Vault](#using-azure-vault)
-- [Custom metrics](#custom-metrics)
-- [Controlling memory usage](#controlling-memory-usage)
-- [Grafana dashboards](#grafana-dashboards)
-- [Monitoring Transactional Event Queues](#monitoring-transactional-event-queues)
-- [Developer notes](#developer-notes)
+
+* [Unified Observability for Oracle Database](#unified-observability-for-oracle-database)
+  * [Main Features](#main-features)
+  * [Table of Contents](#table-of-contents)
+  * [Releases](#releases)
+  * [Roadmap](#roadmap)
+  * [Standard metrics](#standard-metrics)
+  * [Database permissions required](#database-permissions-required)
+  * [Alert logs](#alert-logs)
+  * [Installation](#installation)
+    * [Docker, Podman, etc](#docker-podman-etc)
+      * [Oracle Database](#oracle-database)
+      * [Exporter](#exporter)
+        * [Simple connection](#simple-connection)
+        * [Using a wallet](#using-a-wallet)
+    * [Test/demo environment with Docker Compose](#testdemo-environment-with-docker-compose)
+    * [Kubernetes](#kubernetes)
+      * [Create a secret with credentials for connecting to the Oracle Database](#create-a-secret-with-credentials-for-connecting-to-the-oracle-database)
+      * [Create a config map for the exporter configuration file (recommended)](#create-a-config-map-for-the-exporter-configuration-file-recommended)
+      * [Create a config map for the wallet (optional)](#create-a-config-map-for-the-wallet-optional)
+      * [Create a config map for your metrics definition file (optional)](#create-a-config-map-for-your-metrics-definition-file-optional)
+      * [Deploy the Oracle Database Observability exporter](#deploy-the-oracle-database-observability-exporter)
+      * [Create a Kubernetes service for the exporter](#create-a-kubernetes-service-for-the-exporter)
+      * [Create a Kubernetes service monitor](#create-a-kubernetes-service-monitor)
+      * [Configure a Prometheus target (optional)](#configure-a-prometheus-target-optional)
+      * [Import Grafana dashboard definition(s) (optional)](#import-grafana-dashboard-definitions-optional)
+    * [Standalone binary](#standalone-binary)
+    * [Scraping multiple databases](#scraping-multiple-databases)
+      * [Configuring connections for multiple databases using Oracle Database wallet(s)](#configuring-connections-for-multiple-databases-using-oracle-database-wallets)
+      * [Scraping metrics from specific databases](#scraping-metrics-from-specific-databases)
+    * [Using OCI Vault](#using-oci-vault)
+      * [OCI Vault CLI Configuration](#oci-vault-cli-configuration)
+    * [Using Azure Vault](#using-azure-vault)
+      * [Azure Vault CLI Configuration](#azure-vault-cli-configuration)
+      * [Authentication](#authentication)
+  * [Custom metrics](#custom-metrics)
+    * [Customize metrics in a container image](#customize-metrics-in-a-container-image)
+  * [Controlling memory usage](#controlling-memory-usage)
+  * [Grafana dashboards](#grafana-dashboards)
+  * [Monitoring Transactional Event Queues](#monitoring-transactional-event-queues)
+    * [How to create some traffic with PL/SQL](#how-to-create-some-traffic-with-plsql)
+    * [How to create some traffic with Java (Spring Boot)](#how-to-create-some-traffic-with-java-spring-boot)
+    * [Metrics definitions](#metrics-definitions)
+    * [Additional database permissions](#additional-database-permissions)
+    * [Grafana dashboard](#grafana-dashboard)
+  * [Developer notes](#developer-notes)
+    * [Docker/container build](#dockercontainer-build)
+    * [Building Binaries](#building-binaries)
+  * [Contributing](#contributing)
+  * [Security](#security)
+  * [License](#license)
 
 ## Releases
 
@@ -811,9 +845,75 @@ log:
   # disable: 0
 ```
 
+#### Configuring connections for multiple databases using Oracle Database wallet(s)
+
+The Oracle Database Metrics exporter uses ODPI-C, which can only initalize the TNS aliases from a `tnsnames.ora` file once per process. To work around this, the exporter can be configured to read from a "combined" `tnsnames.ora` file containing all tns aliases for connections in a multi-database configuration.
+
+1. For each database the exporter will connect to, download the corresponding wallet files. If you're using ADB/ATP-S, download the regional wallet instead of the instance wallet IFF the databases are in the same region.
+
+2. Copy the TNS aliases the `tnsnames.ora` file from each wallet, and combine them into one file, so all your database service names are in one file together
+
+3. In the combined `tnsnames.ora` file, and add the following snippet to each tns alias connection string, to tell the client where the wallet directory is:
+
+(security=(MY_WALLET_DIRECTORY=/path/to/this/database/wallet))
+
+The combined `tnsnames.ora` file, which contains the tns names for both databases, and their corresponding wallet location in the `security` configuration will look something like the following:
+
+```sql
+db1_high = (description= (retry_count=20)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=adb.****.oraclecloud.com))(connect_data=(service_name=****.adb.oraclecloud.com))(security=(MY_WALLET_DIRECTORY=/wallets/db1)(ssl_server_dn_match=yes)))
+
+db2_high = (description= (retry_count=20)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=adb.****.oraclecloud.com))(connect_data=(service_name=****.adb.oraclecloud.com))(security=(MY_WALLET_DIRECTORY=/wallets/db2)(ssl_server_dn_match=yes)))
+```
+
+4. Take wallet files (cwallet.sso ewallet.p12 ewallet.pem) for each database, and place them in separate directories. E.g., db1 gets its own directory, db2 gets its own directory, and so forth.
+
+The resulting directory structure should look like the following, with wallet information separate from the combined `tnsnames.ora` file:
+
+```
+wallets
+├── combined
+│   ├── sqlnet.ora
+│   └── tnsnames.ora // Combined tnsnames.ora
+├── db1
+│   ├── cwallet.sso
+│   ├── ewallet.p12
+│   └── ewallet.pem
+└── db2
+├── cwallet.sso
+├── ewallet.p12
+└── ewallet.pem
+```
+
+5. Set the `TNS_ADMIN` environment variable where the exporter is running to the directory containing your combined `tnsnames.ora` file:
+
+```
+export TNS_ADMIN=/wallets/combined/tnsnames.ora
+```
+
+6. Finally, update the exporter configuration file to include the TNS aliases for all databases you will be connecting to. Ensure your database configuration file does not use the `tnsAdmin` property, as we are using the global `TNS_ADMIN` environment variable to point to the combined `tnsnames.ora` file:
+
+```yaml
+databases:
+    db2:
+        username: ****
+        password: ****
+        url: db2_high
+        queryTimeout: 5
+        maxOpenConns: 10
+        maxIdleConns: 10
+    db1:
+        username: ****
+        password: ****
+        url: db1_high
+        queryTimeout: 5
+        maxOpenConns: 10
+        maxIdleConns: 10
+```
+
+Then, run the exporter with the config file:
 
 ```shell
-./oracledb_exporter --log.destination="./alert.log" --default.metrics="./default-metrics.toml"
+./oracledb_exporter --config.file=my-config-file.yaml
 ```
 
 #### Scraping metrics from specific databases
