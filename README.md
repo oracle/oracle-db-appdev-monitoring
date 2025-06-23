@@ -847,17 +847,19 @@ log:
 
 #### Configuring connections for multiple databases using Oracle Database wallet(s)
 
-The Oracle Database Metrics exporter uses ODPI-C, which can only initalize the TNS aliases from a `tnsnames.ora` file once per process. To work around this, the exporter can be configured to read from a "combined" `tnsnames.ora` file containing all tns aliases for connections in a multi-database configuration.
+The Oracle Database Metrics exporter uses ODPI-C, which can only initalize the TNS aliases from a `tnsnames.ora` file once per process. To work around this, the exporter can be configured to read from a "combined" `tnsnames.ora` file containing all TNS aliases for connections in a multi-database configuration.
 
-1. For each database the exporter will connect to, download the corresponding wallet files. If you're using ADB/ATP-S, download the regional wallet instead of the instance wallet IFF the databases are in the same region.
+1. For each database the exporter will connect to, download the corresponding wallet files. If you're using ADB/ATP-S, download the regional wallet instead of the instance wallet if the databases are in the same region.
 
 2. Copy the TNS aliases the `tnsnames.ora` file from each wallet, and combine them into one file, so all your database service names are in one file together
 
-3. In the combined `tnsnames.ora` file, and add the following snippet to each tns alias connection string, to tell the client where the wallet directory is:
+3. In the combined `tnsnames.ora` file, and add the following snippet to each TNS alias connection string, to tell the client where the wallet directory is:
 
+```
 (security=(MY_WALLET_DIRECTORY=/path/to/this/database/wallet))
+```
 
-The combined `tnsnames.ora` file, which contains the tns names for both databases, and their corresponding wallet location in the `security` configuration will look something like the following:
+The combined `tnsnames.ora` file, which contains the TNS aliases for both databases, and their corresponding wallet location in the `security` configuration will look something like the following:
 
 ```sql
 db1_high = (description= (retry_count=20)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=adb.****.oraclecloud.com))(connect_data=(service_name=****.adb.oraclecloud.com))(security=(MY_WALLET_DIRECTORY=/wallets/db1)(ssl_server_dn_match=yes)))
@@ -865,7 +867,7 @@ db1_high = (description= (retry_count=20)(retry_delay=3)(address=(protocol=tcps)
 db2_high = (description= (retry_count=20)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=adb.****.oraclecloud.com))(connect_data=(service_name=****.adb.oraclecloud.com))(security=(MY_WALLET_DIRECTORY=/wallets/db2)(ssl_server_dn_match=yes)))
 ```
 
-4. Take wallet files (cwallet.sso ewallet.p12 ewallet.pem) for each database, and place them in separate directories. E.g., db1 gets its own directory, db2 gets its own directory, and so forth.
+4. Take wallet files (cwallet.sso, ewallet.p12, & ewallet.pem) for each database, and place them in separate directories. For example, `db1` gets its own directory, `db2` gets its own directory, and so forth.
 
 The resulting directory structure should look like the following, with wallet information separate from the combined `tnsnames.ora` file:
 
