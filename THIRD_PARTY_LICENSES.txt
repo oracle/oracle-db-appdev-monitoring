@@ -1447,4 +1447,4 @@ SOFTWARE.
 
 === ATTRIBUTION-HELPER-GENERATED:
 === Attribution helper version: {Major:0 Minor:11 GitVersion:0.10.0-116-g2a434e4d-dirty GitCommit:2a434e4d7eea22d4dfd2d1cf04909239d05562b1 GitTreeState:dirty BuildDate:2025-04-29T00:30:45Z GoVersion:go1.22.4 Compiler:gc Platform:linux/amd64}
-=== License file based on go.mod with md5 sum:  15979ec9beb851f5e9b7b1e60a196993
+=== License file based on go.mod with md5 sum:  58adc57ce145a7af310f946bddb27b7e
