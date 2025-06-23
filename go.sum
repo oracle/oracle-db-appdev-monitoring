@@ -110,6 +110,8 @@ github.com/oracle/oci-go-sdk/v65 v65.91.1 h1:jRE4jUiJd+sDhJTyTCXIJdzLjTx+99gA3Pg
 github.com/oracle/oci-go-sdk/v65 v65.91.1/go.mod h1:u6XRPsw9tPziBh76K7GrrRXPa8P8W3BQeqJ6ZZt9VLA=
 github.com/oracle/oci-go-sdk/v65 v65.93.1 h1:lIvy/6aQOUenQI+cxXH1wDBJeXFPO9Du3CaomXeYFaY=
 github.com/oracle/oci-go-sdk/v65 v65.93.1/go.mod h1:u6XRPsw9tPziBh76K7GrrRXPa8P8W3BQeqJ6ZZt9VLA=
+github.com/oracle/oci-go-sdk/v65 v65.93.2 h1:Nu/yrxB8FS7Ns0QQm0cYcQN2ViZ3+g5qHfOIh4l/2BU=
+github.com/oracle/oci-go-sdk/v65 v65.93.2/go.mod h1:u6XRPsw9tPziBh76K7GrrRXPa8P8W3BQeqJ6ZZt9VLA=
 github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c h1:+mdjkGKdHQG3305AYmdv1U2eRNDiU2ErMBj1gwrq8eQ=
 github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c/go.mod h1:7rwL4CYBLnjLxUqIJNnCWiEdr3bn6IUYi15bNlnbCCU=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
@@ -128,6 +130,8 @@ github.com/prometheus/common v0.63.0 h1:YR/EIY1o3mEFP/kZCD7iDMnLPlGyuU2Gb3HIcXnA
 github.com/prometheus/common v0.63.0/go.mod h1:VVFF/fBIoToEnWRVkYoXEkq3R3paCoxG9PXP74SnV18=
 github.com/prometheus/common v0.64.0 h1:pdZeA+g617P7oGv1CzdTzyeShxAGrTBsolKNOLQPGO4=
 github.com/prometheus/common v0.64.0/go.mod h1:0gZns+BLRQ3V6NdaerOhMbwwRbNh9hkGINtQAsP5GS8=
+github.com/prometheus/common v0.65.0 h1:QDwzd+G1twt//Kwj/Ww6E9FQq1iVMmODnILtW1t2VzE=
+github.com/prometheus/common v0.65.0/go.mod h1:0gZns+BLRQ3V6NdaerOhMbwwRbNh9hkGINtQAsP5GS8=
 github.com/prometheus/exporter-toolkit v0.14.0 h1:NMlswfibpcZZ+H0sZBiTjrA3/aBFHkNZqE+iCj5EmRg=
 github.com/prometheus/exporter-toolkit v0.14.0/go.mod h1:Gu5LnVvt7Nr/oqTBUC23WILZepW0nffNo10XdhQcwWA=
 github.com/prometheus/procfs v0.15.1 h1:YagwOFzUgYfKKHX6Dr+sHT7km/hxC76UB0learggepc=
