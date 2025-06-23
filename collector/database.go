@@ -42,9 +42,10 @@ func (d *Database) DBTypeMetric() prometheus.Metric {
 }
 
 func (d *Database) ping(logger *slog.Logger) error {
-	err := d.Session.Ping()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err := d.Session.PingContext(ctx)
 	if err != nil {
-
 		d.Up = 0
 		if strings.Contains(err.Error(), "sql: database is closed") {
 			db, dbtype := connect(logger, d.Name, d.Config)
@@ -178,7 +179,9 @@ func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.
 	db.SetConnMaxLifetime(0)
 	logger.Debug(fmt.Sprintf("Successfully configured connection to %s", maskDsn(dbconfig.URL)), "database", dbname)
 
-	if _, err := db.Exec(`
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	if _, err := db.ExecContext(ctx, `
 			begin
 	       		dbms_application_info.set_client_info('oracledb_exporter');
 			end;`); err != nil {
@@ -186,12 +189,12 @@ func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.
 	}
 
 	var result int
-	if err := db.QueryRow("select sys_context('USERENV', 'CON_ID') from dual").Scan(&result); err != nil {
+	if err := db.QueryRowContext(ctx, "select sys_context('USERENV', 'CON_ID') from dual").Scan(&result); err != nil {
 		logger.Info("dbtype err", "error", err, "database", dbname)
 	}
 
 	var sysdba string
-	if err := db.QueryRow("select sys_context('USERENV', 'ISDBA') from dual").Scan(&sysdba); err != nil {
+	if err := db.QueryRowContext(ctx, "select sys_context('USERENV', 'ISDBA') from dual").Scan(&sysdba); err != nil {
 		logger.Error("error checking my database role", "error", err, "database", dbname)
 	}
 	logger.Info("Connected as SYSDBA? "+sysdba, "database", dbname)
