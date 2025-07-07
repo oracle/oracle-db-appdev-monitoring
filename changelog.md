@@ -4,6 +4,9 @@
 
 Our current priorities are support for Exadata metrics.  We expect to address these in an upcoming release.
 
+This release includes the following changes:
+- Fixed a bug where database type (CDB, PDB, etc.) was not reported in certain situations.
+
 ### Version 2.0.2, June 24, 2025
 
 This release includes the following changes:
