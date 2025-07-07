@@ -890,7 +890,7 @@ wallets
 5. Set the `TNS_ADMIN` environment variable where the exporter is running to the directory containing your combined `tnsnames.ora` file:
 
 ```
-export TNS_ADMIN=/wallets/combined/tnsnames.ora
+export TNS_ADMIN=/wallets/combined
 ```
 
 6. Finally, update the exporter configuration file to include the TNS aliases for all databases you will be connecting to. Ensure your database configuration file does not use the `tnsAdmin` property, as we are using the global `TNS_ADMIN` environment variable to point to the combined `tnsnames.ora` file:
