@@ -210,6 +210,7 @@ func (e *Exporter) scheduledScrape(tick *time.Time) {
 }
 
 func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- error, d *Database, tick *time.Time) int {
+	// If ping fails, we will try again on the next iteration of metrics scraping
 	if err := d.ping(e.logger); err != nil {
 		e.logger.Error("Error pinging database", "error", err, "database", d.Name)
 		errChan <- err

@@ -41,21 +41,28 @@ func (d *Database) DBTypeMetric() prometheus.Metric {
 	)
 }
 
+// ping the database. If the database is disconnected, try to reconnect.
+// If the database type is unknown, try to reload it.
 func (d *Database) ping(logger *slog.Logger) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	err := d.Session.PingContext(ctx)
 	if err != nil {
 		d.Up = 0
+		// If database is closed, try to reconnect
 		if strings.Contains(err.Error(), "sql: database is closed") {
 			db, dbtype := connect(logger, d.Name, d.Config)
 			d.Session = db
 			d.Type = dbtype
 		}
-	} else {
-		d.Up = 1
+		return err
 	}
-	return err
+	// if connected but database type is unknown, try to reload it
+	if d.Type == -1 {
+		d.Type = getDBtype(ctx, d.Session, logger, d.Name)
+	}
+	d.Up = 1
+	return nil
 }
 
 func (d *Database) constLabels() map[string]string {
@@ -188,16 +195,21 @@ func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.
 		logger.Info("Could not set CLIENT_INFO.", "database", dbname)
 	}
 
-	var result int
-	if err := db.QueryRowContext(ctx, "select sys_context('USERENV', 'CON_ID') from dual").Scan(&result); err != nil {
-		logger.Info("dbtype err", "error", err, "database", dbname)
-	}
-
 	var sysdba string
 	if err := db.QueryRowContext(ctx, "select sys_context('USERENV', 'ISDBA') from dual").Scan(&sysdba); err != nil {
 		logger.Error("error checking my database role", "error", err, "database", dbname)
 	}
 	logger.Info("Connected as SYSDBA? "+sysdba, "database", dbname)
 
-	return db, float64(result)
+	dbtype := getDBtype(ctx, db, logger, dbname)
+	return db, dbtype
+}
+
+func getDBtype(ctx context.Context, db *sql.DB, logger *slog.Logger, dbname string) float64 {
+	var dbtype int
+	if err := db.QueryRowContext(ctx, "select sys_context('USERENV', 'CON_ID') from dual").Scan(&dbtype); err != nil {
+		logger.Info("dbtype err", "error", err, "database", dbname)
+		return -1
+	}
+	return float64(dbtype)
 }
