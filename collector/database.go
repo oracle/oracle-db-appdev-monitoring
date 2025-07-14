@@ -66,19 +66,33 @@ func (d *Database) ping(logger *slog.Logger) error {
 }
 
 func (d *Database) constLabels() map[string]string {
-	return map[string]string{
+	// database name always included in constLabels
+	labels := map[string]string{
 		"database": d.Name,
 	}
+	// All the metrics of the same name need to have the same labels
+	// If a label is set for a particular database, it must be included also
+	// in the same metrics collected from other databases. It will just be
+	// set to a blank value.
+	for _, label := range d.allConstLabels {
+		labels[label] = ""
+	}
+	// configured per-database labels added to constLabels
+	for _, label := range d.Config.Labels {
+		labels[label.Name] = label.Value
+	}
+	return labels
 }
 
-func NewDatabase(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) *Database {
+func NewDatabase(logger *slog.Logger, dbname string, dbconfig DatabaseConfig, allConstLabels []string) *Database {
 	db, dbtype := connect(logger, dbname, dbconfig)
 	return &Database{
-		Name:    dbname,
-		Up:      0,
-		Session: db,
-		Type:    dbtype,
-		Config:  dbconfig,
+		Name:            dbname,
+		Up:              0,
+		Session:         db,
+		Type:            dbtype,
+		Config:          dbconfig,
+		allConstLabels:  allConstLabels,
 	}
 }
 

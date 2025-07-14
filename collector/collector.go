@@ -14,6 +14,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -50,9 +51,23 @@ func maskDsn(dsn string) string {
 func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
 	var databases []*Database
 	wg := &sync.WaitGroup{}
+
+	var allConstLabels []string
+	// All the metrics of the same name need to have the same labels
+	// If a label is set for a particular database, it must be included also
+	// in the same metrics collected from other databases. It will just be
+	// set to a blank value.
+	for _, dbconfig := range m.Databases {
+		for _, label := range dbconfig.Labels {
+			if (!slices.Contains(allConstLabels, label.Name)) {
+				allConstLabels = append(allConstLabels, label.Name)
+			}
+		}
+	}
+
 	for dbname, dbconfig := range m.Databases {
 		logger.Info("Initializing database", "database", dbname)
-		database := NewDatabase(logger, dbname, dbconfig)
+		database := NewDatabase(logger, dbname, dbconfig, allConstLabels)
 		databases = append(databases, database)
 		wg.Add(1)
 		go func() {
@@ -400,6 +415,7 @@ func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric,
 	fieldToAppend string, ignoreZeroResult bool, request string, queryTimeout time.Duration) error {
 	metricsCount := 0
 	constLabels := d.constLabels()
+	e.logger.Debug("labels", constLabels)
 	genericParser := func(row map[string]string) error {
 		// Construct labels value
 		labelsValues := []string{}

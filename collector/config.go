@@ -27,6 +27,7 @@ type DatabaseConfig struct {
 	URL           string `yaml:"url"`
 	ConnectConfig `yaml:",inline"`
 	Vault         *VaultConfig `yaml:"vault,omitempty"`
+	Labels        []DatabaseLabel `yaml:"labels,omitempty"`
 }
 
 type ConnectConfig struct {
@@ -70,6 +71,11 @@ type LoggingConfig struct {
 	LogDisable     *int           `yaml:"disable"`
 	LogInterval    *time.Duration `yaml:"interval"`
 	LogDestination string         `yaml:"destination"`
+}
+
+type DatabaseLabel struct {
+	Name string `yaml:"name"`
+	Value string `yaml:"value"`
 }
 
 func (m *MetricsConfiguration) LogDestination() string {

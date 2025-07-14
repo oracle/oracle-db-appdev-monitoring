@@ -27,11 +27,12 @@ type Exporter struct {
 }
 
 type Database struct {
-	Name    string
-	Up      float64
-	Session *sql.DB
-	Type    float64
-	Config  DatabaseConfig
+	Name            string
+	Up              float64
+	Session         *sql.DB
+	Type            float64
+	Config          DatabaseConfig
+	allConstLabels  []string
 }
 
 type Config struct {
