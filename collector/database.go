@@ -15,12 +15,12 @@ import (
 	"time"
 )
 
-func (d *Database) UpMetric() prometheus.Metric {
+func (d *Database) UpMetric(exporterLabels map[string]string) prometheus.Metric {
 	desc := prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "up"),
 		"Whether the Oracle database server is up.",
 		nil,
-		d.constLabels(),
+		d.constLabels(exporterLabels),
 	)
 	return prometheus.MustNewConstMetric(desc,
 		prometheus.GaugeValue,
@@ -28,12 +28,12 @@ func (d *Database) UpMetric() prometheus.Metric {
 	)
 }
 
-func (d *Database) DBTypeMetric() prometheus.Metric {
+func (d *Database) DBTypeMetric(exporterLabels map[string]string) prometheus.Metric {
 	desc := prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "dbtype"),
 		"Type of database the exporter is connected to (0=non-CDB, 1=CDB, >1=PDB).",
 		nil,
-		d.constLabels(),
+		d.constLabels(exporterLabels),
 	)
 	return prometheus.MustNewConstMetric(desc,
 		prometheus.GaugeValue,
@@ -65,26 +65,17 @@ func (d *Database) ping(logger *slog.Logger) error {
 	return nil
 }
 
-func (d *Database) constLabels() map[string]string {
-	// database name always included in constLabels
-	labels := map[string]string{
-		"database": d.Name,
-	}
-	// All the metrics of the same name need to have the same labels
-	// If a label is set for a particular database, it must be included also
-	// in the same metrics collected from other databases. It will just be
-	// set to a blank value.
-	for _, label := range d.allConstLabels {
-		labels[label] = ""
-	}
+func (d *Database) constLabels(labels map[string]string) map[string]string {
+	labels["database"] = d.Name
+
 	// configured per-database labels added to constLabels
-	for _, label := range d.Config.Labels {
-		labels[label.Name] = label.Value
+	for label, value := range d.Config.Labels {
+		labels[label] = value
 	}
 	return labels
 }
 
-func NewDatabase(logger *slog.Logger, dbname string, dbconfig DatabaseConfig, allConstLabels []string) *Database {
+func NewDatabase(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) *Database {
 	db, dbtype := connect(logger, dbname, dbconfig)
 	return &Database{
 		Name:            dbname,
@@ -92,7 +83,6 @@ func NewDatabase(logger *slog.Logger, dbname string, dbconfig DatabaseConfig, al
 		Session:         db,
 		Type:            dbtype,
 		Config:          dbconfig,
-		allConstLabels:  allConstLabels,
 	}
 }
 

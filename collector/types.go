@@ -24,6 +24,7 @@ type Exporter struct {
 	databases       []*Database
 	logger          *slog.Logger
 	lastScraped     map[string]*time.Time
+	allConstLabels  []string
 }
 
 type Database struct {
@@ -32,7 +33,6 @@ type Database struct {
 	Session         *sql.DB
 	Type            float64
 	Config          DatabaseConfig
-	allConstLabels  []string
 }
 
 type Config struct {
