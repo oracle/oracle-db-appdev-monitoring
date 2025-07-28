@@ -14,6 +14,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -50,6 +51,20 @@ func maskDsn(dsn string) string {
 func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
 	var databases []*Database
 	wg := &sync.WaitGroup{}
+
+	var allConstLabels []string
+	// All the metrics of the same name need to have the same set of labels
+	// If a label is set for a particular database, it must be included also
+	// in the same metrics collected from other databases. It will just be
+	// set to a blank value.
+	for _, dbconfig := range m.Databases {
+		for label, _ := range dbconfig.Labels {
+			if (!slices.Contains(allConstLabels, label)) {
+				allConstLabels = append(allConstLabels, label)
+			}
+		}
+	}
+
 	for dbname, dbconfig := range m.Databases {
 		logger.Info("Initializing database", "database", dbname)
 		database := NewDatabase(logger, dbname, dbconfig)
@@ -91,10 +106,23 @@ func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
 		MetricsConfiguration: m,
 		databases:            databases,
 		lastScraped:          map[string]*time.Time{},
+		allConstLabels:       allConstLabels,
 	}
 	e.metricsToScrape = e.DefaultMetrics()
 
 	return e
+}
+
+func (e *Exporter) constLabels() map[string]string {
+	// All the metrics of the same name need to have the same labels
+	// If a label is set for a particular database, it must be included also
+	// in the same metrics collected from other databases. It will just be
+	// set to a blank value.
+	labels := map[string]string{}
+	for _, label := range e.allConstLabels {
+		labels[label] = ""
+	}
+	return labels
 }
 
 // Describe describes all the metrics exported by the Oracle DB exporter.
@@ -148,8 +176,8 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	ch <- e.error
 	e.scrapeErrors.Collect(ch)
 	for _, db := range e.databases {
-		ch <- db.DBTypeMetric()
-		ch <- db.UpMetric()
+		ch <- db.DBTypeMetric(e.constLabels())
+		ch <- db.UpMetric(e.constLabels())
 	}
 }
 
@@ -203,7 +231,7 @@ func (e *Exporter) scheduledScrape(tick *time.Time) {
 	metricCh <- e.error
 	e.scrapeErrors.Collect(metricCh)
 	for _, db := range e.databases {
-		metricCh <- db.UpMetric()
+		metricCh <- db.UpMetric(e.constLabels())
 	}
 	close(metricCh)
 	wg.Wait()
@@ -399,7 +427,8 @@ func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric,
 	metricsDesc map[string]string, metricsType map[string]string, metricsBuckets map[string]map[string]string,
 	fieldToAppend string, ignoreZeroResult bool, request string, queryTimeout time.Duration) error {
 	metricsCount := 0
-	constLabels := d.constLabels()
+	constLabels := d.constLabels(e.constLabels())
+	e.logger.Debug("labels", constLabels)
 	genericParser := func(row map[string]string) error {
 		// Construct labels value
 		labelsValues := []string{}

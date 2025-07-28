@@ -24,14 +24,15 @@ type Exporter struct {
 	databases       []*Database
 	logger          *slog.Logger
 	lastScraped     map[string]*time.Time
+	allConstLabels  []string
 }
 
 type Database struct {
-	Name    string
-	Up      float64
-	Session *sql.DB
-	Type    float64
-	Config  DatabaseConfig
+	Name            string
+	Up              float64
+	Session         *sql.DB
+	Type            float64
+	Config          DatabaseConfig
 }
 
 type Config struct {

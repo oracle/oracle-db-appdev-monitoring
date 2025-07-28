@@ -27,6 +27,7 @@ type DatabaseConfig struct {
 	URL           string `yaml:"url"`
 	ConnectConfig `yaml:",inline"`
 	Vault         *VaultConfig `yaml:"vault,omitempty"`
+	Labels        map[string]string `yaml:"labels,omitempty"`
 }
 
 type ConnectConfig struct {

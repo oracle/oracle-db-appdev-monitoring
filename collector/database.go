@@ -15,12 +15,12 @@ import (
 	"time"
 )
 
-func (d *Database) UpMetric() prometheus.Metric {
+func (d *Database) UpMetric(exporterLabels map[string]string) prometheus.Metric {
 	desc := prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "up"),
 		"Whether the Oracle database server is up.",
 		nil,
-		d.constLabels(),
+		d.constLabels(exporterLabels),
 	)
 	return prometheus.MustNewConstMetric(desc,
 		prometheus.GaugeValue,
@@ -28,12 +28,12 @@ func (d *Database) UpMetric() prometheus.Metric {
 	)
 }
 
-func (d *Database) DBTypeMetric() prometheus.Metric {
+func (d *Database) DBTypeMetric(exporterLabels map[string]string) prometheus.Metric {
 	desc := prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "dbtype"),
 		"Type of database the exporter is connected to (0=non-CDB, 1=CDB, >1=PDB).",
 		nil,
-		d.constLabels(),
+		d.constLabels(exporterLabels),
 	)
 	return prometheus.MustNewConstMetric(desc,
 		prometheus.GaugeValue,
@@ -65,20 +65,24 @@ func (d *Database) ping(logger *slog.Logger) error {
 	return nil
 }
 
-func (d *Database) constLabels() map[string]string {
-	return map[string]string{
-		"database": d.Name,
+func (d *Database) constLabels(labels map[string]string) map[string]string {
+	labels["database"] = d.Name
+
+	// configured per-database labels added to constLabels
+	for label, value := range d.Config.Labels {
+		labels[label] = value
 	}
+	return labels
 }
 
 func NewDatabase(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) *Database {
 	db, dbtype := connect(logger, dbname, dbconfig)
 	return &Database{
-		Name:    dbname,
-		Up:      0,
-		Session: db,
-		Type:    dbtype,
-		Config:  dbconfig,
+		Name:            dbname,
+		Up:              0,
+		Session:         db,
+		Type:            dbtype,
+		Config:          dbconfig,
 	}
 }
 

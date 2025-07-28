@@ -721,6 +721,12 @@ databases:
     ## Oracle Database Connection pool minimum size
     # poolMinConnections: 15
 
+    ## Arbitrary labels to add to each metric scraped from this database
+    # labels:
+    #   label_name1: label_value1
+    #   label_name2: label_value2
+
+
 metrics:
   ## How often to scrape metrics. If not provided, metrics will be scraped on request.
   # scrapeInterval: 15s
@@ -791,6 +797,16 @@ databases:
     # poolMaxConnections: 15
     ## Oracle Database Connection pool minimum size
     # poolMinConnections: 15
+
+    ### Arbitrary labels to add to each metric scraped from this database
+    ## Any labels configured for one database will be added to metrics from
+    ## every database, because the same metric names must always have the same
+    ## full labelset. If the label isn't set for a particular database, then it
+    ## will just be set to an empty string.
+    # labels:
+    #   label_name1: label_value1
+    #   label_name2: label_value2
+
   db2:
     ## Database username
     username: ${DB2_USERNAME}
@@ -827,6 +843,15 @@ databases:
     # poolMaxConnections: 15
     ## Oracle Database Connection pool minimum size
     # poolMinConnections: 15
+
+    ### Arbitrary labels to add to each metric scraped from this database
+    ## Any labels configured for one database will be added to metrics from
+    ## every database, because the same metric names must always have the same
+    ## full labelset. If the label isn't set for a particular database, then it
+    ## will just be set to an empty string.
+    # labels:
+    #   label_name1: label_value1
+    #   label_name2: label_value2
 
 metrics:
   ## How often to scrape metrics. If not provided, metrics will be scraped on request.
