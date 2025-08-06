@@ -152,7 +152,7 @@ func (d DatabaseConfig) GetPassword() string {
 	if d.Vault == nil {
 		return d.Password
 	}
-	if d.Vault.OCI.UsernameSecret != "" {
+	if d.Vault.OCI.PasswordSecret != "" {
 		return ocivault.GetVaultSecret(d.Vault.OCI.ID, d.Vault.OCI.PasswordSecret)
 	}
 	if d.Vault.Azure != nil {
