@@ -26,7 +26,7 @@ type DatabaseConfig struct {
 	Password      string
 	URL           string `yaml:"url"`
 	ConnectConfig `yaml:",inline"`
-	Vault         *VaultConfig `yaml:"vault,omitempty"`
+	Vault         *VaultConfig      `yaml:"vault,omitempty"`
 	Labels        map[string]string `yaml:"labels,omitempty"`
 }
 
@@ -139,7 +139,7 @@ func (d DatabaseConfig) GetUsername() string {
 	if d.Vault == nil {
 		return d.Username
 	}
-	if d.Vault.OCI != nil {
+	if d.Vault.OCI.UsernameSecret != "" {
 		return ocivault.GetVaultSecret(d.Vault.OCI.ID, d.Vault.OCI.UsernameSecret)
 	}
 	if d.Vault.Azure != nil {
@@ -152,7 +152,7 @@ func (d DatabaseConfig) GetPassword() string {
 	if d.Vault == nil {
 		return d.Password
 	}
-	if d.Vault.OCI != nil {
+	if d.Vault.OCI.UsernameSecret != "" {
 		return ocivault.GetVaultSecret(d.Vault.OCI.ID, d.Vault.OCI.PasswordSecret)
 	}
 	if d.Vault.Azure != nil {
