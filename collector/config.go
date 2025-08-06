@@ -136,29 +136,25 @@ func (c ConnectConfig) GetQueryTimeout() int {
 }
 
 func (d DatabaseConfig) GetUsername() string {
-	if d.Vault == nil {
-		return d.Username
-	}
+
 	if d.Vault.OCI.UsernameSecret != "" {
 		return ocivault.GetVaultSecret(d.Vault.OCI.ID, d.Vault.OCI.UsernameSecret)
 	}
-	if d.Vault.Azure != nil {
+	if d.Vault.Azure.UsernameSecret != "" {
 		return azvault.GetVaultSecret(d.Vault.Azure.ID, d.Vault.Azure.UsernameSecret)
 	}
-	return ""
+	return d.Username
 }
 
 func (d DatabaseConfig) GetPassword() string {
-	if d.Vault == nil {
-		return d.Password
-	}
+
 	if d.Vault.OCI.PasswordSecret != "" {
 		return ocivault.GetVaultSecret(d.Vault.OCI.ID, d.Vault.OCI.PasswordSecret)
 	}
-	if d.Vault.Azure != nil {
+	if d.Vault.Azure.PasswordSecret != "" {
 		return azvault.GetVaultSecret(d.Vault.Azure.ID, d.Vault.Azure.PasswordSecret)
 	}
-	return ""
+	return d.Password
 }
 
 func LoadMetricsConfiguration(logger *slog.Logger, cfg *Config, path string) (*MetricsConfiguration, error) {
