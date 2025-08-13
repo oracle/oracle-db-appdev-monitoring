@@ -20,7 +20,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/BurntSushi/toml"
 	_ "github.com/godror/godror"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -59,7 +58,7 @@ func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
 	// set to a blank value.
 	for _, dbconfig := range m.Databases {
 		for label, _ := range dbconfig.Labels {
-			if (!slices.Contains(allConstLabels, label)) {
+			if !slices.Contains(allConstLabels, label) {
 				allConstLabels = append(allConstLabels, label)
 			}
 		}
@@ -400,12 +399,14 @@ func (e *Exporter) reloadMetrics() {
 	if len(e.CustomMetricsFiles()) > 0 {
 		for _, _customMetrics := range e.CustomMetricsFiles() {
 			metrics := &Metrics{}
-			if _, err := toml.DecodeFile(_customMetrics, metrics); err != nil {
+
+			if err := loadMetricsConfig(_customMetrics, metrics); err != nil {
 				e.logger.Error("failed to load custom metrics", "error", err)
 				panic(errors.New("Error while loading " + _customMetrics))
 			} else {
 				e.logger.Info("Successfully loaded custom metrics from " + _customMetrics)
 			}
+
 			e.metricsToScrape.Metric = append(e.metricsToScrape.Metric, metrics.Metric...)
 		}
 	} else {
