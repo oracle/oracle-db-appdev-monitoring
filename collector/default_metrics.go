@@ -20,7 +20,7 @@ var defaultMetricsToml string
 func (e *Exporter) DefaultMetrics() Metrics {
 	var metricsToScrape Metrics
 	if e.Metrics.Default != "" {
-		if _, err := toml.DecodeFile(filepath.Clean(e.Metrics.Default), &metricsToScrape); err != nil {
+		if err := loadMetricsConfig(filepath.Clean(e.Metrics.Default), &metricsToScrape); err != nil {
 			e.logger.Error(fmt.Sprintf("there was an issue while loading specified default metrics file at: "+e.Metrics.Default+", proceeding to run with default metrics."),
 				"error", err)
 		}
