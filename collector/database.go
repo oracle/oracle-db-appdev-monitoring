@@ -78,11 +78,11 @@ func (d *Database) constLabels(labels map[string]string) map[string]string {
 func NewDatabase(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) *Database {
 	db, dbtype := connect(logger, dbname, dbconfig)
 	return &Database{
-		Name:            dbname,
-		Up:              0,
-		Session:         db,
-		Type:            dbtype,
-		Config:          dbconfig,
+		Name:    dbname,
+		Up:      0,
+		Session: db,
+		Type:    dbtype,
+		Config:  dbconfig,
 	}
 }
 

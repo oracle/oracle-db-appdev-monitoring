@@ -4,12 +4,13 @@ package collector
 
 import (
 	"database/sql"
-	"github.com/godror/godror/dsn"
-	"github.com/prometheus/client_golang/prometheus"
 	"log/slog"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/godror/godror/dsn"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // Exporter collects Oracle DB metrics. It implements prometheus.Collector.
@@ -28,11 +29,11 @@ type Exporter struct {
 }
 
 type Database struct {
-	Name            string
-	Up              float64
-	Session         *sql.DB
-	Type            float64
-	Config          DatabaseConfig
+	Name    string
+	Up      float64
+	Session *sql.DB
+	Type    float64
+	Config  DatabaseConfig
 }
 
 type Config struct {
