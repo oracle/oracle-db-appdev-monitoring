@@ -234,10 +234,9 @@ func (m *MetricsConfiguration) defaultDatabase(cfg *Config) DatabaseConfig {
 	if ociVaultID, useOciVault := os.LookupEnv("OCI_VAULT_ID"); useOciVault {
 		dbconfig.Vault = &VaultConfig{
 			OCI: &OCIVault{
-				ID: ociVaultID,
-				// For the CLI, only the password may be loaded from a secret. If you need to load
-				// both the username and password from OCI Vault, use the exporter configuration file.
-				PasswordSecret: os.Getenv("OCI_VAULT_SECRET_NAME"),
+				ID:             ociVaultID,
+				UsernameSecret: os.Getenv("OCI_VAULT_USERNAME_SECRET"),
+				PasswordSecret: os.Getenv("OCI_VAULT_PASSWORD_SECRET"),
 			},
 		}
 	} else if azVaultID, useAzVault := os.LookupEnv("AZ_VAULT_ID"); useAzVault {
