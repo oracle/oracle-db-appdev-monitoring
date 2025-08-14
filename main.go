@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"runtime/debug"
+	"strings"
 	"syscall"
 	"time"
 
@@ -53,6 +54,15 @@ var (
 	toolkitFlags       = webflag.AddFlags(kingpin.CommandLine, ":9161")
 )
 
+func readPasswordFromFile(filePath string) (string, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+	password := strings.TrimSpace(string(data))
+	return password, nil
+}
+
 func main() {
 	promLogConfig := &promslog.Config{}
 	flag.AddFlags(kingpin.CommandLine, promLogConfig)
@@ -62,6 +72,17 @@ func main() {
 	logger := promslog.New(promLogConfig)
 	user := os.Getenv("DB_USERNAME")
 	password := os.Getenv("DB_PASSWORD")
+	passwordFile := os.Getenv("DB_PASSWORD_FILE")
+	if passwordFile != "" {
+		pswrd, err := readPasswordFromFile(passwordFile)
+		if err != nil {
+			logger.Error("error reading password", "error", err)
+			return
+		}
+
+		password = pswrd
+	}
+
 	connectString := os.Getenv("DB_CONNECT_STRING")
 	dbrole := os.Getenv("DB_ROLE")
 	tnsadmin := os.Getenv("TNS_ADMIN")
@@ -110,7 +131,7 @@ func main() {
 		logger.Error("unable to load metrics configuration", "error", err)
 		return
 	}
-	
+
 	exporter := collector.NewExporter(logger, m)
 	if exporter.ScrapeInterval() != 0 {
 		ctx, cancel := context.WithCancel(context.Background())
