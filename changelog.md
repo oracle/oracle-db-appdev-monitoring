@@ -6,6 +6,7 @@ Our current priorities are support for Exadata metrics.  We expect to address th
 
 This release includes the following changes:
 - Fixed a bug where database type (CDB, PDB, etc.) was not reported in certain situations.
+- Fixed a bug where literal passwords containing the '$' character (in the config file) would be evaluated as environment variables. To use literal passwords with the '$' character, escape the '$' character with a second '$': `$test$pwd` becomes `$$test$$pwd`.
 
 ### Version 2.0.2, June 24, 2025
 
