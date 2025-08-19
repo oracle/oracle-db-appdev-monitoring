@@ -4,9 +4,11 @@
 package collector
 
 import (
+	"fmt"
 	"github.com/godror/godror/dsn"
 	"github.com/oracle/oracle-db-appdev-monitoring/azvault"
 	"github.com/oracle/oracle-db-appdev-monitoring/ocivault"
+	"github.com/prometheus/exporter-toolkit/web"
 	"gopkg.in/yaml.v2"
 	"log/slog"
 	"os"
@@ -15,15 +17,24 @@ import (
 )
 
 type MetricsConfiguration struct {
-	MetricsPath string                    `yaml:"metricsPath"`
-	Databases   map[string]DatabaseConfig `yaml:"databases"`
-	Metrics     MetricsFilesConfig        `yaml:"metrics"`
-	Logging     LoggingConfig             `yaml:"log"`
+	ListenAddress string                    `yaml:"listenAddress"`
+	MetricsPath   string                    `yaml:"metricsPath"`
+	Databases     map[string]DatabaseConfig `yaml:"databases"`
+	Metrics       MetricsFilesConfig        `yaml:"metrics"`
+	Logging       LoggingConfig             `yaml:"log"`
+	Web           WebConfig                 `yaml:"web"`
+}
+
+type WebConfig struct {
+	ListenAddresses *[]string `yaml:"listenAddresses"`
+	SystemdSocket   *bool     `yaml:"systemdSocket"`
+	ConfigFile      *string   `yaml:"configFile"`
 }
 
 type DatabaseConfig struct {
 	Username      string
 	Password      string
+	PasswordFile  string `yaml:"passwordFile"`
 	URL           string `yaml:"url"`
 	ConnectConfig `yaml:",inline"`
 	Vault         *VaultConfig      `yaml:"vault,omitempty"`
@@ -146,6 +157,14 @@ func (d DatabaseConfig) GetUsername() string {
 }
 
 func (d DatabaseConfig) GetPassword() string {
+	if d.PasswordFile != "" {
+		bytes, err := os.ReadFile(d.PasswordFile)
+		if err != nil {
+			// If there is an invalid file, exporter cannot continue processing.
+			panic(fmt.Errorf("failed to read password file: %v", err))
+		}
+		return string(bytes)
+	}
 	if d.isOCIVault() && d.Vault.OCI.PasswordSecret != "" {
 		return ocivault.GetVaultSecret(d.Vault.OCI.ID, d.Vault.OCI.PasswordSecret)
 	}
@@ -163,7 +182,7 @@ func (d DatabaseConfig) isAzureVault() bool {
 	return d.Vault != nil && d.Vault.Azure != nil
 }
 
-func LoadMetricsConfiguration(logger *slog.Logger, cfg *Config, path string) (*MetricsConfiguration, error) {
+func LoadMetricsConfiguration(logger *slog.Logger, cfg *Config, path string, flags *web.FlagConfig) (*MetricsConfiguration, error) {
 	m := &MetricsConfiguration{}
 	if len(cfg.ConfigFile) > 0 {
 		content, err := os.ReadFile(cfg.ConfigFile)
@@ -186,18 +205,39 @@ func LoadMetricsConfiguration(logger *slog.Logger, cfg *Config, path string) (*M
 		m.Databases["default"] = m.defaultDatabase(cfg)
 	}
 
-	m.merge(cfg, path)
+	m.merge(cfg, path, flags)
 	return m, nil
 }
 
-func (m *MetricsConfiguration) merge(cfg *Config, path string) {
+func (wc WebConfig) Flags() *web.FlagConfig {
+	return &web.FlagConfig{
+		WebListenAddresses: wc.ListenAddresses,
+		WebSystemdSocket:   wc.SystemdSocket,
+		WebConfigFile:      wc.ConfigFile,
+	}
+}
+
+func (m *MetricsConfiguration) merge(cfg *Config, path string, flags *web.FlagConfig) {
 	if len(m.MetricsPath) == 0 {
 		m.MetricsPath = path
 	}
+	m.mergeWebConfig(flags)
 	m.mergeLoggingConfig(cfg)
 	m.mergeMetricsConfig(cfg)
 	if m.Metrics.ScrapeInterval == nil {
 		m.Metrics.ScrapeInterval = &cfg.ScrapeInterval
+	}
+}
+
+func (m *MetricsConfiguration) mergeWebConfig(flags *web.FlagConfig) {
+	if m.Web.ListenAddresses == nil {
+		m.Web.ListenAddresses = flags.WebListenAddresses
+	}
+	if m.Web.SystemdSocket == nil {
+		m.Web.SystemdSocket = flags.WebSystemdSocket
+	}
+	if m.Web.ConfigFile == nil {
+		m.Web.ConfigFile = flags.WebConfigFile
 	}
 }
 

@@ -692,6 +692,9 @@ databases:
     username: ${DB_USERNAME}
     ## Database password
     password: ${DB_PASSWORD}
+    ## Database password file
+    ## If specified, will load the database password from a file.
+    # passwordFile: ${DB_PASSWORD_FILE}
     ## Database connection url
     url: localhost:1521/freepdb1
 
@@ -729,6 +732,11 @@ databases:
     #   label_name1: label_value1
     #   label_name2: label_value2
 
+# Optionally configure prometheus webserver
+#web:
+#  listenAddresses: [':9161']
+#  systemdSocket: true|false
+#  configFile: /path/to/webconfigfile
 
 metrics:
   ## How often to scrape metrics. If not provided, metrics will be scraped on request.
