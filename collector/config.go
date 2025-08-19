@@ -4,6 +4,7 @@
 package collector
 
 import (
+	"fmt"
 	"github.com/godror/godror/dsn"
 	"github.com/oracle/oracle-db-appdev-monitoring/azvault"
 	"github.com/oracle/oracle-db-appdev-monitoring/ocivault"
@@ -24,6 +25,7 @@ type MetricsConfiguration struct {
 type DatabaseConfig struct {
 	Username      string
 	Password      string
+	PasswordFile  string `yaml:"passwordFile"`
 	URL           string `yaml:"url"`
 	ConnectConfig `yaml:",inline"`
 	Vault         *VaultConfig      `yaml:"vault,omitempty"`
@@ -146,6 +148,14 @@ func (d DatabaseConfig) GetUsername() string {
 }
 
 func (d DatabaseConfig) GetPassword() string {
+	if d.PasswordFile != "" {
+		bytes, err := os.ReadFile(d.PasswordFile)
+		if err != nil {
+			// If there is an invalid file, exporter cannot continue processing.
+			panic(fmt.Errorf("failed to read password file: %v", err))
+		}
+		return string(bytes)
+	}
 	if d.isOCIVault() && d.Vault.OCI.PasswordSecret != "" {
 		return ocivault.GetVaultSecret(d.Vault.OCI.ID, d.Vault.OCI.PasswordSecret)
 	}

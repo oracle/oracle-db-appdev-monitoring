@@ -769,6 +769,9 @@ databases:
     username: ${DB1_USERNAME}
     ## Database password
     password: ${DB1_PASSWORD}
+    ## Database password file
+    ## If specified, will load the database password from a file.
+    # passwordFile: /path/to/password/file
     ## Database connection url
     url: localhost:1521/freepdb1
 
