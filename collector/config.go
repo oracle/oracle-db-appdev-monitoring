@@ -136,25 +136,31 @@ func (c ConnectConfig) GetQueryTimeout() int {
 }
 
 func (d DatabaseConfig) GetUsername() string {
-
-	if d.Vault.OCI.UsernameSecret != "" {
+	if d.isOCIVault() && d.Vault.OCI.UsernameSecret != "" {
 		return ocivault.GetVaultSecret(d.Vault.OCI.ID, d.Vault.OCI.UsernameSecret)
 	}
-	if d.Vault.Azure.UsernameSecret != "" {
+	if d.isAzureVault() && d.Vault.Azure.UsernameSecret != "" {
 		return azvault.GetVaultSecret(d.Vault.Azure.ID, d.Vault.Azure.UsernameSecret)
 	}
 	return d.Username
 }
 
 func (d DatabaseConfig) GetPassword() string {
-
-	if d.Vault.OCI.PasswordSecret != "" {
+	if d.isOCIVault() && d.Vault.OCI.PasswordSecret != "" {
 		return ocivault.GetVaultSecret(d.Vault.OCI.ID, d.Vault.OCI.PasswordSecret)
 	}
-	if d.Vault.Azure.PasswordSecret != "" {
+	if d.isAzureVault() && d.Vault.Azure.PasswordSecret != "" {
 		return azvault.GetVaultSecret(d.Vault.Azure.ID, d.Vault.Azure.PasswordSecret)
 	}
 	return d.Password
+}
+
+func (d DatabaseConfig) isOCIVault() bool {
+	return d.Vault != nil && d.Vault.OCI != nil
+}
+
+func (d DatabaseConfig) isAzureVault() bool {
+	return d.Vault != nil && d.Vault.Azure != nil
 }
 
 func LoadMetricsConfiguration(logger *slog.Logger, cfg *Config, path string) (*MetricsConfiguration, error) {
@@ -164,7 +170,13 @@ func LoadMetricsConfiguration(logger *slog.Logger, cfg *Config, path string) (*M
 		if err != nil {
 			return m, err
 		}
-		expanded := os.ExpandEnv(string(content))
+		expanded := os.Expand(string(content), func(s string) string {
+			// allows escaping literal $ characters
+			if s == "$" {
+				return "$"
+			}
+			return os.Getenv(s)
+		})
 		if yerr := yaml.UnmarshalStrict([]byte(expanded), m); yerr != nil {
 			return m, yerr
 		}
