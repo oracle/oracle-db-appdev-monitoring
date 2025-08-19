@@ -676,6 +676,9 @@ If you prefer to provide configuration via a [config file](./example-config.yaml
 ```yaml
 # Example Oracle Database Metrics Exporter Configuration file.
 # Environment variables of the form ${VAR_NAME} will be expanded.
+# If you include a config value that contains a '$' character, escape that '$' with another '$', e.g.,
+# "$test$pwd" => "$$test$$pwd"
+# Otherwise, the value will be expanded as an environment variable.
 
 # Example Oracle Database Metrics Exporter Configuration file.
 # Environment variables of the form ${VAR_NAME} will be expanded.
