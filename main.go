@@ -105,12 +105,12 @@ func main() {
 			LogDestination: *logDestination,
 		},
 	}
-	m, err := collector.LoadMetricsConfiguration(logger, config, *metricPath)
+	m, err := collector.LoadMetricsConfiguration(logger, config, *metricPath, toolkitFlags)
 	if err != nil {
 		logger.Error("unable to load metrics configuration", "error", err)
 		return
 	}
-	
+
 	exporter := collector.NewExporter(logger, m)
 	if exporter.ScrapeInterval() != 0 {
 		ctx, cancel := context.WithCancel(context.Background())
@@ -194,7 +194,7 @@ func main() {
 
 	// start the main server thread
 	server := &http.Server{}
-	if err := web.ListenAndServe(server, toolkitFlags, logger); err != nil {
+	if err := web.ListenAndServe(server, m.Web.Flags(), logger); err != nil {
 		logger.Error("Listening error", "error", err)
 		os.Exit(1)
 	}

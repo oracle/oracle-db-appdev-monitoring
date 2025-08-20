@@ -676,6 +676,9 @@ If you prefer to provide configuration via a [config file](./example-config.yaml
 ```yaml
 # Example Oracle Database Metrics Exporter Configuration file.
 # Environment variables of the form ${VAR_NAME} will be expanded.
+# If you include a config value that contains a '$' character, escape that '$' with another '$', e.g.,
+# "$test$pwd" => "$$test$$pwd"
+# Otherwise, the value will be expanded as an environment variable.
 
 # Example Oracle Database Metrics Exporter Configuration file.
 # Environment variables of the form ${VAR_NAME} will be expanded.
@@ -689,6 +692,9 @@ databases:
     username: ${DB_USERNAME}
     ## Database password
     password: ${DB_PASSWORD}
+    ## Database password file
+    ## If specified, will load the database password from a file.
+    # passwordFile: ${DB_PASSWORD_FILE}
     ## Database connection url
     url: localhost:1521/freepdb1
 
@@ -726,6 +732,11 @@ databases:
     #   label_name1: label_value1
     #   label_name2: label_value2
 
+# Optionally configure prometheus webserver
+#web:
+#  listenAddresses: [':9161']
+#  systemdSocket: true|false
+#  configFile: /path/to/webconfigfile
 
 metrics:
   ## How often to scrape metrics. If not provided, metrics will be scraped on request.
@@ -977,10 +988,11 @@ databases:
 
 #### OCI Vault CLI Configuration
 
-If using the default database with CLI parameters, the exporter will read the password from a secret stored in OCI Vault if you set these two environment variables:
+If using the default database with CLI parameters, the exporter will read the username and password from a secret stored in OCI Vault if you set these two environment variables:
 
 - `OCI_VAULT_ID` should be set to the OCID of the OCI vault that you wish to use
-- `OCI_VAULT_SECRET_NAME` should be set to the name of the secret in the OCI vault which contains the database password
+- `OCI_VAULT_USERNAME_SECRET` should be set to the name of the secret in the OCI vault which contains the database username
+- `OCI_VAULT_PASSWORD_SECRET` should be set to the name of the secret in the OCI vault which contains the database password
 
 > Note that the process must be running under a user that has the OCI CLI installed and configured correctly to access the desired tenancy and region. The OCI Profile used is `DEFAULT`.
 
