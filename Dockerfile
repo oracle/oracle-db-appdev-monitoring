@@ -38,11 +38,10 @@ ENV GOARCH=${GOARCH:-amd64}
 RUN microdnf update && \
     microdnf install -y oracle-instantclient-release-23ai-el8-1.0-4.el8 && \
     microdnf install -y oracle-instantclient-basic-23.9.0.25.07-1.el8 && \
-    microdnf install -y glibc-2.28-251.0.3.el8_10.25 && \
-    ln -s /usr/lib/oracle/19.24 /usr/lib/oracle/23
+    microdnf install -y glibc-2.28-251.0.3.el8_10.25
 
-ENV LD_LIBRARY_PATH=/usr/lib/oracle/23/client64/lib:usr/lib/oracle/19.24/client64/lib
-ENV PATH=$PATH:/usr/lib/oracle/23/client64/bin:usr/lib/oracle/19.24/client64/bin
+ENV LD_LIBRARY_PATH=/usr/lib/oracle/23/client64/lib
+ENV PATH=$PATH:/usr/lib/oracle/23/client64/bin
 
 COPY --from=build /go/src/oracledb_exporter/oracle-db-appdev-monitoring /oracledb_exporter
 ADD ./default-metrics.toml /default-metrics.toml
