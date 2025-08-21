@@ -24,9 +24,8 @@ This command starts a local development server and opens up a browser window. Mo
 ## Build
 
 ```bash
-rm -rf content
 npm run build
-cp -r build content
+cp -r build ../docs
 ```
 
 ## Versioning 
