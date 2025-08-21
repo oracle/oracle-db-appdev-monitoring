@@ -2,6 +2,8 @@
 
 This website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
 
+The `content` directory contains the built, static site.
+
 Requirements:
 - latest version of NodeJS
 
@@ -22,7 +24,9 @@ This command starts a local development server and opens up a browser window. Mo
 ## Build
 
 ```bash
+rm -rf content
 npm run build
+cp -r build content
 ```
 
 ## Versioning 
