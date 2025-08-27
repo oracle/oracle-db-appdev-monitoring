@@ -16,38 +16,45 @@ from gv$sql
 where last_active_time >= sysdate - 5/(24*60)
 '''
 
+# User segment queries may return zero rows on certain database configurations
 [[metric]]
 context = "size_user_segments_top100"
 metricsdesc = {table_bytes="Gauge metric with the size of the tables in user segments."}
 labels = ["segment_name"]
 request = "select * from (select segment_name,sum(bytes) as table_bytes from user_segments where segment_type='TABLE' group by segment_name) order by table_bytes DESC FETCH NEXT 100 ROWS ONLY"
+ignorezeroresult = true
 
 [[metric]]
 context = "size_user_segments_top100"
 metricsdesc = {table_partition_bytes="Gauge metric with the size of the table partition in user segments."}
 labels = ["segment_name"]
 request = "select * from (select segment_name,sum(bytes) as table_partition_bytes from user_segments where segment_type='TABLE PARTITION' group by segment_name) order by table_partition_bytes DESC FETCH NEXT 100 ROWS ONLY"
+ignorezeroresult = true
 
 [[metric]]
 context = "size_user_segments_top100"
 metricsdesc = {cluster_bytes="Gauge metric with the size of the cluster in user segments."}
 labels = ["segment_name"]
 request = "select * from (select segment_name,sum(bytes) as cluster_bytes from user_segments where segment_type='CLUSTER' group by segment_name) order by cluster_bytes DESC FETCH NEXT 100 ROWS ONLY"
+ignorezeroresult = true
 
 [[metric]]
 context = "size_dba_segments_top100"
 metricsdesc = {table_bytes="Gauge metric with the size of the tables in user segments."}
 labels = ["segment_name"]
 request = "select * from (select segment_name,sum(bytes) as table_bytes from dba_segments where segment_type='TABLE' group by segment_name) order by table_bytes DESC FETCH NEXT 100 ROWS ONLY"
+ignorezeroresult = true
 
 [[metric]]
 context = "size_dba_segments_top100"
 metricsdesc = {table_partition_bytes="Gauge metric with the size of the table partition in user segments."}
 labels = ["segment_name"]
 request = "select * from (select segment_name,sum(bytes) as table_partition_bytes from dba_segments where segment_type='TABLE PARTITION' group by segment_name) order by table_partition_bytes DESC FETCH NEXT 100 ROWS ONLY"
+ignorezeroresult = true
 
 [[metric]]
 context = "size_dba_segments_top100"
 metricsdesc = {cluster_bytes="Gauge metric with the size of the cluster in user segments."}
 labels = ["segment_name"]
 request = "select * from (select segment_name,sum(bytes) as cluster_bytes from dba_segments where segment_type='CLUSTER' group by segment_name) order by cluster_bytes DESC FETCH NEXT 100 ROWS ONLY"
+ignorezeroresult = true
