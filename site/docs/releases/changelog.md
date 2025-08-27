@@ -11,6 +11,8 @@ List of upcoming and historic changes to the exporter.
 
 Our current priorities are support for Exadata metrics.  We expect to address these in an upcoming release.
 
+### Version 2.0.3, August 27, 2025
+
 This release includes the following changes:
 - Enable configuration of the prometheus webserver from the config file using the `web` prefix.
 - Allow loading of database password(s) from a file.
