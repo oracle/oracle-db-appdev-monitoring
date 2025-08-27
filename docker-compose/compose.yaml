@@ -27,7 +27,7 @@ services:
       - ./grafana/dashboards:/var/lib/grafana/dashboards
 
   free23ai:
-    image: gvenzl/oracle-free:23.6-slim-faststart
+    image: gvenzl/oracle-free:23.9-slim-faststart
     container_name: free23ai
     ports:
       - 1521:1521
@@ -43,7 +43,7 @@ services:
       start_period: 30s
 
   second23ai:
-    image: gvenzl/oracle-free:23.6-slim-faststart
+    image: gvenzl/oracle-free:23.9-slim-faststart
     container_name: second23ai
     ports:
       - 1522:1521
