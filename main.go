@@ -107,7 +107,7 @@ func main() {
 	}
 	m, err := collector.LoadMetricsConfiguration(logger, config, *metricPath, toolkitFlags)
 	if err != nil {
-		logger.Error("unable to load metrics configuration", "error", err)
+		logger.Error("unable to load metrics configuration file", "error", err)
 		return
 	}
 

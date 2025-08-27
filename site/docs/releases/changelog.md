@@ -16,6 +16,22 @@ This release includes the following changes:
 - Allow loading of database password(s) from a file.
 - Fixed a bug where database type (CDB, PDB, etc.) was not reported in certain situations.
 - Fixed a bug where literal passwords containing the '$' character (in the config file) would be evaluated as environment variables. To use literal passwords with the '$' character, escape the '$' character with a second '$': `$test$pwd` becomes `$$test$$pwd`.
+- Fixed a bug when using `metrics.scrapeInterval` combined with per-metric scrape intervals that made the available metrics data set inconsistent.
+
+Thank you to the following people for their suggestions and contributions:
+
+- [@Supporterino](https://github.com/Supporterino)
+- [@neilschelly](https://github.com/neilschelly)
+- [@aberinnj](https://github.com/aberinnj)
+- [@redelang](https://github.com/redelang)
+- [@qrkop](https://github.com/qrkop)
+- [@KevDi](https://github.com/KevDi)
+- [@bomuva](https://github.com/bomuva)
+- [@anilmoris](https://github.com/anilmoris)
+- [@Sycri](https://github.com/Sycri)
+- [@kizuna-lek](https://github.com/kizuna-lek)
+- [@rfrozza](https://github.com/rfrozza)
+- [@neilschelly](https://github.com/neilschelly)
 
 ### Version 2.0.2, June 24, 2025
 

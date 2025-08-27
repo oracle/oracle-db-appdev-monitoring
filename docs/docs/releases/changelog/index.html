@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.8.1">
 <title data-rh="true">Changelog | Oracle Database Metrics Exporter</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:image" content="https://oracle.github.io/oracle-db-appdev-monitoring/img/logo.png"><meta data-rh="true" name="twitter:image" content="https://oracle.github.io/oracle-db-appdev-monitoring/img/logo.png"><meta data-rh="true" property="og:url" content="https://oracle.github.io/oracle-db-appdev-monitoring/docs/releases/changelog"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Changelog | Oracle Database Metrics Exporter"><meta data-rh="true" name="description" content="List of upcoming and historic changes to the exporter."><meta data-rh="true" property="og:description" content="List of upcoming and historic changes to the exporter."><link data-rh="true" rel="icon" href="/oracle-db-appdev-monitoring/img/favicon-32x32.png"><link data-rh="true" rel="canonical" href="https://oracle.github.io/oracle-db-appdev-monitoring/docs/releases/changelog"><link data-rh="true" rel="alternate" href="https://oracle.github.io/oracle-db-appdev-monitoring/docs/releases/changelog" hreflang="en"><link data-rh="true" rel="alternate" href="https://oracle.github.io/oracle-db-appdev-monitoring/docs/releases/changelog" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Releases","item":"https://oracle.github.io/oracle-db-appdev-monitoring/docs/category/releases"},{"@type":"ListItem","position":2,"name":"Changelog","item":"https://oracle.github.io/oracle-db-appdev-monitoring/docs/releases/changelog"}]}</script><link rel="stylesheet" href="/oracle-db-appdev-monitoring/assets/css/styles.d329a656.css">
-<script src="/oracle-db-appdev-monitoring/assets/js/runtime~main.f4fbb5be.js" defer="defer"></script>
+<script src="/oracle-db-appdev-monitoring/assets/js/runtime~main.17989aec.js" defer="defer"></script>
 <script src="/oracle-db-appdev-monitoring/assets/js/main.dfeca7cc.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -21,6 +21,22 @@
 <li>Allow loading of database password(s) from a file.</li>
 <li>Fixed a bug where database type (CDB, PDB, etc.) was not reported in certain situations.</li>
 <li>Fixed a bug where literal passwords containing the &#x27;$&#x27; character (in the config file) would be evaluated as environment variables. To use literal passwords with the &#x27;$&#x27; character, escape the &#x27;$&#x27; character with a second &#x27;$&#x27;: <code>$test$pwd</code> becomes <code>$$test$$pwd</code>.</li>
+<li>Fixed a bug when using <code>metrics.scrapeInterval</code> combined with per-metric scrape intervals that made the available metrics data set inconsistent.</li>
+</ul>
+<p>Thank you to the following people for their suggestions and contributions:</p>
+<ul>
+<li><a href="https://github.com/Supporterino" target="_blank" rel="noopener noreferrer">@Supporterino</a></li>
+<li><a href="https://github.com/neilschelly" target="_blank" rel="noopener noreferrer">@neilschelly</a></li>
+<li><a href="https://github.com/aberinnj" target="_blank" rel="noopener noreferrer">@aberinnj</a></li>
+<li><a href="https://github.com/redelang" target="_blank" rel="noopener noreferrer">@redelang</a></li>
+<li><a href="https://github.com/qrkop" target="_blank" rel="noopener noreferrer">@qrkop</a></li>
+<li><a href="https://github.com/KevDi" target="_blank" rel="noopener noreferrer">@KevDi</a></li>
+<li><a href="https://github.com/bomuva" target="_blank" rel="noopener noreferrer">@bomuva</a></li>
+<li><a href="https://github.com/anilmoris" target="_blank" rel="noopener noreferrer">@anilmoris</a></li>
+<li><a href="https://github.com/Sycri" target="_blank" rel="noopener noreferrer">@Sycri</a></li>
+<li><a href="https://github.com/kizuna-lek" target="_blank" rel="noopener noreferrer">@kizuna-lek</a></li>
+<li><a href="https://github.com/rfrozza" target="_blank" rel="noopener noreferrer">@rfrozza</a></li>
+<li><a href="https://github.com/neilschelly" target="_blank" rel="noopener noreferrer">@neilschelly</a></li>
 </ul>
 <h3 class="anchor anchorWithStickyNavbar_LWe7" id="version-202-june-24-2025">Version 2.0.2, June 24, 2025<a href="#version-202-june-24-2025" class="hash-link" aria-label="Direct link to Version 2.0.2, June 24, 2025" title="Direct link to Version 2.0.2, June 24, 2025">​</a></h3>
 <p>This release includes the following changes:</p>

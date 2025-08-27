@@ -28,11 +28,11 @@ type Exporter struct {
 }
 
 type Database struct {
-	Name            string
-	Up              float64
-	Session         *sql.DB
-	Type            float64
-	Config          DatabaseConfig
+	Name    string
+	Up      float64
+	Session *sql.DB
+	Type    float64
+	Config  DatabaseConfig
 }
 
 type Config struct {
@@ -57,28 +57,29 @@ type Config struct {
 
 // Metric is an object description
 type Metric struct {
-	Context          string
-	Labels           []string
-	MetricsDesc      map[string]string
-	MetricsType      map[string]string
-	MetricsBuckets   map[string]map[string]string
-	FieldToAppend    string
-	Request          string
-	IgnoreZeroResult bool
-	QueryTimeout     string
-	ScrapeInterval   string
-	Databases        []string
+	Context           string
+	Labels            []string
+	MetricsDesc       map[string]string
+	MetricsType       map[string]string
+	MetricsBuckets    map[string]map[string]string
+	FieldToAppend     string
+	Request           string
+	IgnoreZeroResult  bool
+	QueryTimeout      string
+	ScrapeInterval    string
+	Databases         []string
+	PrometheusMetrics map[string]prometheus.Metric
 }
 
 // Metrics is a container structure for prometheus metrics
 type Metrics struct {
-	Metric []Metric
+	Metric []*Metric
 }
 
 type ScrapeContext struct {
 }
 
-func (m Metric) id(dbname string) string {
+func (m *Metric) id(dbname string) string {
 	builder := strings.Builder{}
 	builder.WriteString(dbname)
 	builder.WriteString(m.Context)
@@ -86,4 +87,20 @@ func (m Metric) id(dbname string) string {
 		builder.WriteString(d)
 	}
 	return builder.String()
+}
+
+// sendAll sends all cached metrics to the collector.
+func (m *Metric) sendAll(ch chan<- prometheus.Metric) {
+	for _, metric := range m.PrometheusMetrics {
+		ch <- metric
+	}
+}
+
+// cacheAndSend caches the metric and sends it to the collector.
+func (m *Metric) cacheAndSend(ch chan<- prometheus.Metric, metric prometheus.Metric) {
+	if len(m.PrometheusMetrics) == 0 {
+		m.PrometheusMetrics = map[string]prometheus.Metric{}
+	}
+	m.PrometheusMetrics[metric.Desc().String()] = metric
+	ch <- metric
 }

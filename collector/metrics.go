@@ -13,7 +13,7 @@ import (
 // isScrapeMetric returns true if a metric should be scraped. Metrics may not be scraped if they have a custom scrape interval,
 // and the time since the last scrape is less than the custom scrape interval.
 // If there is no tick time or last known tick, the metric is always scraped.
-func (e *Exporter) isScrapeMetric(tick *time.Time, metric Metric, d *Database) bool {
+func (e *Exporter) isScrapeMetric(tick *time.Time, metric *Metric, d *Database) bool {
 	if len(metric.Databases) > 0 {
 		if !slices.Contains(metric.Databases, d.Name) {
 			return false
@@ -52,7 +52,7 @@ func (e *Exporter) getScrapeInterval(context, scrapeInterval string) (time.Durat
 	return 0, false
 }
 
-func (e *Exporter) getQueryTimeout(metric Metric, d *Database) time.Duration {
+func (e *Exporter) getQueryTimeout(metric *Metric, d *Database) time.Duration {
 	if len(metric.QueryTimeout) > 0 {
 		qt, err := time.ParseDuration(metric.QueryTimeout)
 		if err != nil {

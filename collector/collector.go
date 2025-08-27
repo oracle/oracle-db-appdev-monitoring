@@ -248,11 +248,15 @@ func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- er
 	metricsToScrape := 0
 	for _, metric := range e.metricsToScrape.Metric {
 		metric := metric //https://golang.org/doc/faq#closures_and_goroutines
-		if !e.isScrapeMetric(tick, metric, d) {
-			continue
-		}
+		isScrapeMetric := e.isScrapeMetric(tick, metric, d)
 		metricsToScrape++
 		go func() {
+			// If the metric doesn't need to be scraped, send the cached values
+			if !isScrapeMetric {
+				metric.sendAll(ch)
+				errChan <- nil
+				return
+			}
 			e.logger.Debug("About to scrape metric",
 				"Context", metric.Context,
 				"MetricsDesc", fmt.Sprint(metric.MetricsDesc),
@@ -389,7 +393,7 @@ func hashFile(h hash.Hash, fn string) error {
 
 func (e *Exporter) reloadMetrics() {
 	// Truncate metricsToScrape
-	e.metricsToScrape.Metric = []Metric{}
+	e.metricsToScrape.Metric = []*Metric{}
 
 	// Load default metrics
 	defaultMetrics := e.DefaultMetrics()
@@ -415,29 +419,24 @@ func (e *Exporter) reloadMetrics() {
 }
 
 // ScrapeMetric is an interface method to call scrapeGenericValues using Metric struct values
-func (e *Exporter) ScrapeMetric(d *Database, ch chan<- prometheus.Metric, m Metric) error {
+func (e *Exporter) ScrapeMetric(d *Database, ch chan<- prometheus.Metric, m *Metric) error {
 	e.logger.Debug("Calling function ScrapeGenericValues()")
-	queryTimeout := e.getQueryTimeout(m, d)
-	return e.scrapeGenericValues(d, ch, m.Context, m.Labels, m.MetricsDesc,
-		m.MetricsType, m.MetricsBuckets, m.FieldToAppend, m.IgnoreZeroResult,
-		m.Request, queryTimeout)
+	return e.scrapeGenericValues(d, ch, m)
 }
 
 // generic method for retrieving metrics.
-func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric, context string, labels []string,
-	metricsDesc map[string]string, metricsType map[string]string, metricsBuckets map[string]map[string]string,
-	fieldToAppend string, ignoreZeroResult bool, request string, queryTimeout time.Duration) error {
+func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric, m *Metric) error {
 	metricsCount := 0
 	constLabels := d.constLabels(e.constLabels())
 	e.logger.Debug("labels", constLabels)
 	genericParser := func(row map[string]string) error {
 		// Construct labels value
 		labelsValues := []string{}
-		for _, label := range labels {
+		for _, label := range m.Labels {
 			labelsValues = append(labelsValues, row[label])
 		}
 		// Construct Prometheus values to sent back
-		for metric, metricHelp := range metricsDesc {
+		for metric, metricHelp := range m.MetricsDesc {
 			value, ok := e.parseFloat(metric, metricHelp, row)
 			if !ok {
 				// Skip invalid metric values
@@ -446,14 +445,14 @@ func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric,
 			e.logger.Debug("Query result",
 				"value", value)
 			// If metric do not use a field content in metric's name
-			if strings.Compare(fieldToAppend, "") == 0 {
+			if strings.Compare(m.FieldToAppend, "") == 0 {
 				desc := prometheus.NewDesc(
-					prometheus.BuildFQName(namespace, context, metric),
+					prometheus.BuildFQName(namespace, m.Context, metric),
 					metricHelp,
-					labels,
+					m.Labels,
 					constLabels,
 				)
-				if metricsType[strings.ToLower(metric)] == "histogram" {
+				if m.MetricsType[strings.ToLower(metric)] == "histogram" {
 					count, err := strconv.ParseUint(strings.TrimSpace(row["count"]), 10, 64)
 					if err != nil {
 						e.logger.Error("Unable to convert count value to int (metric=" + metric +
@@ -461,7 +460,7 @@ func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric,
 						continue
 					}
 					buckets := make(map[float64]uint64)
-					for field, le := range metricsBuckets[metric] {
+					for field, le := range m.MetricsBuckets[metric] {
 						lelimit, err := strconv.ParseFloat(strings.TrimSpace(le), 64)
 						if err != nil {
 							e.logger.Error("Unable to convert bucket limit value to float (metric=" + metric +
@@ -476,18 +475,18 @@ func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric,
 						}
 						buckets[lelimit] = counter
 					}
-					ch <- prometheus.MustNewConstHistogram(desc, count, value, buckets, labelsValues...)
+					m.cacheAndSend(ch, prometheus.MustNewConstHistogram(desc, count, value, buckets, labelsValues...))
 				} else {
-					ch <- prometheus.MustNewConstMetric(desc, getMetricType(metric, metricsType), value, labelsValues...)
+					m.cacheAndSend(ch, prometheus.MustNewConstMetric(desc, getMetricType(metric, m.MetricsType), value, labelsValues...))
 				}
 				// If no labels, use metric name
 			} else {
 				desc := prometheus.NewDesc(
-					prometheus.BuildFQName(namespace, context, cleanName(row[fieldToAppend])),
+					prometheus.BuildFQName(namespace, m.Context, cleanName(row[m.FieldToAppend])),
 					metricHelp,
 					nil, constLabels,
 				)
-				if metricsType[strings.ToLower(metric)] == "histogram" {
+				if m.MetricsType[strings.ToLower(metric)] == "histogram" {
 					count, err := strconv.ParseUint(strings.TrimSpace(row["count"]), 10, 64)
 					if err != nil {
 						e.logger.Error("Unable to convert count value to int (metric=" + metric +
@@ -495,7 +494,7 @@ func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric,
 						continue
 					}
 					buckets := make(map[float64]uint64)
-					for field, le := range metricsBuckets[metric] {
+					for field, le := range m.MetricsBuckets[metric] {
 						lelimit, err := strconv.ParseFloat(strings.TrimSpace(le), 64)
 						if err != nil {
 							e.logger.Error("Unable to convert bucket limit value to float (metric=" + metric +
@@ -510,9 +509,9 @@ func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric,
 						}
 						buckets[lelimit] = counter
 					}
-					ch <- prometheus.MustNewConstHistogram(desc, count, value, buckets)
+					m.cacheAndSend(ch, prometheus.MustNewConstHistogram(desc, count, value, buckets))
 				} else {
-					ch <- prometheus.MustNewConstMetric(desc, getMetricType(metric, metricsType), value)
+					m.cacheAndSend(ch, prometheus.MustNewConstMetric(desc, getMetricType(metric, m.MetricsType), value))
 				}
 			}
 			metricsCount++
@@ -520,12 +519,12 @@ func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric,
 		return nil
 	}
 	e.logger.Debug("Calling function GeneratePrometheusMetrics()")
-	err := e.generatePrometheusMetrics(d, genericParser, request, queryTimeout)
+	err := e.generatePrometheusMetrics(d, genericParser, m.Request, e.getQueryTimeout(m, d))
 	e.logger.Debug("ScrapeGenericValues() - metricsCount: " + strconv.Itoa(metricsCount))
 	if err != nil {
 		return err
 	}
-	if !ignoreZeroResult && metricsCount == 0 {
+	if !m.IgnoreZeroResult && metricsCount == 0 {
 		// a zero result error is returned for caller error identification.
 		// https://github.com/oracle/oracle-db-appdev-monitoring/issues/168
 		return newZeroResultError()
