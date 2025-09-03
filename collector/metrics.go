@@ -28,14 +28,13 @@ func (e *Exporter) isScrapeMetric(tick *time.Time, metric *Metric, d *Database) 
 	if !ok {
 		return true
 	}
-	id := metric.id(d.Name)
-	lastScraped := e.lastScraped[id]
+	lastScraped := d.MetricsCache.GetLastScraped(metric)
 	shouldScrape := lastScraped == nil ||
 		// If the metric's scrape interval is less than the time elapsed since the last scrape,
 		// we should scrape the metric.
 		interval < tick.Sub(*lastScraped)
 	if shouldScrape {
-		e.lastScraped[id] = tick
+		d.MetricsCache.SetLastScraped(metric, lastScraped)
 	}
 	return shouldScrape
 }
