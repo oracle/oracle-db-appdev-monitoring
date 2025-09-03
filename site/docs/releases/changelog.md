@@ -11,6 +11,10 @@ List of upcoming and historic changes to the exporter.
 
 Our current priorities are support for Exadata metrics.  We expect to address these in an upcoming release.
 
+- Added WARN logging when database configurations are duplicated in the exporter configuration.
+- Added INST_ID to `gv$` query metrics as a label.
+- Fixed multiple concurrency bugs when the exporter is connected to multiple databases and using a custom scrape interval.
+
 ### Version 2.0.3, August 27, 2025
 
 This release includes the following changes:

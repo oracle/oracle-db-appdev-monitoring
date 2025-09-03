@@ -118,7 +118,7 @@ databases:
     #   label_name2: label_value2
 ```
 
-### Only scraping metrics from specific databases
+### Scraping specific metrics from specific databases
 
 By default, metrics are scraped from every connected database. To expose only certain metrics on specific databases, configure the `databases` property of a metric. The following metric definition will only be scraped from databases "db2" and "db3":
 
@@ -134,3 +134,11 @@ databases = [ "db2", "db3" ]
 ```
 
 If the `databases` array is empty or not provided for a metric, that metric will be scraped from all connected databases.
+
+### Duplicated database configurations
+
+If one or more database configurations are "duplicated", that is, using the same URL and username, a WARN message is logged:
+
+```
+msg="duplicated database connections" "database connections"="db1, db2 count=2
+```
