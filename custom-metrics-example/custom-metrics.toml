@@ -1,19 +1,23 @@
 [[metric]]
 context = "slow_queries"
+labels = [ "inst_id" ]
 metricsdesc = { p95_time_usecs= "Gauge metric with percentile 95 of elapsed time.", p99_time_usecs= "Gauge metric with percentile 99 of elapsed time." }
 request = '''
-select percentile_disc(0.95) within group (order by elapsed_time) as p95_time_usecs, percentile_disc(0.99) within group (order by elapsed_time) as p99_time_usecs
+select inst_id, percentile_disc(0.95) within group (order by elapsed_time) as p95_time_usecs, percentile_disc(0.99) within group (order by elapsed_time) as p99_time_usecs
 from gv$sql
 where last_active_time >= sysdate - 5/(24*60)
+group by inst_id
 '''
 
 [[metric]]
 context = "big_queries"
+labels = [ "inst_id" ]
 metricsdesc = { p95_rows= "Gauge metric with percentile 95 of returned rows.", p99_rows= "Gauge metric with percentile 99 of returned rows." }
 request = '''
-select percentile_disc(0.95) within group (order by rownum) as p95_rows, percentile_disc(0.99) within group (order by rownum) as p99_rows
+select inst_id, percentile_disc(0.95) within group (order by rownum) as p95_rows, percentile_disc(0.99) within group (order by rownum) as p99_rows
 from gv$sql
 where last_active_time >= sysdate - 5/(24*60)
+group by inst_id
 '''
 
 # User segment queries may return zero rows on certain database configurations

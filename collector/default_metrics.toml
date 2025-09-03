@@ -1,63 +1,73 @@
 [[metric]]
 context = "sessions"
-labels = [ "status", "type" ]
-metricsdesc = { value= "Gauge metric with count of sessions by status and type." }
+labels = [ "inst_id", "status", "type" ]
+metricsdesc = { value= "Gauge metric with count of sessions by inst_id, status and type." }
 request = '''
-select status, type, count(*) as value
+select inst_id, status, type, count(*) as value
 from gv$session
-group by status, type
+group by inst_id, status, type
 '''
 
 [[metric]]
 context = "resource"
-labels = [ "resource_name" ]
+labels = [ "inst_id", "resource_name" ]
 metricsdesc = { current_utilization= "Generic counter metric from gv$resource_limit view in Oracle (current value).", limit_value="Generic counter metric from v$resource_limit view in Oracle (UNLIMITED: -1)." }
 request = '''
-select resource_name, current_utilization, case when trim(limit_value) like 'UNLIMITED' then '-1' else trim(limit_value) end as limit_value
+select inst_id, resource_name, current_utilization, case when trim(limit_value) like 'UNLIMITED' then '-1' else trim(limit_value) end as limit_value
 from gv$resource_limit
+group by inst_id, resource_name, current_utilization, limit_value
 '''
 ignorezeroresult = true
 
 [[metric]]
 context = "asm_diskgroup"
-labels = [ "name" ]
+labels = [ "inst_id", "name" ]
 metricsdesc = { total = "Total size of ASM disk group.", free = "Free space available on ASM disk group." }
 request = '''
-select name, total_mb*1024*1024 as total, free_mb*1024*1024 as free
+select inst_id, name, total_mb*1024*1024 as total, free_mb*1024*1024 as free
 from gv$asm_diskgroup_stat
 where exists (select 1 from gv$datafile where name like '+%')
 and inst_id = (select max(inst_id) from gv$instance)
-group by name, total_mb, free_mb
+group by inst_id, name, total_mb, free_mb
 '''
 ignorezeroresult = true
 
 [[metric]]
 context = "activity"
+labels = [ "inst_id" ]
 metricsdesc = { value="Generic counter metric from gv$sysstat view in Oracle." }
 fieldtoappend = "name"
 request = '''
-select name, value from gv$sysstat
+select inst_id, name, value from gv$sysstat
 where name in ('parse count (total)', 'execute count', 'user commits', 'user rollbacks')
+group by inst_id, name, value
 '''
 
 [[metric]]
 context = "process"
+labels = [ "inst_id" ]
 metricsdesc = { count="Gauge metric with count of processes." }
-request = "select count(*) as count from gv$process"
+request = '''
+select inst_id, count(*) as count
+from gv$process
+group by inst_id
+'''
 
 [[metric]]
 context = "wait_time"
-labels = ["wait_class","con_id"]
+labels = [ "inst_id", "wait_class", "con_id" ]
 metricsdesc = { time_waited_sec_total="counter metric from system_wait_class view in Oracle." }
 metricstype = { time_waited_sec_total = "counter" }
 fieldtoappend= "wait_class"
 request = '''
 select
+  inst_id,
   wait_class,
   round(time_waited/100,3) time_waited_sec_total,
   con_id
 from gv$system_wait_class
 where wait_class <> 'Idle'
+group by inst_id, wait_class, con_id, time_waited_sec_total
 '''
 ignorezeroresult = true
 
@@ -90,29 +100,32 @@ order by tablespace
 
 [[metric]]
 context = "db_system"
-labels = [ "name" ]
+labels = [ "inst_id", "name" ]
 metricsdesc = { value = "Database system resources metric" }
 request = '''
-select name, value
+select inst_id, name, value
 from gv$parameter
 where name in ('cpu_count', 'sga_max_size', 'pga_aggregate_limit')
+group by inst_id, name, value
 '''
 
 [[metric]]
 context = "db_platform"
-labels = [ "platform_name" ]
+labels = [ "inst_id", "platform_name" ]
 metricsdesc = { value = "Database platform" }
 request = '''
-SELECT platform_name, 1 as value FROM gv$database
+SELECT platform_name, 1 as value
+FROM gv$database
+GROUP BY inst_id, platform_name
 '''
 
 [[metric]]
 context = "top_sql"
-labels = [ "sql_id", "sql_text" ]
+labels = [ "inst_id", "sql_id", "sql_text" ]
 metricsdesc = { elapsed = "SQL statement elapsed time running" }
 request = '''
 select * from (
-select sql_id, elapsed_time / 1000000 as elapsed, substrb(replace(sql_text,'',' '),1,55) as sql_text
+select inst_id, sql_id, elapsed_time / 1000000 as elapsed, substrb(replace(sql_text,'',' '),1,55) as sql_text
 from   gv$sqlstats
 order by elapsed_time desc
 ) where rownum <= 15
@@ -126,7 +139,7 @@ ignorezeroresult = true
 
 [[metric]]
 context = "cache_hit_ratio"
-labels = [ "cache_hit_type" ]
+labels = [ "inst_id", "cache_hit_type" ]
 metricsdesc = { value = "Cache Hit Ratio" }
 request = '''
 select metric_name cache_hit_type, value
