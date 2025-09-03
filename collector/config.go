@@ -206,7 +206,7 @@ func LoadMetricsConfiguration(logger *slog.Logger, cfg *Config, path string, fla
 	}
 
 	m.merge(cfg, path, flags)
-	return m, nil
+	return m, m.validate(logger)
 }
 
 func (wc WebConfig) Flags() *web.FlagConfig {
@@ -301,4 +301,24 @@ func (m *MetricsConfiguration) defaultDatabase(cfg *Config) DatabaseConfig {
 		}
 	}
 	return dbconfig
+}
+
+func (m *MetricsConfiguration) validate(logger *slog.Logger) error {
+	m.checkDuplicatedDatabases(logger)
+	return nil
+}
+
+// checkDuplicatedDatabases validates duplicated databases. If a database entry is duplicated, log a warning.
+func (m *MetricsConfiguration) checkDuplicatedDatabases(logger *slog.Logger) {
+	dbs := map[string][]string{}
+	for db, cfg := range m.Databases {
+		key := cfg.URL + cfg.Username
+		dbs[key] = append(dbs[key], db)
+	}
+
+	for _, v := range dbs {
+		if len(v) > 1 {
+			logger.Warn("duplicated database connections", "database connections", strings.Join(v, ", "))
+		}
+	}
 }
