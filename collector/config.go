@@ -312,7 +312,7 @@ func (m *MetricsConfiguration) validate(logger *slog.Logger) error {
 func (m *MetricsConfiguration) checkDuplicatedDatabases(logger *slog.Logger) {
 	dbs := map[string][]string{}
 	for db, cfg := range m.Databases {
-		key := cfg.URL + cfg.Username
+		key := strings.ToLower(cfg.URL + cfg.Username)
 		dbs[key] = append(dbs[key], db)
 	}
 
