@@ -310,15 +310,23 @@ func (m *MetricsConfiguration) validate(logger *slog.Logger) error {
 
 // checkDuplicatedDatabases validates duplicated databases. If a database entry is duplicated, log a warning.
 func (m *MetricsConfiguration) checkDuplicatedDatabases(logger *slog.Logger) {
-	dbs := map[string][]string{}
+	type dbkey struct {
+		URL      string
+		Username string
+	}
+
+	dbs := map[dbkey][]string{}
 	for db, cfg := range m.Databases {
-		key := strings.ToLower(cfg.URL + cfg.Username)
+		key := dbkey{
+			URL:      cfg.URL,
+			Username: strings.ToLower(cfg.Username),
+		}
 		dbs[key] = append(dbs[key], db)
 	}
 
 	for _, v := range dbs {
 		if len(v) > 1 {
-			logger.Warn("duplicated database connections", "database connections", strings.Join(v, ", "))
+			logger.Warn("duplicated database connections", "database connections", strings.Join(v, ", "), "count", len(v))
 		}
 	}
 }
