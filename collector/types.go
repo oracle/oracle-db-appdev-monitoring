@@ -22,7 +22,6 @@ type Exporter struct {
 	scrapeResults   []prometheus.Metric
 	databases       []*Database
 	logger          *slog.Logger
-	lastScraped     map[string]*time.Time
 	allConstLabels  []string
 }
 

@@ -104,7 +104,6 @@ func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
 		logger:               logger,
 		MetricsConfiguration: m,
 		databases:            databases,
-		lastScraped:          map[string]*time.Time{},
 		allConstLabels:       allConstLabels,
 	}
 	e.metricsToScrape = e.DefaultMetrics()
