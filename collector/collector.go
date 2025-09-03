@@ -108,7 +108,7 @@ func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
 		allConstLabels:       allConstLabels,
 	}
 	e.metricsToScrape = e.DefaultMetrics()
-
+	e.initCache()
 	return e
 }
 
@@ -253,7 +253,7 @@ func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- er
 		go func() {
 			// If the metric doesn't need to be scraped, send the cached values
 			if !isScrapeMetric {
-				metric.sendAll(ch)
+				d.MetricsCache.SendAll(ch, metric)
 				errChan <- nil
 				return
 			}
@@ -416,6 +416,7 @@ func (e *Exporter) reloadMetrics() {
 	} else {
 		e.logger.Debug("No custom metrics defined.")
 	}
+	e.initCache()
 }
 
 // ScrapeMetric is an interface method to call scrapeGenericValues using Metric struct values
@@ -475,9 +476,9 @@ func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric,
 						}
 						buckets[lelimit] = counter
 					}
-					m.cacheAndSend(ch, prometheus.MustNewConstHistogram(desc, count, value, buckets, labelsValues...))
+					d.MetricsCache.CacheAndSend(ch, m, prometheus.MustNewConstHistogram(desc, count, value, buckets, labelsValues...))
 				} else {
-					m.cacheAndSend(ch, prometheus.MustNewConstMetric(desc, getMetricType(metric, m.MetricsType), value, labelsValues...))
+					d.MetricsCache.CacheAndSend(ch, m, prometheus.MustNewConstMetric(desc, getMetricType(metric, m.MetricsType), value, labelsValues...))
 				}
 				// If no labels, use metric name
 			} else {
@@ -509,9 +510,9 @@ func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric,
 						}
 						buckets[lelimit] = counter
 					}
-					m.cacheAndSend(ch, prometheus.MustNewConstHistogram(desc, count, value, buckets))
+					d.MetricsCache.CacheAndSend(ch, m, prometheus.MustNewConstHistogram(desc, count, value, buckets))
 				} else {
-					m.cacheAndSend(ch, prometheus.MustNewConstMetric(desc, getMetricType(metric, m.MetricsType), value))
+					d.MetricsCache.CacheAndSend(ch, m, prometheus.MustNewConstMetric(desc, getMetricType(metric, m.MetricsType), value))
 				}
 			}
 			metricsCount++
@@ -576,6 +577,12 @@ func (e *Exporter) generatePrometheusMetrics(d *Database, parse func(row map[str
 		}
 	}
 	return nil
+}
+
+func (e *Exporter) initCache() {
+	for _, d := range e.databases {
+		d.initCache(e.metricsToScrape.Metric)
+	}
 }
 
 func getMetricType(metricType string, metricsType map[string]string) prometheus.ValueType {

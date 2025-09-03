@@ -7,7 +7,6 @@ import (
 	"github.com/godror/godror/dsn"
 	"github.com/prometheus/client_golang/prometheus"
 	"log/slog"
-	"strings"
 	"sync"
 	"time"
 )
@@ -33,6 +32,26 @@ type Database struct {
 	Session *sql.DB
 	Type    float64
 	Config  DatabaseConfig
+	// MetricsCache holds computed metrics for a database, so these metrics are available on each scrape.
+	// Given a metric's scrape configuration, it may not be computed on the same interval as other metrics.
+	MetricsCache *MetricsCache
+}
+
+type MetricsCache struct {
+	// The outer map is to be initialized at startup, and when metrics are reloaded.
+	// Read access is concurrent, write access is (and must) be from a single thread.
+	cache map[*Metric]*MetricCacheRecord
+}
+
+// MetricCacheRecord stores metadata associated with a given Metric
+// As one metric may have multiple prometheus.Metric representations,
+// These are cached as a map value.
+type MetricCacheRecord struct {
+	// PrometheusMetrics stores cached prometheus metric values.
+	// Used when custom scrape intervals are used, and the metric must be returned to the collector, but not scraped.
+	PrometheusMetrics map[string]prometheus.Metric
+	// LastScraped is the collector tick time when the metric was last computed.
+	LastScraped *time.Time
 }
 
 type Config struct {
@@ -57,18 +76,17 @@ type Config struct {
 
 // Metric is an object description
 type Metric struct {
-	Context           string
-	Labels            []string
-	MetricsDesc       map[string]string
-	MetricsType       map[string]string
-	MetricsBuckets    map[string]map[string]string
-	FieldToAppend     string
-	Request           string
-	IgnoreZeroResult  bool
-	QueryTimeout      string
-	ScrapeInterval    string
-	Databases         []string
-	PrometheusMetrics map[string]prometheus.Metric
+	Context          string
+	Labels           []string
+	MetricsDesc      map[string]string
+	MetricsType      map[string]string
+	MetricsBuckets   map[string]map[string]string
+	FieldToAppend    string
+	Request          string
+	IgnoreZeroResult bool
+	QueryTimeout     string
+	ScrapeInterval   string
+	Databases        []string
 }
 
 // Metrics is a container structure for prometheus metrics
@@ -77,30 +95,4 @@ type Metrics struct {
 }
 
 type ScrapeContext struct {
-}
-
-func (m *Metric) id(dbname string) string {
-	builder := strings.Builder{}
-	builder.WriteString(dbname)
-	builder.WriteString(m.Context)
-	for _, d := range m.MetricsDesc {
-		builder.WriteString(d)
-	}
-	return builder.String()
-}
-
-// sendAll sends all cached metrics to the collector.
-func (m *Metric) sendAll(ch chan<- prometheus.Metric) {
-	for _, metric := range m.PrometheusMetrics {
-		ch <- metric
-	}
-}
-
-// cacheAndSend caches the metric and sends it to the collector.
-func (m *Metric) cacheAndSend(ch chan<- prometheus.Metric, metric prometheus.Metric) {
-	if len(m.PrometheusMetrics) == 0 {
-		m.PrometheusMetrics = map[string]prometheus.Metric{}
-	}
-	m.PrometheusMetrics[metric.Desc().String()] = metric
-	ch <- metric
 }
