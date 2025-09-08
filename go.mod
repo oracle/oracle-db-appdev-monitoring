@@ -7,7 +7,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/keyvault/azsecrets v0.12.0
 	github.com/BurntSushi/toml v1.5.0
 	github.com/alecthomas/kingpin/v2 v2.4.0
-	github.com/godror/godror v0.49.1
+	github.com/godror/godror v0.49.2
 	github.com/oracle/oci-go-sdk/v65 v65.99.1
 	github.com/prometheus/client_golang v1.23.0
 	github.com/prometheus/common v0.65.0
