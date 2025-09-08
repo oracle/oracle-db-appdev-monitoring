@@ -91,4 +91,13 @@ docker-arm:
 push-oraclelinux-image:
 	docker push $(IMAGE_ID)
 
-.PHONY: version build deps go-test clean docker
+podman-build:
+    podman manifest create $(IMAGE_ID)
+    podman build --platform linux/amd64,linux/arm64  --manifest $(IMAGE_ID)
+
+podman-push:
+    podman manifest push $(IMAGE_ID)
+
+podman-release: podman-build podman-push
+
+.PHONY: version build deps go-test clean docker podman-build podman-push podman-release
