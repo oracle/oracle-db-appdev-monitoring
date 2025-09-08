@@ -17,7 +17,7 @@ ENV PATH=$PATH:/usr/local/go/bin
 
 WORKDIR /go/src/oracledb_exporter
 COPY . .
-RUN go get -d -v
+RUN go mod download
 
 ARG VERSION
 ENV VERSION=${VERSION:-1.0.0}

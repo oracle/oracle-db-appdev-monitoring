@@ -72,7 +72,7 @@ const config: Config = {
         },
         {
           type: 'docsVersionDropdown',
-          versions: ['current', '2.0.3']
+          versions: ['current', '2.0.4', '2.0.3' ]
         },
         {
           href: 'https://github.com/oracle/oracle-db-appdev-monitoring',
