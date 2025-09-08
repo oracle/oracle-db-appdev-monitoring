@@ -3,7 +3,7 @@ OS_TYPE        ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
 ARCH_TYPE      ?= $(subst x86_64,amd64,$(patsubst i%86,386,$(ARCH)))
 GOOS           ?= $(shell go env GOOS)
 GOARCH         ?= $(shell go env GOARCH)
-VERSION        ?= 2.0.3
+VERSION        ?= 2.0.4
 LDFLAGS        := -X main.Version=$(VERSION)
 GOFLAGS        := -ldflags "$(LDFLAGS) -s -w"
 BUILD_ARGS      = --build-arg VERSION=$(VERSION)
@@ -91,4 +91,13 @@ docker-arm:
 push-oraclelinux-image:
 	docker push $(IMAGE_ID)
 
-.PHONY: version build deps go-test clean docker
+podman-build:
+    podman manifest create $(IMAGE_ID)
+    podman build --platform linux/amd64,linux/arm64  --manifest $(IMAGE_ID)
+
+podman-push:
+    podman manifest push $(IMAGE_ID)
+
+podman-release: podman-build podman-push
+
+.PHONY: version build deps go-test clean docker podman-build podman-push podman-release
