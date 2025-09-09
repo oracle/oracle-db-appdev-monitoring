@@ -43,6 +43,10 @@ go-build-linux-amd64:
 go-build-linux-arm64:
 	CGO_ENABLED=1 GOOS=linux GOARCH=arm64 $(MAKE) go-build -j2
 
+.PHONY: go-build-linux-gcc-arm64
+go-build-linux-gcc-arm64:
+	CGO_ENABLED=1 CC=aarch64-linux-gnu-gcc GOOS=linux GOARCH=arm64 $(MAKE) go-build -j2
+
 .PHONY: go-build-darwin-amd64
 go-build-darwin-amd64:
 	CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 $(MAKE) go-build -j2
@@ -58,6 +62,8 @@ go-build-windows-amd64:
 .PHONY: go-build-windows-x86
 go-build-windows-x86:
 	CGO_ENABLED=1 GOOS=windows GOARCH=386 $(MAKE) go-build -j2
+
+dist: go-build-linux-gcc-arm64 go-build-linux-amd64
 
 go-lint:
 	@echo "Linting codebase"
@@ -91,12 +97,15 @@ docker-arm:
 push-oraclelinux-image:
 	docker push $(IMAGE_ID)
 
+# build multiarch (linux-amd64, linux-arm64) images with podman
 podman-build:
-    podman manifest create $(IMAGE_ID)
-    podman build --platform linux/amd64,linux/arm64  --manifest $(IMAGE_ID)
+	podman manifest rm $(IMAGE_ID) || true
+	podman manifest create $(IMAGE_ID)
+	podman build --platform linux/amd64 --manifest $(IMAGE_ID) --build-arg BASE_IMAGE=$(ORACLE_LINUX_BASE_IMAGE) --build-arg GOARCH=amd64 --build-arg GOOS=linux --build-arg VERSION=$(VERSION) .
+	podman build --platform linux/arm64 --manifest $(IMAGE_ID) --build-arg BASE_IMAGE=$(ORACLE_LINUX_BASE_IMAGE) --build-arg GOARCH=arm64 --build-arg GOOS=linux --build-arg VERSION=$(VERSION) .
 
 podman-push:
-    podman manifest push $(IMAGE_ID)
+	podman manifest push $(IMAGE_ID)
 
 podman-release: podman-build podman-push
 
