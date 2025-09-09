@@ -11,6 +11,12 @@ List of upcoming and historic changes to the exporter.
 
 Our current priorities are support for Exadata metrics.  We expect to address these in an upcoming release.
 
+- Updated project dependencies.
+- Fix `wait_time` default metric to work with Oracle Database 19c.
+
+Thank you to the following people for their suggestions and contributions:
+- [@romankspb](https://github.com/romankspb)
+
 ### Version 2.0.4, September 8, 2025
 
 This release includes the following changes:
