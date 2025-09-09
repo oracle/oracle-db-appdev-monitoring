@@ -61,13 +61,13 @@ metricstype = { time_waited_sec_total = "counter" }
 fieldtoappend= "wait_class"
 request = '''
 select
-  inst_id,
-  wait_class,
-  round(time_waited/100,3) time_waited_sec_total,
-  con_id
+    inst_id,
+    wait_class,
+    round(time_waited/100,3) time_waited_sec_total,
+    con_id
 from gv$system_wait_class
 where wait_class <> 'Idle'
-group by inst_id, wait_class, con_id, time_waited_sec_total
+group by inst_id, wait_class, con_id, round(time_waited/100,3)
 '''
 ignorezeroresult = true
 
