@@ -12,6 +12,7 @@ List of upcoming and historic changes to the exporter.
 Our current priorities are support for Exadata metrics.  We expect to address these in an upcoming release.
 
 - Updated project dependencies.
+- Added metric label support for metrics using the `fieldtoappend` property. The default `wait_time` and `activity` use the `fieldtoappend` property. 
 - Fix `wait_time` default metric to work with Oracle Database 19c.
 
 Thank you to the following people for their suggestions and contributions:

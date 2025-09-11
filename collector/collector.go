@@ -30,7 +30,7 @@ var (
 	exporterName = "exporter"
 )
 
-// ScrapResult is container structure for error handling
+// ScrapeResult is container structure for error handling
 type ScrapeResult struct {
 	Err         error
 	Metric      Metric
@@ -433,7 +433,10 @@ func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric,
 		// Construct labels value
 		labelsValues := []string{}
 		for _, label := range m.Labels {
-			labelsValues = append(labelsValues, row[label])
+			// Don't include FieldToAppend in the label values
+			if label != m.FieldToAppend {
+				labelsValues = append(labelsValues, row[label])
+			}
 		}
 		// Construct Prometheus values to sent back
 		for metric, metricHelp := range m.MetricsDesc {
@@ -444,75 +447,42 @@ func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric,
 			}
 			e.logger.Debug("Query result",
 				"value", value)
-			// If metric do not use a field content in metric's name
-			if strings.Compare(m.FieldToAppend, "") == 0 {
-				desc := prometheus.NewDesc(
-					prometheus.BuildFQName(namespace, m.Context, metric),
-					metricHelp,
-					m.Labels,
-					constLabels,
-				)
-				if m.MetricsType[strings.ToLower(metric)] == "histogram" {
-					count, err := strconv.ParseUint(strings.TrimSpace(row["count"]), 10, 64)
+
+			// Build metric desc
+			suffix := metricNameSuffix(row, metric, m.FieldToAppend)
+			desc := prometheus.NewDesc(
+				prometheus.BuildFQName(namespace, m.Context, suffix),
+				metricHelp,
+				m.GetLabels(),
+				constLabels,
+			)
+			// process histogram metric, then cache and send metric through channel
+			if m.MetricsType[strings.ToLower(metric)] == "histogram" {
+				count, err := strconv.ParseUint(strings.TrimSpace(row["count"]), 10, 64)
+				if err != nil {
+					e.logger.Error("Unable to convert count value to int (metric=" + metric +
+						",metricHelp=" + metricHelp + ",value=<" + row["count"] + ">)")
+					continue
+				}
+				buckets := make(map[float64]uint64)
+				for field, le := range m.MetricsBuckets[metric] {
+					lelimit, err := strconv.ParseFloat(strings.TrimSpace(le), 64)
 					if err != nil {
-						e.logger.Error("Unable to convert count value to int (metric=" + metric +
-							",metricHelp=" + metricHelp + ",value=<" + row["count"] + ">)")
+						e.logger.Error("Unable to convert bucket limit value to float (metric=" + metric +
+							",metricHelp=" + metricHelp + ",bucketlimit=<" + le + ">)")
 						continue
 					}
-					buckets := make(map[float64]uint64)
-					for field, le := range m.MetricsBuckets[metric] {
-						lelimit, err := strconv.ParseFloat(strings.TrimSpace(le), 64)
-						if err != nil {
-							e.logger.Error("Unable to convert bucket limit value to float (metric=" + metric +
-								",metricHelp=" + metricHelp + ",bucketlimit=<" + le + ">)")
-							continue
-						}
-						counter, err := strconv.ParseUint(strings.TrimSpace(row[field]), 10, 64)
-						if err != nil {
-							e.logger.Error("Unable to convert ", field, " value to int (metric="+metric+
-								",metricHelp="+metricHelp+",value=<"+row[field]+">)")
-							continue
-						}
-						buckets[lelimit] = counter
+					counter, err := strconv.ParseUint(strings.TrimSpace(row[field]), 10, 64)
+					if err != nil {
+						e.logger.Error("Unable to convert ", field, " value to int (metric="+metric+
+							",metricHelp="+metricHelp+",value=<"+row[field]+">)")
+						continue
 					}
-					d.MetricsCache.CacheAndSend(ch, m, prometheus.MustNewConstHistogram(desc, count, value, buckets, labelsValues...))
-				} else {
-					d.MetricsCache.CacheAndSend(ch, m, prometheus.MustNewConstMetric(desc, getMetricType(metric, m.MetricsType), value, labelsValues...))
+					buckets[lelimit] = counter
 				}
-				// If no labels, use metric name
+				d.MetricsCache.CacheAndSend(ch, m, prometheus.MustNewConstHistogram(desc, count, value, buckets, labelsValues...))
 			} else {
-				desc := prometheus.NewDesc(
-					prometheus.BuildFQName(namespace, m.Context, cleanName(row[m.FieldToAppend])),
-					metricHelp,
-					nil, constLabels,
-				)
-				if m.MetricsType[strings.ToLower(metric)] == "histogram" {
-					count, err := strconv.ParseUint(strings.TrimSpace(row["count"]), 10, 64)
-					if err != nil {
-						e.logger.Error("Unable to convert count value to int (metric=" + metric +
-							",metricHelp=" + metricHelp + ",value=<" + row["count"] + ">)")
-						continue
-					}
-					buckets := make(map[float64]uint64)
-					for field, le := range m.MetricsBuckets[metric] {
-						lelimit, err := strconv.ParseFloat(strings.TrimSpace(le), 64)
-						if err != nil {
-							e.logger.Error("Unable to convert bucket limit value to float (metric=" + metric +
-								",metricHelp=" + metricHelp + ",bucketlimit=<" + le + ">)")
-							continue
-						}
-						counter, err := strconv.ParseUint(strings.TrimSpace(row[field]), 10, 64)
-						if err != nil {
-							e.logger.Error("Unable to convert ", field, " value to int (metric="+metric+
-								",metricHelp="+metricHelp+",value=<"+row[field]+">)")
-							continue
-						}
-						buckets[lelimit] = counter
-					}
-					d.MetricsCache.CacheAndSend(ch, m, prometheus.MustNewConstHistogram(desc, count, value, buckets))
-				} else {
-					d.MetricsCache.CacheAndSend(ch, m, prometheus.MustNewConstMetric(desc, getMetricType(metric, m.MetricsType), value))
-				}
+				d.MetricsCache.CacheAndSend(ch, m, prometheus.MustNewConstMetric(desc, getMetricType(metric, m.MetricsType), value, labelsValues...))
 			}
 			metricsCount++
 		}
@@ -610,4 +580,11 @@ func cleanName(s string) string {
 	s = strings.Replace(s, "*", "", -1)  // Remove asterisks
 	s = strings.ToLower(s)
 	return s
+}
+
+func metricNameSuffix(row map[string]string, metric, fieldToAppend string) string {
+	if len(fieldToAppend) == 0 {
+		return metric
+	}
+	return cleanName(row[fieldToAppend])
 }
