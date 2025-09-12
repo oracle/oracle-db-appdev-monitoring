@@ -77,3 +77,18 @@ func (e *Exporter) parseFloat(metric, metricHelp string, row map[string]string) 
 	}
 	return valueFloat, true
 }
+
+func (m *Metric) GetLabels() []string {
+	if len(m.FieldToAppend) == 0 {
+		return m.Labels
+	}
+	// Do not include FieldToAppend in metric labels,
+	// as this field is appended to the metric FQDN.
+	var labels []string
+	for _, label := range m.Labels {
+		if label != m.FieldToAppend {
+			labels = append(labels, label)
+		}
+	}
+	return labels
+}
