@@ -58,9 +58,9 @@ const config: Config = {
     // Replace with your project's social card
     image: 'img/logo.png',
     navbar: {
-      title: 'Oracle Database Monitoring Exporter',
+      title: 'Oracle Database Metrics Exporter',
       logo: {
-        alt: 'Oracle Database Monitoring Exporter Logo',
+        alt: 'Oracle Database Metrics Exporter Logo',
         src: 'img/logo_home.png',
       },
       items: [
