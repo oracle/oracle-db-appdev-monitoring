@@ -14,11 +14,11 @@ import (
 // and the time since the last scrape is less than the custom scrape interval.
 // If there is no tick time or last known tick, the metric is always scraped.
 func (e *Exporter) isScrapeMetric(tick *time.Time, metric *Metric, d *Database) bool {
-	if len(metric.Databases) > 0 {
-		if !slices.Contains(metric.Databases, d.Name) {
-			return false
-		}
+	// If the metric isn't enabled for the database, don't scrape it.
+	if !metric.IsEnabledForDatabase(d) {
+		return false
 	}
+
 	// Always scrape the metric if we don't have a current tick.
 	if tick == nil {
 		return true
@@ -91,4 +91,15 @@ func (m *Metric) GetLabels() []string {
 		}
 	}
 	return labels
+}
+
+// IsEnabledForDatabase checks if a metric is enabled for a database.
+// If the m.Databases slice is nil, the metric is enabled for all databases.
+// If the m.Databases slice contains the database name, the metric is enabled for that database.
+// Otherwise, the metric is disabled for all databases (non-nil, empty m.Databases slice)
+func (m *Metric) IsEnabledForDatabase(d *Database) bool {
+	if m.Databases == nil || slices.Contains(m.Databases, d.Name) {
+		return true
+	}
+	return false
 }
