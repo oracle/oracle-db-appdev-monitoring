@@ -129,6 +129,7 @@ metrics:
       order by elapsed_time desc
       ) where rownum <= 15
     ignorezeroresult: true
+    querytimeout: "10s"
     # scrapeinterval: "5m"
 
   - context: "cache_hit_ratio"
