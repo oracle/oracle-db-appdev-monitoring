@@ -131,6 +131,7 @@ order by elapsed_time desc
 ) where rownum <= 15
 '''
 ignorezeroresult = true
+querytimeout = "10s"
 # scrapeinterval = "5m"
 # The previous line is an example of changing the interval at which this one metric
 # will be scraped. You may wish to do this to scrape a metric less often, if the SQL
