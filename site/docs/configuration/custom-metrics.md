@@ -123,6 +123,27 @@ oracledb_test_value_2 2
 You can find [working examples](https://github.com/oracle/oracle-db-appdev-monitoring/blob/main/custom-metrics-example/custom-metrics.toml) of custom metrics for slow queries, big queries and top 100 tables.
 An example of [custom metrics for Transacational Event Queues](https://github.com/oracle/oracle-db-appdev-monitoring/blob/main/custom-metrics-example/txeventq-metrics.toml) is also provided.
 
+### YAML Metrics
+
+Metrics may be defined with YAML instead of TOML. YAML metric field names correspond to TOML metric field names.
+
+YAML metrics are defined as a list of `metrics` objects:
+
+
+```yaml
+metrics:
+  - context: "sessions"
+    labels: [ "inst_id", "status", "type" ]
+    metricsdesc:
+      value: "Gauge metric with count of sessions by inst_id, status and type."
+    request: |
+      select inst_id, status, type, count(*) as value
+      from gv$session
+      group by inst_id, status, type
+```
+
+The default metrics are provided in YAML format as an example. See [default-metrics.yaml](https://github.com/oracle/oracle-db-appdev-monitoring/blob/main/default-metrics.yaml).
+
 ### Customize metrics in a container image
 
 If you run the exporter as a container image and want to include your custom metrics in the image itself, you can use the following example `Dockerfile` to create a new image:
