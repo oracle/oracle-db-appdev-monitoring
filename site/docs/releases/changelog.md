@@ -25,6 +25,7 @@ Thank you to the following people for their suggestions and contributions:
 - [@muhammadabdullah-amjad](https://github.com/muhammadabdullah-amjad)
 - [@MansuyDavid](https://github.com/MansuyDavid)
 - [@borkoz](https://github.com/borkoz)
+- [@ristagg](https://github.com/ristagg)
 
 ### Version 2.0.4, September 8, 2025
 
