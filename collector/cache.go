@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func NewMetricsCache(metrics []*Metric) *MetricsCache {
+func NewMetricsCache(metrics map[string]*Metric) *MetricsCache {
 	c := map[*Metric]*MetricCacheRecord{}
 
 	for _, metric := range metrics {

@@ -23,6 +23,10 @@ metrics:
 
 You may also use `--custom.metrics` flag followed by a comma separated list of TOML or YAML files, or export `CUSTOM_METRICS` variable environment (`export CUSTOM_METRICS=my-custom-metrics.toml,my-other-custom-metrics.toml`)
 
+### Metric Hot Reload
+
+The exporter watches for changes in custom metrics. When these files change, the exporter hot reloads the metrics definition, and serves the new metrics on the next scrape.
+
 ### Metric Schema
 
 Metrics files must contain a series of `[[metric]]` definitions, in TOML, or the equivalent definition in a YAML file. Each metric definition must follow the exporter's metric schema:
@@ -122,6 +126,40 @@ oracledb_test_value_2 2
 
 You can find [working examples](https://github.com/oracle/oracle-db-appdev-monitoring/blob/main/custom-metrics-example/custom-metrics.toml) of custom metrics for slow queries, big queries and top 100 tables.
 An example of [custom metrics for Transacational Event Queues](https://github.com/oracle/oracle-db-appdev-monitoring/blob/main/custom-metrics-example/txeventq-metrics.toml) is also provided.
+
+#### Override Existing, Individual Metrics
+
+You may override properties for existing metrics by supplying a new, custom metric definition with the same `context` and `metricsdesc` values. For example, if you have an existing metric like so:
+
+```toml
+[[metric]]
+context = "my_default_metric"
+metricsdesc = { value_1 = "Simple example returning always 1.", value_2 = "Same but returning always 2." }
+request = "SELECT 1 as value_1, 2 as value_2 FROM DUAL"
+```
+
+You can redefine this metric in a custom metrics file to change any properties other than `context` or `metricsdesc`. For example, overriding the previous metric with `labels`, `scrapeinterval`, and `querytimeout` properties:
+
+```toml
+[[metric]]
+context = "my_default_metric"
+metricsdesc = { value_1 = "Simple example returning always 1.", value_2 = "Same but returning always 2." }
+labels = [ "label_1", "label_2" ]
+request = "SELECT 1 as value_1, 2 as value_2 FROM DUAL"
+scrapeinterval = "30s"
+querytimeout = "10s"
+```
+
+Then, provide any metrics overrides as custom metrics files in the [exporter configuration file](config-file.md):
+
+```yaml
+metrics:
+  ## Paths to any custom metrics files
+  custom:
+    - my-custom-metrics.toml
+```
+
+If any metric appears more than once in the custom metrics file list, the metric definition in the last file provided takes precedence.
 
 ### YAML Metrics
 
