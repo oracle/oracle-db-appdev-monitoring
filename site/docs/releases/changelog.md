@@ -13,7 +13,7 @@ Our current priorities to support metrics for advanced database features and use
 
 - Updated project dependencies.
 - Standardize multi-arch builds and document supported database versions.
-- If the exporter fails to connect to a database due to invalid credentials (ORA-01017 error), that database configuration will be invalidated and the exporter will not attempt to re-establish the database connection. Other databases will continue to be scraped.
+- If the exporter fails to connect to a database due to invalid or locked credentials (ORA-01017 or ORA-28000 errors), that database configuration will be invalidated and the exporter will not attempt to re-establish the database connection. Other databases will continue to be scraped.
 - Metrics with an empty databases array (`databases = []`) are now considered disabled, and will not be scraped.
 - Increased the default query timeout for the `top_sql` metric to 10 seconds (previously 5 seconds).
 - Metrics using the `scrapeinterval` property will no longer be scraped on every request if they have a cached value. This only applies when the metrics exporter is configured to scrape metrics _on request_, rather than on a global interval.

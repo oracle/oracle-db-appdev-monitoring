@@ -18,6 +18,7 @@ import (
 
 const (
 	ora01017code = 1017
+	ora28000code = 28000
 )
 
 func (d *Database) UpMetric(exporterLabels map[string]string) prometheus.Metric {
@@ -154,7 +155,7 @@ func isInvalidCredentialsError(err error) bool {
 	if !ok {
 		return false
 	}
-	return oraErr.Code() == ora01017
+	return oraErr.Code() == ora01017code || oraErr.Code() == ora28000code
 }
 
 func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.DB, float64) {
