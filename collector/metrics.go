@@ -34,7 +34,7 @@ func (e *Exporter) isScrapeMetric(tick *time.Time, metric *Metric, d *Database) 
 		// we should scrape the metric.
 		interval < tick.Sub(*lastScraped)
 	if shouldScrape {
-		d.MetricsCache.SetLastScraped(metric, lastScraped)
+		d.MetricsCache.SetLastScraped(metric, tick)
 	}
 	return shouldScrape
 }
@@ -76,6 +76,15 @@ func (e *Exporter) parseFloat(metric, metricHelp string, row map[string]string) 
 		return -1, false
 	}
 	return valueFloat, true
+}
+
+func (m *Metric) ID() string {
+	sb := strings.Builder{}
+	sb.WriteString(m.Context)
+	for desc := range m.MetricsDesc {
+		sb.WriteString(desc)
+	}
+	return sb.String()
 }
 
 func (m *Metric) GetLabels() []string {

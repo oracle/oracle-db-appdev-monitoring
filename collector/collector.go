@@ -168,7 +168,8 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	// otherwise do a normal scrape per request
 	e.mu.Lock() // ensure no simultaneous scrapes
 	defer e.mu.Unlock()
-	e.scrape(ch, nil)
+	now := time.Now()
+	e.scrape(ch, &now)
 	ch <- e.duration
 	ch <- e.totalScrapes
 	ch <- e.error
@@ -388,34 +389,6 @@ func hashFile(h hash.Hash, fn string) error {
 		return err
 	}
 	return nil
-}
-
-func (e *Exporter) reloadMetrics() {
-	// Truncate metricsToScrape
-	e.metricsToScrape.Metric = []*Metric{}
-
-	// Load default metrics
-	defaultMetrics := e.DefaultMetrics()
-	e.metricsToScrape.Metric = defaultMetrics.Metric
-
-	// If custom metrics, load it
-	if len(e.CustomMetricsFiles()) > 0 {
-		for _, _customMetrics := range e.CustomMetricsFiles() {
-			metrics := &Metrics{}
-
-			if err := loadMetricsConfig(_customMetrics, metrics); err != nil {
-				e.logger.Error("failed to load custom metrics", "error", err)
-				panic(errors.New("Error while loading " + _customMetrics))
-			} else {
-				e.logger.Info("Successfully loaded custom metrics from " + _customMetrics)
-			}
-
-			e.metricsToScrape.Metric = append(e.metricsToScrape.Metric, metrics.Metric...)
-		}
-	} else {
-		e.logger.Debug("No custom metrics defined.")
-	}
-	e.initCache()
 }
 
 // ScrapeMetric is an interface method to call scrapeGenericValues using Metric struct values
