@@ -4,6 +4,7 @@
 package collector
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -11,6 +12,34 @@ import (
 	"github.com/BurntSushi/toml"
 	"gopkg.in/yaml.v2"
 )
+
+func (e *Exporter) reloadMetrics() {
+	// Truncate metricsToScrape
+	e.metricsToScrape.Metric = []*Metric{}
+
+	// Load default metrics
+	defaultMetrics := e.DefaultMetrics()
+	e.metricsToScrape.Metric = defaultMetrics.Metric
+
+	// If custom metrics, load it
+	if len(e.CustomMetricsFiles()) > 0 {
+		for _, _customMetrics := range e.CustomMetricsFiles() {
+			metrics := &Metrics{}
+
+			if err := loadMetricsConfig(_customMetrics, metrics); err != nil {
+				e.logger.Error("failed to load custom metrics", "error", err)
+				panic(errors.New("Error while loading " + _customMetrics))
+			} else {
+				e.logger.Info("Successfully loaded custom metrics from " + _customMetrics)
+			}
+
+			e.metricsToScrape.Metric = append(e.metricsToScrape.Metric, metrics.Metric...)
+		}
+	} else {
+		e.logger.Debug("No custom metrics defined.")
+	}
+	e.initCache()
+}
 
 func loadYamlMetricsConfig(_metricsFileName string, metrics *Metrics) error {
 	yamlBytes, err := os.ReadFile(_metricsFileName)

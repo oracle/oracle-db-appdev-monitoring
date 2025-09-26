@@ -1,9 +1,9 @@
 ---
-title: Exporter Config File
+title: Exporter Configuration
 sidebar_position: 1
 ---
 
-# Exporter Config File
+# Exporter Configuration
 
 The recommended way to configure the exporter is with the `--config.file` argument, specifying a YAML configuration file.
 
@@ -91,6 +91,20 @@ log:
 #  systemdSocket: true|false
 #  configFile: /path/to/webconfigfile
 ```
+
+### Scrape on request vs. Scrape on interval
+
+The metrics exporter has two scraping modes: scrape on request, and scrape on interval. By default, the metrics exporter scrapes metrics on request, when the `/metrics` endpoint is invoked.
+
+To scrape metrics on a given interval, set the `metrics.scrapeInterval` property to a valid interval:
+
+```yaml
+metrics:
+  # Metrics will be scraped every 30s.
+  scrapeInterval: 30s
+```
+
+An individual metric may have its own scrape interval separate from the exporter's scrape interval. See the [metric schema](custom-metrics.md#metric-schema) for details on configuring per-metric scrape intervals.
 
 ### Config file in a container image
 

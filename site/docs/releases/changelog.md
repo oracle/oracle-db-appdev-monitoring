@@ -15,14 +15,17 @@ Our current priorities to support metrics for advanced database features and use
 - Standardize multi-arch builds and document supported database versions.
 - Metrics with an empty databases array (`databases = []`) are now considered disabled, and will not be scraped.
 - Increased the default query timeout for the `top_sql` metric to 10 seconds (previously 5 seconds).
+- Metrics using the `scrapeinterval` property will no longer be scraped on every request if they have a cached value. This only applies when the metrics exporter is configured to scrape metrics _on request_, rather than on a global interval.
 - Metrics using the `fieldtoappend` property now support labels. The `wait_time` and `activity` default metrics use the `fieldtoappend` property, and now properly display their labels. 
 - Fix `wait_time` default metric to work with Oracle Database 19c.
+- Fix an issue where the exporter would unnecessarily scrape metrics with a custom scrape interval.
 
 Thank you to the following people for their suggestions and contributions:
 - [@romankspb](https://github.com/romankspb)
 - [@muhammadabdullah-amjad](https://github.com/muhammadabdullah-amjad)
 - [@MansuyDavid](https://github.com/MansuyDavid)
 - [@borkoz](https://github.com/borkoz)
+- [@ristagg](https://github.com/ristagg)
 
 ### Version 2.0.4, September 8, 2025
 

@@ -200,7 +200,7 @@ func LoadMetricsConfiguration(logger *slog.Logger, cfg *Config, path string, fla
 			return m, yerr
 		}
 	} else {
-		logger.Warn("Configuring default database from CLI parameters is deprecated. Use of the '--config.file' argument is preferred. See https://github.com/oracle/oracle-db-appdev-monitoring?tab=readme-ov-file#standalone-binary")
+		logger.Warn("Configuring default database from CLI parameters is deprecated. Use of the '--config.file' argument is preferred. See https://oracle.github.io/oracle-db-appdev-monitoring/docs/getting-started/basics#standalone-binary")
 		m.Databases = make(map[string]DatabaseConfig)
 		m.Databases["default"] = m.defaultDatabase(cfg)
 	}
