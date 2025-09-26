@@ -16,6 +16,10 @@ import (
 	"time"
 )
 
+const (
+	ora01017code = 1017
+)
+
 func (d *Database) UpMetric(exporterLabels map[string]string) prometheus.Metric {
 	desc := prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "up"),
@@ -150,7 +154,7 @@ func isInvalidCredentialsError(err error) bool {
 	if !ok {
 		return false
 	}
-	return oraErr.Code() == 1017
+	return oraErr.Code() == ora01017
 }
 
 func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.DB, float64) {
