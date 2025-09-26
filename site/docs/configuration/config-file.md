@@ -96,7 +96,7 @@ log:
 
 The metrics exporter has two scraping modes: scrape on request, and scrape on interval. By default, the metrics exporter scrapes metrics on request, when the `/metrics` endpoint is invoked.
 
-To enable scrape on request, set the `metrics.scrapeInterval` property to a valid interval:
+To scrape metrics on a given interval, set the `metrics.scrapeInterval` property to a valid interval:
 
 ```yaml
 metrics:
@@ -104,7 +104,7 @@ metrics:
   scrapeInterval: 30s
 ```
 
-In either mode, an individual metric may have its own scrape interval. See the [metric schema](custom-metrics.md#metric-schema) for more details.
+An individual metric may have its own scrape interval separate from the exporter's scrape interval. See the [metric schema](custom-metrics.md#metric-schema) for details on configuring per-metric scrape intervals.
 
 ### Config file in a container image
 
