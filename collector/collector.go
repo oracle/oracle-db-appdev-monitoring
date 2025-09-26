@@ -237,6 +237,12 @@ func (e *Exporter) scheduledScrape(tick *time.Time) {
 }
 
 func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- error, d *Database, tick *time.Time) int {
+	// If the database configuration is invalid, do not attempt to ping or reestablish the database connection.
+	if !d.IsValid() {
+		e.logger.Warn("Invalid database configuration, will not attempt reconnection", "database", d.Name)
+		errChan <- fmt.Errorf("database %s is invalid, will not be scraped", d.Name)
+		return 1
+	}
 	// If ping fails, we will try again on the next iteration of metrics scraping
 	if err := d.ping(e.logger); err != nil {
 		e.logger.Error("Error pinging database", "error", err, "database", d.Name)

@@ -24,6 +24,10 @@ type LogRecord struct {
 var databaseFailures map[string]int = map[string]int{}
 
 func UpdateLog(logDestination string, logger *slog.Logger, d *collector.Database) {
+	// Do not try to query the alert log if the database configuration is invalid.
+	if !d.IsValid() {
+		return
+	}
 
 	queryFailures := databaseFailures[d.Name]
 	if queryFailures == 3 {

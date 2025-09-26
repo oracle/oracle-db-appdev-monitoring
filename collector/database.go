@@ -6,6 +6,7 @@ package collector
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/godror/godror"
 	"github.com/godror/godror/dsn"
@@ -49,6 +50,10 @@ func (d *Database) ping(logger *slog.Logger) error {
 	err := d.Session.PingContext(ctx)
 	if err != nil {
 		d.Up = 0
+		if isInvalidCredentialsError(err) {
+			d.invalidate()
+			return err
+		}
 		// If database is closed, try to reconnect
 		if strings.Contains(err.Error(), "sql: database is closed") {
 			db, dbtype := connect(logger, d.Name, d.Config)
@@ -83,6 +88,7 @@ func NewDatabase(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) *D
 		Session: db,
 		Type:    dbtype,
 		Config:  dbconfig,
+		Valid:   true,
 	}
 }
 
@@ -125,6 +131,26 @@ func (d *Database) WarmupConnectionPool(logger *slog.Logger) {
 			logger.Debug("Failed to return database connection to pool on warmup", "conn", i+1, "error", err, "database", d.Name)
 		}
 	}
+}
+
+func (d *Database) IsValid() bool {
+	return d.Valid
+}
+
+func (d *Database) invalidate() {
+	d.Valid = false
+}
+
+func isInvalidCredentialsError(err error) bool {
+	err = errors.Unwrap(err)
+	if err == nil {
+		return false
+	}
+	oraErr, ok := err.(*godror.OraErr)
+	if !ok {
+		return false
+	}
+	return oraErr.Code() == 1017
 }
 
 func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.DB, float64) {
