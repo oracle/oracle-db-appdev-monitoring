@@ -8,7 +8,7 @@ require (
 	github.com/BurntSushi/toml v1.5.0
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/godror/godror v0.49.3
-	github.com/oracle/oci-go-sdk/v65 v65.100.1
+	github.com/oracle/oci-go-sdk/v65 v65.101.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/common v0.66.1
 	github.com/prometheus/exporter-toolkit v0.14.1
