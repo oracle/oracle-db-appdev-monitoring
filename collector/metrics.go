@@ -112,3 +112,11 @@ func (m *Metric) IsEnabledForDatabase(d *Database) bool {
 	}
 	return false
 }
+
+func (metrics Metrics) toMap() map[string]*Metric {
+	m := map[string]*Metric{}
+	for _, metric := range metrics.Metric {
+		m[metric.ID()] = metric
+	}
+	return m
+}

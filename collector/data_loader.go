@@ -14,12 +14,8 @@ import (
 )
 
 func (e *Exporter) reloadMetrics() {
-	// Truncate metricsToScrape
-	e.metricsToScrape.Metric = []*Metric{}
-
-	// Load default metrics
-	defaultMetrics := e.DefaultMetrics()
-	e.metricsToScrape.Metric = defaultMetrics.Metric
+	// reload default metrics
+	e.metricsToScrape = e.DefaultMetrics()
 
 	// If custom metrics, load it
 	if len(e.CustomMetricsFiles()) > 0 {
@@ -32,13 +28,20 @@ func (e *Exporter) reloadMetrics() {
 			} else {
 				e.logger.Info("Successfully loaded custom metrics from " + _customMetrics)
 			}
-
-			e.metricsToScrape.Metric = append(e.metricsToScrape.Metric, metrics.Metric...)
+			// Merge custom metrics into default metrics.
+			// Any collisions (by ID) will overwrite the old metric value.
+			e.merge(metrics)
 		}
 	} else {
 		e.logger.Debug("No custom metrics defined.")
 	}
 	e.initCache()
+}
+
+func (e *Exporter) merge(metrics *Metrics) {
+	for _, metric := range metrics.Metric {
+		e.metricsToScrape[metric.ID()] = metric
+	}
 }
 
 func loadYamlMetricsConfig(_metricsFileName string, metrics *Metrics) error {

@@ -17,19 +17,19 @@ import (
 var defaultMetricsToml string
 
 // DefaultMetrics is a somewhat hacky way to load the default metrics
-func (e *Exporter) DefaultMetrics() Metrics {
+func (e *Exporter) DefaultMetrics() map[string]*Metric {
 	var metricsToScrape Metrics
 	if e.Metrics.Default != "" {
 		if err := loadMetricsConfig(filepath.Clean(e.Metrics.Default), &metricsToScrape); err != nil {
 			e.logger.Error(fmt.Sprintf("there was an issue while loading specified default metrics file at: "+e.Metrics.Default+", proceeding to run with default metrics."),
 				"error", err)
 		}
-		return metricsToScrape
+		return metricsToScrape.toMap()
 	}
 
 	if _, err := toml.Decode(defaultMetricsToml, &metricsToScrape); err != nil {
 		e.logger.Error("failed to load default metrics", "error", err)
 		panic(errors.New("Error while loading " + defaultMetricsToml))
 	}
-	return metricsToScrape
+	return metricsToScrape.toMap()
 }

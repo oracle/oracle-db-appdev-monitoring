@@ -13,6 +13,7 @@ Our current priorities to support metrics for advanced database features and use
 
 - Updated project dependencies.
 - Standardize multi-arch builds and document supported database versions.
+- The metrics override capability is extended, allowing users to redefine individual existing metrics in custom metrics files. This allows users to modify individual default metrics without wholly replacing the default metrics file. 
 - If the exporter fails to connect to a database due to invalid or locked credentials (ORA-01017 or ORA-28000 errors), that database configuration will be invalidated and the exporter will not attempt to re-establish the database connection. Other databases will continue to be scraped.
 - Metrics with an empty databases array (`databases = []`) are now considered disabled, and will not be scraped.
 - Increased the default query timeout for the `top_sql` metric to 10 seconds (previously 5 seconds).

@@ -252,7 +252,7 @@ func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- er
 	e.logger.Debug("Successfully pinged Oracle database: "+maskDsn(d.Config.URL), "database", d.Name)
 
 	metricsToScrape := 0
-	for _, metric := range e.metricsToScrape.Metric {
+	for _, metric := range e.metricsToScrape {
 		metric := metric //https://golang.org/doc/faq#closures_and_goroutines
 		isScrapeMetric := e.isScrapeMetric(tick, metric, d)
 		metricsToScrape++
@@ -324,7 +324,7 @@ func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- er
 
 func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 	e.totalScrapes.Inc()
-	errChan := make(chan error, len(e.metricsToScrape.Metric)*len(e.databases))
+	errChan := make(chan error, len(e.metricsToScrape)*len(e.databases))
 	begun := time.Now()
 	if e.checkIfMetricsChanged() {
 		e.reloadMetrics()
@@ -529,7 +529,7 @@ func (e *Exporter) generatePrometheusMetrics(d *Database, parse func(row map[str
 
 func (e *Exporter) initCache() {
 	for _, d := range e.databases {
-		d.initCache(e.metricsToScrape.Metric)
+		d.initCache(e.metricsToScrape)
 	}
 }
 

@@ -98,7 +98,7 @@ func NewDatabase(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) *D
 }
 
 // initCache resets the metrics cached. Used on startup and when metrics are reloaded.
-func (d *Database) initCache(metrics []*Metric) {
+func (d *Database) initCache(metrics map[string]*Metric) {
 	d.MetricsCache = NewMetricsCache(metrics)
 }
 
