@@ -254,7 +254,7 @@ func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- er
 	metricsToScrape := 0
 	for _, metric := range e.metricsToScrape {
 		metric := metric //https://golang.org/doc/faq#closures_and_goroutines
-		isScrapeMetric := e.isScrapeMetric(tick, metric, d)
+		isScrapeMetric := isScrapeMetric(e.logger, tick, metric, d)
 		metricsToScrape++
 		go func() {
 			// If the metric doesn't need to be scraped, send the cached values
@@ -419,7 +419,7 @@ func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric,
 		}
 		// Construct Prometheus values to sent back
 		for metric, metricHelp := range m.MetricsDesc {
-			value, ok := e.parseFloat(metric, metricHelp, row)
+			value, ok := parseFloat(e.logger, metric, metricHelp, row)
 			if !ok {
 				// Skip invalid metric values
 				continue
@@ -468,7 +468,7 @@ func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric,
 		return nil
 	}
 	e.logger.Debug("Calling function GeneratePrometheusMetrics()")
-	err := e.generatePrometheusMetrics(d, genericParser, m.Request, e.getQueryTimeout(m, d))
+	err := e.generatePrometheusMetrics(d, genericParser, m.Request, getQueryTimeout(e.logger, m, d))
 	e.logger.Debug("ScrapeGenericValues() - metricsCount: " + strconv.Itoa(metricsCount))
 	if err != nil {
 		return err
