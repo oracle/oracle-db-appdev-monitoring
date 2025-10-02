@@ -175,7 +175,6 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	ch <- e.error
 	e.scrapeErrors.Collect(ch)
 	for _, db := range e.databases {
-		ch <- db.DBTypeMetric(e.constLabels())
 		ch <- db.UpMetric(e.constLabels())
 	}
 }

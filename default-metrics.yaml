@@ -1,4 +1,11 @@
 metrics:
+  - context: ""
+    metricsdesc:
+      dbtype: "Type of database the exporter is connected to (0=non-CDB, 1=CDB, >1=PDB)."
+    request: |
+      select sys_context('USERENV', 'CON_ID') as dbtype
+      from dual
+
   - context: "sessions"
     labels: [ "inst_id", "status", "type" ]
     metricsdesc:
