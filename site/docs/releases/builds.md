@@ -65,3 +65,37 @@ Creates multi-arch container builds for linux/amd64 and linux/arm64:
 ```
 make podman-build
 ```
+
+### Build on Oracle Linux
+
+To build on Oracle Linux, follow these steps.
+
+#### 1. Install build tools
+
+```bash
+dnf install -y git golang make
+```
+
+#### 2. Clone the exporter git repository
+
+```bash
+git clone git@github.com:oracle/oracle-db-appdev-monitoring.git
+```
+
+#### 3. Build the binary
+
+```bash
+cd oracle-db-appdev-monitoring
+make go-build
+```
+
+You will now have a tar.gz and binary file in the `dist/` directory, named according to your target platform.
+
+For example, for the darwin-arm64 platform:
+
+```
+dist/
+├── oracledb_exporter-2.1.0.darwin-arm64
+│   └── oracledb_exporter
+└── oracledb_exporter-2.1.0.darwin-arm64.tar.gz
+```
