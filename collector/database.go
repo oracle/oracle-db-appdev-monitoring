@@ -34,19 +34,6 @@ func (d *Database) UpMetric(exporterLabels map[string]string) prometheus.Metric 
 	)
 }
 
-func (d *Database) DBTypeMetric(exporterLabels map[string]string) prometheus.Metric {
-	desc := prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "dbtype"),
-		"Type of database the exporter is connected to (0=non-CDB, 1=CDB, >1=PDB).",
-		nil,
-		d.constLabels(exporterLabels),
-	)
-	return prometheus.MustNewConstMetric(desc,
-		prometheus.GaugeValue,
-		d.Type,
-	)
-}
-
 // ping the database. If the database is disconnected, try to reconnect.
 // If the database type is unknown, try to reload it.
 func (d *Database) ping(logger *slog.Logger) error {
@@ -61,15 +48,9 @@ func (d *Database) ping(logger *slog.Logger) error {
 		}
 		// If database is closed, try to reconnect
 		if strings.Contains(err.Error(), "sql: database is closed") {
-			db, dbtype := connect(logger, d.Name, d.Config)
-			d.Session = db
-			d.Type = dbtype
+			d.Session = connect(logger, d.Name, d.Config)
 		}
 		return err
-	}
-	// if connected but database type is unknown, try to reload it
-	if d.Type == -1 {
-		d.Type = getDBtype(ctx, d.Session, logger, d.Name)
 	}
 	d.Up = 1
 	return nil
@@ -86,12 +67,11 @@ func (d *Database) constLabels(labels map[string]string) map[string]string {
 }
 
 func NewDatabase(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) *Database {
-	db, dbtype := connect(logger, dbname, dbconfig)
+	db := connect(logger, dbname, dbconfig)
 	return &Database{
 		Name:    dbname,
 		Up:      0,
 		Session: db,
-		Type:    dbtype,
 		Config:  dbconfig,
 		Valid:   true,
 	}
@@ -158,7 +138,7 @@ func isInvalidCredentialsError(err error) bool {
 	return oraErr.Code() == ora01017code || oraErr.Code() == ora28000code
 }
 
-func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.DB, float64) {
+func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) *sql.DB {
 	logger.Debug("Launching connection to "+maskDsn(dbconfig.URL), "database", dbname)
 
 	var P godror.ConnectionParams
@@ -241,15 +221,5 @@ func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.
 	}
 	logger.Info("Connected as SYSDBA? "+sysdba, "database", dbname)
 
-	dbtype := getDBtype(ctx, db, logger, dbname)
-	return db, dbtype
-}
-
-func getDBtype(ctx context.Context, db *sql.DB, logger *slog.Logger, dbname string) float64 {
-	var dbtype int
-	if err := db.QueryRowContext(ctx, "select sys_context('USERENV', 'CON_ID') from dual").Scan(&dbtype); err != nil {
-		logger.Info("dbtype err", "error", err, "database", dbname)
-		return -1
-	}
-	return float64(dbtype)
+	return db
 }

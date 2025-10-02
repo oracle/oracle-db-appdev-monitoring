@@ -1,4 +1,12 @@
 [[metric]]
+context = ""
+metricsdesc = { dbtype="Type of database the exporter is connected to (0=non-CDB, 1=CDB, >1=PDB)." }
+request = '''
+select sys_context('USERENV', 'CON_ID') as dbtype
+from dual
+'''
+
+[[metric]]
 context = "sessions"
 labels = [ "inst_id", "status", "type" ]
 metricsdesc = { value= "Gauge metric with count of sessions by inst_id, status and type." }
