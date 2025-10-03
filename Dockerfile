@@ -38,7 +38,8 @@ ENV GOARCH=${GOARCH:-amd64}
 RUN microdnf update && \
     microdnf install -y oracle-instantclient-release-23ai-el8-1.0-4.el8 && \
     microdnf install -y oracle-instantclient-basic-23.9.0.25.07-1.el8 && \
-    microdnf install -y glibc-2.28-251.0.3.el8_10.25
+    microdnf install -y glibc-2.28-251.0.3.el8_10.25 && \
+    microdnf clean all
 
 ENV LD_LIBRARY_PATH=/usr/lib/oracle/23/client64/lib
 ENV PATH=$PATH:/usr/lib/oracle/23/client64/bin
