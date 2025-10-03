@@ -12,6 +12,28 @@ In this section you will find information on running the exporter.
 - In [Kubernetes](./kubernetes.md)
 - As a [standalone binary](#standalone-binary)
 
+## Database Permissions
+
+For the built-in default metrics, the exporter database database user must have the `SELECT_CATALOG_ROLE` privilege and/or `SELECT` permission on the following objects:
+
+```
+dba_tablespace_usage_metrics
+dba_tablespaces
+gv$system_wait_class
+gv$asm_diskgroup_stat
+gv$datafile
+gv$sysstat
+gv$process
+gv$waitclassmetric
+gv$session
+gv$resource_limit
+gv$parameter
+gv$database
+gv$sqlstats
+gv$sysmetric
+v$diag_alert_ext (for alert logs only)
+```
+
 ## Docker, Podman, etc
 
 You can run the exporter in a local container using a container image from [Oracle Container Registry](https://container-registry.oracle.com).  The container image is available in the "observability-exporter" repository in the "Database" category.  No authentication or license presentment/acceptance are required to pull this image from the registry.
