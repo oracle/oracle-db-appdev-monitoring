@@ -12,9 +12,11 @@ List of upcoming and historic changes to the exporter.
 Our current priorities to support metrics for advanced database features and use cases, like Exadata, GoldenGate, and views included in the Oracle Diagnostics Pack.
 
 - Move `oracledb_dbtype` metric to the default metrics. You may now disable or override this metric like any other database metric.
+- Document required database permissions for the exporter
 
 Thank you to the following people for their suggestions and contributions:
 - [@MansuyDavid](https://github.com/MansuyDavid)
+- [@jdagemark](https://github.com/jdagemark)
 
 ### Version 2.1.0, September 29, 2025
 
