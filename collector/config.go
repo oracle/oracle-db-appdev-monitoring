@@ -5,7 +5,6 @@ package collector
 
 import (
 	"fmt"
-	"github.com/godror/godror/dsn"
 	"github.com/oracle/oracle-db-appdev-monitoring/azvault"
 	"github.com/oracle/oracle-db-appdev-monitoring/ocivault"
 	"github.com/prometheus/exporter-toolkit/web"
@@ -42,7 +41,7 @@ type DatabaseConfig struct {
 }
 
 type ConnectConfig struct {
-	Role               dsn.AdminRole
+	Role               string
 	TNSAdmin           string `yaml:"tnsAdmin"`
 	ExternalAuth       bool   `yaml:"externalAuth"`
 	MaxOpenConns       *int   `yaml:"maxOpenConns"`
