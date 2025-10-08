@@ -3,9 +3,11 @@ OS_TYPE        ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
 ARCH_TYPE      ?= $(subst x86_64,amd64,$(patsubst i%86,386,$(ARCH)))
 GOOS           ?= $(shell go env GOOS)
 GOARCH         ?= $(shell go env GOARCH)
+TAGS           ?= godror
+CGO_ENABLED    ?= 1
 VERSION        ?= 2.1.0
 LDFLAGS        := -X main.Version=$(VERSION)
-GOFLAGS        := -ldflags "$(LDFLAGS) -s -w"
+GOFLAGS        := -ldflags "$(LDFLAGS) -s -w" --tags $(TAGS)
 BUILD_ARGS      = --build-arg VERSION=$(VERSION)
 OUTDIR          = ./dist
 
@@ -37,31 +39,31 @@ go-build:
 
 .PHONY: go-build-linux-amd64
 go-build-linux-amd64:
-	CGO_ENABLED=1 GOOS=linux GOARCH=amd64 $(MAKE) go-build -j2
+	CGO_ENABLED=$(CGO_ENABLED) GOOS=linux GOARCH=amd64 $(MAKE) go-build -j2
 
 .PHONY: go-build-linux-arm64
 go-build-linux-arm64:
-	CGO_ENABLED=1 GOOS=linux GOARCH=arm64 $(MAKE) go-build -j2
+	CGO_ENABLED=$(CGO_ENABLED) GOOS=linux GOARCH=arm64 $(MAKE) go-build -j2
 
 .PHONY: go-build-linux-gcc-arm64
 go-build-linux-gcc-arm64:
-	CGO_ENABLED=1 CC=aarch64-linux-gnu-gcc GOOS=linux GOARCH=arm64 $(MAKE) go-build -j2
+	CGO_ENABLED=$(CGO_ENABLED) CC=aarch64-linux-gnu-gcc GOOS=linux GOARCH=arm64 $(MAKE) go-build -j2
 
 .PHONY: go-build-darwin-amd64
 go-build-darwin-amd64:
-	CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 $(MAKE) go-build -j2
+	CGO_ENABLED=$(CGO_ENABLED) GOOS=darwin GOARCH=amd64 $(MAKE) go-build -j2
 
 .PHONY: go-build-darwin-arm64
 go-build-darwin-arm64:
-	CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 $(MAKE) go-build -j2
+	CGO_ENABLED=$(CGO_ENABLED) GOOS=darwin GOARCH=arm64 $(MAKE) go-build -j2
 
 .PHONY: go-build-windows-amd64
 go-build-windows-amd64:
-	CGO_ENABLED=1 GOOS=windows GOARCH=amd64 $(MAKE) go-build -j2
+	CGO_ENABLED=$(CGO_ENABLED) GOOS=windows GOARCH=amd64 $(MAKE) go-build -j2
 
 .PHONY: go-build-windows-x86
 go-build-windows-x86:
-	CGO_ENABLED=1 GOOS=windows GOARCH=386 $(MAKE) go-build -j2
+	CGO_ENABLED=$(CGO_ENABLED) GOOS=windows GOARCH=386 $(MAKE) go-build -j2
 
 dist: go-build-linux-gcc-arm64 go-build-linux-amd64
 
