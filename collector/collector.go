@@ -428,8 +428,9 @@ func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric,
 
 			// Build metric desc
 			suffix := metricNameSuffix(row, metric, m.FieldToAppend)
+			fqname := prometheus.BuildFQName(namespace, m.Context, suffix)
 			desc := prometheus.NewDesc(
-				prometheus.BuildFQName(namespace, m.Context, suffix),
+				fqname,
 				metricHelp,
 				m.GetLabels(),
 				constLabels,
@@ -467,6 +468,7 @@ func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric,
 		return nil
 	}
 	e.logger.Debug("Calling function GeneratePrometheusMetrics()")
+	d.MetricsCache.Reset(m)
 	err := e.generatePrometheusMetrics(d, genericParser, m.Request, getQueryTimeout(e.logger, m, d))
 	e.logger.Debug("ScrapeGenericValues() - metricsCount: " + strconv.Itoa(metricsCount))
 	if err != nil {
