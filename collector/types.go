@@ -49,7 +49,7 @@ type MetricsCache struct {
 type MetricCacheRecord struct {
 	// PrometheusMetrics stores cached prometheus metric values.
 	// Used when custom scrape intervals are used, and the metric must be returned to the collector, but not scraped.
-	PrometheusMetrics map[string]prometheus.Metric
+	PrometheusMetrics []prometheus.Metric
 	// LastScraped is the collector tick time when the metric was last computed.
 	LastScraped *time.Time
 }

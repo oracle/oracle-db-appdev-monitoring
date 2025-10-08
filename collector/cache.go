@@ -13,7 +13,7 @@ func NewMetricsCache(metrics map[string]*Metric) *MetricsCache {
 
 	for _, metric := range metrics {
 		c[metric] = &MetricCacheRecord{
-			PrometheusMetrics: map[string]prometheus.Metric{},
+			PrometheusMetrics: nil,
 			LastScraped:       nil,
 		}
 	}
@@ -36,7 +36,11 @@ func (c *MetricsCache) SendAll(ch chan<- prometheus.Metric, m *Metric) {
 	}
 }
 
+func (c *MetricsCache) Reset(m *Metric) {
+	c.cache[m].PrometheusMetrics = nil
+}
+
 func (c *MetricsCache) CacheAndSend(ch chan<- prometheus.Metric, m *Metric, metric prometheus.Metric) {
-	c.cache[m].PrometheusMetrics[metric.Desc().String()] = metric
+	c.cache[m].PrometheusMetrics = append(c.cache[m].PrometheusMetrics, metric)
 	ch <- metric
 }
