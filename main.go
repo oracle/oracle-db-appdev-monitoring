@@ -16,7 +16,6 @@ import (
 	"github.com/prometheus/common/promslog"
 	"github.com/prometheus/common/promslog/flag"
 
-	"github.com/godror/godror/dsn"
 	"github.com/prometheus/client_golang/prometheus"
 	cversion "github.com/prometheus/client_golang/prometheus/collectors/version"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -87,7 +86,7 @@ func main() {
 		User:               user,
 		Password:           password,
 		ConnectString:      connectString,
-		DbRole:             dsn.AdminRole(dbrole),
+		DbRole:             dbrole,
 		ConfigDir:          tnsadmin,
 		ExternalAuth:       externalAuth,
 		MaxOpenConns:       *maxOpenConns,

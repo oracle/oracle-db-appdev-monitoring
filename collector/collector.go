@@ -20,7 +20,6 @@ import (
 	"sync"
 	"time"
 
-	_ "github.com/godror/godror"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
