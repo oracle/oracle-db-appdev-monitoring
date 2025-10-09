@@ -11,6 +11,7 @@ List of upcoming and historic changes to the exporter.
 
 Our current priorities to support metrics for advanced database features and use cases, like Exadata, GoldenGate, and views included in the Oracle Diagnostics Pack.
 
+- Added experimental support for the [go-ora](https://github.com/sijms/go-ora)
 - Move `oracledb_dbtype` metric to the default metrics. You may now disable or override this metric like any other database metric.
 - Document required database permissions for the exporter.
 - Fix an issue where some metrics would not be cached when using a per-metric scrape interval with a global scrape interval.

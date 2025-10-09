@@ -1,19 +1,17 @@
 // Copyright (c) 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
-//go:build !goora
+//go:build godror
 
 package collector
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"github.com/godror/godror"
 	"github.com/godror/godror/dsn"
 	"log/slog"
-	"strings"
 	"time"
 )
 
@@ -78,51 +76,8 @@ func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) *sql.D
 	// note that this just configures the connection, it does not actually connect until later
 	// when we call db.Ping()
 	db := sql.OpenDB(godror.NewConnector(P))
-	logger.Debug(fmt.Sprintf("set max idle connections to %d", dbconfig.MaxIdleConns), "database", dbname)
-	db.SetMaxIdleConns(dbconfig.GetMaxIdleConns())
-	logger.Debug(fmt.Sprintf("set max open connections to %d", dbconfig.MaxOpenConns), "database", dbname)
-	db.SetMaxOpenConns(dbconfig.GetMaxOpenConns())
-	db.SetConnMaxLifetime(0)
-	logger.Debug(fmt.Sprintf("Successfully configured connection to %s", maskDsn(dbconfig.URL)), "database", dbname)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-	if _, err := db.ExecContext(ctx, `
-			begin
-	       		dbms_application_info.set_client_info('oracledb_exporter');
-			end;`); err != nil {
-		logger.Info("Could not set CLIENT_INFO.", "database", dbname)
-	}
-
-	var sysdba string
-	if err := db.QueryRowContext(ctx, "select sys_context('USERENV', 'ISDBA') from dual").Scan(&sysdba); err != nil {
-		logger.Error("error checking my database role", "error", err, "database", dbname)
-	}
-	logger.Info("Connected as SYSDBA? "+sysdba, "database", dbname)
-
+	initdb(logger, dbname, dbconfig, db)
 	return db
-}
-
-// ping the database. If the database is disconnected, try to reconnect.
-// If the database type is unknown, try to reload it.
-func (d *Database) ping(logger *slog.Logger) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	err := d.Session.PingContext(ctx)
-	if err != nil {
-		d.Up = 0
-		if isInvalidCredentialsError(err) {
-			d.invalidate()
-			return err
-		}
-		// If database is closed, try to reconnect
-		if strings.Contains(err.Error(), "sql: database is closed") {
-			d.Session = connect(logger, d.Name, d.Config)
-		}
-		return err
-	}
-	d.Up = 1
-	return nil
 }
 
 func isInvalidCredentialsError(err error) bool {

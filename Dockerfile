@@ -7,6 +7,12 @@ ENV GOOS=${GOOS:-linux}
 ARG GOARCH
 ENV GOARCH=${GOARCH:-amd64}
 
+ARG TAGS
+ENV TAGS=${TAGS:-godror}
+
+ARG CGO_ENABLED
+ENV CGO_ENABLED=${CGO_ENABLED:-1}
+
 RUN microdnf install wget gzip gcc && \
     wget -q https://go.dev/dl/go1.23.10.${GOOS}-${GOARCH}.tar.gz && \
     rm -rf /usr/local/go && \
@@ -22,9 +28,9 @@ RUN go mod download
 ARG VERSION
 ENV VERSION=${VERSION:-1.0.0}
 
-RUN CGO_ENABLED=1 GOOS=${GOOS} GOARCH=${GOARCH} go build -v -ldflags "-X main.Version=${VERSION} -s -w"
+RUN CGO_ENABLED=${CGO_ENABLED} GOOS=${GOOS} GOARCH=${GOARCH} go build --tags=${TAGS} -v -ldflags "-X main.Version=${VERSION} -s -w"
 
-FROM ${BASE_IMAGE:-ghcr.io/oracle/oraclelinux:8-slim} AS exporter
+FROM ${BASE_IMAGE:-ghcr.io/oracle/oraclelinux:8-slim} AS exporter-godror
 LABEL org.opencontainers.image.authors="Oracle America, Inc."
 LABEL org.opencontainers.image.description="Oracle Database Observability Exporter"
 
@@ -43,6 +49,21 @@ RUN microdnf update && \
 
 ENV LD_LIBRARY_PATH=/usr/lib/oracle/23/client64/lib
 ENV PATH=$PATH:/usr/lib/oracle/23/client64/bin
+
+COPY --from=build /go/src/oracledb_exporter/oracle-db-appdev-monitoring /oracledb_exporter
+ADD ./default-metrics.toml /default-metrics.toml
+
+# create the mount point for alert log exports (default location)
+RUN mkdir /log && chown 1000:1000 /log
+RUN mkdir /wallet && chown 1000:1000 /wallet
+
+EXPOSE 9161
+
+USER 1000
+
+ENTRYPOINT ["/oracledb_exporter"]
+
+FROM ${BASE_IMAGE:-ghcr.io/oracle/oraclelinux:8-slim} AS exporter-goora
 
 COPY --from=build /go/src/oracledb_exporter/oracle-db-appdev-monitoring /oracledb_exporter
 ADD ./default-metrics.toml /default-metrics.toml
