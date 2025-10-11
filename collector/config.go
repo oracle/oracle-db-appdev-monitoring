@@ -160,14 +160,14 @@ func (c ConnectConfig) GetQueryTimeout() int {
 	return *c.QueryTimeout
 }
 
-func (h HashiCorpVault)GetUsernameAttr() string {
+func (h HashiCorpVault) GetUsernameAttr() string {
 	if h.UsernameAttr == "" {
 		return "username"
 	}
 	return h.UsernameAttr
 }
 
-func (h HashiCorpVault)GetPasswordAttr() string {
+func (h HashiCorpVault) GetPasswordAttr() string {
 	if h.PasswordAttr == "" {
 		return "password"
 	}

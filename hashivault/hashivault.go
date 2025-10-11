@@ -1,19 +1,21 @@
+// Copyright (c) 2025, Oracle and/or its affiliates.
+// Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
+
 package hashivault
 
 import (
 	"context"
-	"os"
 	"strings"
 	"errors"
 	"net"
 	"net/http"
 	"time"
+	"github.com/oracle/oci-go-sdk/v65/example/helpers"
 
 	"github.com/prometheus/common/promslog"
 	vault "github.com/hashicorp/vault/api"
 )
 
-//var FailedConnect = errors.New("Failed to connect to HashiCorp Vault")
 var UnsupportedMountType = errors.New("Unsupported HashiCorp Vault mount type")
 var RequiredKeyMissing = errors.New("Required key missing from HashiCorp Vault secret")
 
@@ -21,8 +23,8 @@ type HashicorpVaultClient struct {
 	client *vault.Client
 }
 
+// newUnixSocketVaultClient creates a custom HTTP client using a Unix socket
 func newUnixSocketVaultClient(socketPath string) (*vault.Client, error) {
-	// Create a custom HTTP client using the Unix socket
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
@@ -40,20 +42,13 @@ func newUnixSocketVaultClient(socketPath string) (*vault.Client, error) {
 		MinRetryWait: time.Millisecond * 1000,
 		MaxRetryWait: time.Millisecond * 1500,
 		MaxRetries:   2,
-		//Backoff:      retryablehttp.LinearJitterBackoff,
 	}
 
-	client, err := vault.NewClient(config)
-	if err != nil {
-		return nil, err
-	}
-	return client, nil
+	return vault.NewClient(config)
 }
 
+// createVaultClient connects to a vault client, using connection method specified with the parameters. Returns error if fails.
 func createVaultClient(socketPath string) (HashicorpVaultClient,error) {
-	/*
-	Connects client to Vault backend, need to handle different connection methods in the future
-	*/
 	promLogConfig := &promslog.Config{}
 	logger := promslog.New(promLogConfig)
 
@@ -70,18 +65,15 @@ func createVaultClient(socketPath string) (HashicorpVaultClient,error) {
 	return vaultClient,err
 }
 
+// CreateVaultClient connects to a vault client, using connection method specified with the parameters. Fatal if fails.
 func CreateVaultClient(socketPath string) HashicorpVaultClient {
-	// Public callable function that does not return an error, just exits instead. Like other vault code in this project.
 	c,err := createVaultClient(socketPath)
-	if err != nil {
-		os.Exit(1)
-	}
+	helpers.FatalIfError(err)
 	return c
 }
 
-func (c HashicorpVaultClient)getVaultSecret(mountType string, mount string, path string, requiredKeys []string) (map[string]string,error) {
-	// Proper code that returns and error and is testable
-	// Currently only supports key-value stores, but it should support more in the future
+// getVaultSecret fetches secret from vault using specified mount type. Returns error on failure.
+func (c HashicorpVaultClient) getVaultSecret(mountType string, mount string, path string, requiredKeys []string) (map[string]string,error) {
 	promLogConfig := &promslog.Config{}
 	logger := promslog.New(promLogConfig)
 
@@ -116,15 +108,13 @@ func (c HashicorpVaultClient)getVaultSecret(mountType string, mount string, path
 			return result, RequiredKeyMissing
 		}
 	}
-	//
 	return result, nil
 }
 
-func (c HashicorpVaultClient)GetVaultSecret(mountType string, mount string, path string, requiredKeys []string) map[string]string {
+// GetVaultSecret fetches secret from vault using specified mount type. Fatal on failure.
+func (c HashicorpVaultClient) GetVaultSecret(mountType string, mount string, path string, requiredKeys []string) map[string]string {
 	// Public callable function that does not return an error, just exits instead. Like other vault code in this project.
 	res,err := c.getVaultSecret(mountType, mount, path, requiredKeys)
-	if err != nil {
-		os.Exit(1)
-	}
+	helpers.FatalIfError(err)
 	return res
 }
