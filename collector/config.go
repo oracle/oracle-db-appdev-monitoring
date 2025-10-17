@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/oracle/oracle-db-appdev-monitoring/azvault"
 	"github.com/oracle/oracle-db-appdev-monitoring/ocivault"
+	"github.com/oracle/oracle-db-appdev-monitoring/hashivault"
 	"github.com/prometheus/exporter-toolkit/web"
 	"gopkg.in/yaml.v2"
 	"log/slog"
@@ -57,6 +58,8 @@ type VaultConfig struct {
 	OCI *OCIVault `yaml:"oci"`
 	// Azure if present, Azure vault will be used to load username and/or password.
 	Azure *AZVault `yaml:"azure"`
+	// HashiCorp Vault if present. HashiCorp Vault will be used to fetch database credentials.
+	HashiCorp *HashiCorpVault `yaml:"hashicorp"`
 }
 
 type OCIVault struct {
@@ -69,6 +72,17 @@ type AZVault struct {
 	ID             string `yaml:"id"`
 	UsernameSecret string `yaml:"usernameSecret"`
 	PasswordSecret string `yaml:"passwordSecret"`
+}
+
+type HashiCorpVault struct {
+	Socket         string `yaml:"proxySocket"`
+	MountType      string `yaml:"mountType"`
+	MountName      string `yaml:"mountName"`
+	SecretPath     string `yaml:"secretPath"`
+	UsernameAttr   string `yaml:"usernameAttribute"`
+	PasswordAttr   string `yaml:"passwordAttribute"`
+	// Private to avoid making multiple calls
+	fetchedSecert map[string]string
 }
 
 type MetricsFilesConfig struct {
@@ -145,12 +159,41 @@ func (c ConnectConfig) GetQueryTimeout() int {
 	return *c.QueryTimeout
 }
 
+func (h HashiCorpVault) GetUsernameAttr() string {
+	if h.UsernameAttr == "" {
+		return "username"
+	}
+	return h.UsernameAttr
+}
+
+func (h HashiCorpVault) GetPasswordAttr() string {
+	if h.PasswordAttr == "" {
+		return "password"
+	}
+	return h.PasswordAttr
+}
+
+func (d DatabaseConfig) fetchHashiCorpVaultSecret() {
+	if len(d.Vault.HashiCorp.fetchedSecert) > 0 {
+		// Secret is already fetched, do nothing
+		return
+	}
+	vc := hashivault.CreateVaultClient(slog.Default(), d.Vault.HashiCorp.Socket)
+	// Set default username and password attribute values
+	requiredKeys := []string{d.Vault.HashiCorp.GetUsernameAttr(), d.Vault.HashiCorp.GetPasswordAttr()}
+	d.Vault.HashiCorp.fetchedSecert = vc.GetVaultSecret(d.Vault.HashiCorp.MountType, d.Vault.HashiCorp.MountName, d.Vault.HashiCorp.SecretPath, requiredKeys)
+}
+
 func (d DatabaseConfig) GetUsername() string {
 	if d.isOCIVault() && d.Vault.OCI.UsernameSecret != "" {
 		return ocivault.GetVaultSecret(d.Vault.OCI.ID, d.Vault.OCI.UsernameSecret)
 	}
 	if d.isAzureVault() && d.Vault.Azure.UsernameSecret != "" {
 		return azvault.GetVaultSecret(d.Vault.Azure.ID, d.Vault.Azure.UsernameSecret)
+	}
+	if d.isHashiCorpVault() && d.Vault.HashiCorp.MountType != "" && d.Vault.HashiCorp.MountName != "" && d.Vault.HashiCorp.SecretPath != "" {
+		d.fetchHashiCorpVaultSecret()
+		return d.Vault.HashiCorp.fetchedSecert[d.Vault.HashiCorp.GetUsernameAttr()]
 	}
 	return d.Username
 }
@@ -170,6 +213,10 @@ func (d DatabaseConfig) GetPassword() string {
 	if d.isAzureVault() && d.Vault.Azure.PasswordSecret != "" {
 		return azvault.GetVaultSecret(d.Vault.Azure.ID, d.Vault.Azure.PasswordSecret)
 	}
+	if d.isHashiCorpVault() && d.Vault.HashiCorp.MountType != "" && d.Vault.HashiCorp.MountName != "" && d.Vault.HashiCorp.SecretPath != "" {
+		d.fetchHashiCorpVaultSecret()
+		return d.Vault.HashiCorp.fetchedSecert[d.Vault.HashiCorp.GetPasswordAttr()]
+	}
 	return d.Password
 }
 
@@ -179,6 +226,10 @@ func (d DatabaseConfig) isOCIVault() bool {
 
 func (d DatabaseConfig) isAzureVault() bool {
 	return d.Vault != nil && d.Vault.Azure != nil
+}
+
+func (d DatabaseConfig) isHashiCorpVault() bool {
+	return d.Vault != nil && d.Vault.HashiCorp != nil
 }
 
 func LoadMetricsConfiguration(logger *slog.Logger, cfg *Config, path string, flags *web.FlagConfig) (*MetricsConfiguration, error) {
