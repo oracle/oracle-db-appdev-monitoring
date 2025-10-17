@@ -179,7 +179,7 @@ func (d DatabaseConfig) fetchHashiCorpVaultSecret() {
 		// Secret is already fetched, do nothing
 		return
 	}
-	vc := hashivault.CreateVaultClient(d.Vault.HashiCorp.Socket)
+	vc := hashivault.CreateVaultClient(slog.Default(), d.Vault.HashiCorp.Socket)
 	// Set default username and password attribute values
 	requiredKeys := []string{d.Vault.HashiCorp.GetUsernameAttr(), d.Vault.HashiCorp.GetPasswordAttr()}
 	d.Vault.HashiCorp.fetchedSecert = vc.GetVaultSecret(d.Vault.HashiCorp.MountType, d.Vault.HashiCorp.MountName, d.Vault.HashiCorp.SecretPath, requiredKeys)
