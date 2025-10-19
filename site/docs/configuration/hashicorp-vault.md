@@ -15,9 +15,9 @@ databases:
     vault:
       hashicorp:
         proxySocket: /var/run/vault/vault.sock
-        mountType: secret engine type, currently either "kvv1" or "kvv2"
+        mountType: "kvv1", "kvv2", "database" or "logical"
         mountName: secret engine mount path
-        secretPath: path of the secret
+        secretPath: path of the secret or database role name
         usernameAttribute: name of the JSON attribute, where to read the database username, if ommitted defaults to "username"
         passwordAttribute: name of the JSON attribute, where to read the database password, if ommitted defaults to "password"
 ```
@@ -34,6 +34,10 @@ databases:
         mountName: dev
         secretPath: oracle/mydb/monitoring
 ```
+
+### Dynamic database credentials
+
+
 
 ### Authentication
 

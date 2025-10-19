@@ -81,6 +81,7 @@ type HashiCorpVault struct {
 	SecretPath     string `yaml:"secretPath"`
 	UsernameAttr   string `yaml:"usernameAttribute"`
 	PasswordAttr   string `yaml:"passwordAttribute"`
+	AsProxy		   string `yaml:"useAsProxyFor"`
 	// Private to avoid making multiple calls
 	fetchedSecert map[string]string
 }
@@ -160,14 +161,14 @@ func (c ConnectConfig) GetQueryTimeout() int {
 }
 
 func (h HashiCorpVault) GetUsernameAttr() string {
-	if h.UsernameAttr == "" {
+	if h.UsernameAttr == "" || h.MountType == "database" {
 		return "username"
 	}
 	return h.UsernameAttr
 }
 
 func (h HashiCorpVault) GetPasswordAttr() string {
-	if h.PasswordAttr == "" {
+	if h.PasswordAttr == "" || h.MountType == "database" {
 		return "password"
 	}
 	return h.PasswordAttr
@@ -193,7 +194,12 @@ func (d DatabaseConfig) GetUsername() string {
 	}
 	if d.isHashiCorpVault() && d.Vault.HashiCorp.MountType != "" && d.Vault.HashiCorp.MountName != "" && d.Vault.HashiCorp.SecretPath != "" {
 		d.fetchHashiCorpVaultSecret()
-		return d.Vault.HashiCorp.fetchedSecert[d.Vault.HashiCorp.GetUsernameAttr()]
+		userName := d.Vault.HashiCorp.fetchedSecert[d.Vault.HashiCorp.GetUsernameAttr()]
+		if d.Vault.HashiCorp.AsProxy == "" {
+			return userName
+		} else {
+			return fmt.Sprintf("%s[%s]", userName, d.Vault.HashiCorp.AsProxy)
+		}
 	}
 	return d.Username
 }

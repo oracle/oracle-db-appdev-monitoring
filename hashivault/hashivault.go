@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"time"
+	"fmt"
 	"github.com/oracle/oci-go-sdk/v65/example/helpers"
 
 	"log/slog"
@@ -75,6 +76,7 @@ func CreateVaultClient(logger *slog.Logger, socketPath string) HashicorpVaultCli
 func (c HashicorpVaultClient) getVaultSecret(mountType string, mount string, path string, requiredKeys []string) (map[string]string,error) {
 	result := map[string]string{}
 	var err error
+	var secretData map[string]interface{}
 	if mountType == "kvv2" || mountType == "kvv1" {
 		// Handle simple key-value secrets
 		var secret *vault.KVSecret
@@ -88,13 +90,30 @@ func (c HashicorpVaultClient) getVaultSecret(mountType string, mount string, pat
 			c.logger.Error("Failed to fetch secret from HashiCorp Vault", "err", err)
 			return result, err
 		}
-		// Expect simple one-level JSON, remap interface{} straight to string
-		for key,val := range secret.Data {
-			result[key] = strings.TrimRight(val.(string), "\r\n") // make sure a \r and/or \n didn't make it into the secret
+		secretData = secret.Data
+	} else if mountType == "database" || mountType == "logical" {
+		// Handle other types of secrets, for example database roles, just using the Logical() backend
+		var secret *vault.Secret
+		var secretPath string
+		if mountType == "database" {
+			secretPath = fmt.Sprintf("%s/creds/%s", mount, path)
+		} else {
+			secretPath = fmt.Sprintf("%s/%s", mount, path)
 		}
+		c.logger.Info("Making logical call to HashiCorp Vault", "mountType", mountType, "mountName", mount, "secretPath", path, "expectedKeys", requiredKeys)
+		secret, err = c.client.Logical().Read(secretPath)
+		if err != nil {
+			c.logger.Error("Failed to fetch secret from HashiCorp Vault", "err", err)
+			return result, err
+		}
+		secretData = secret.Data
 	} else {
 		c.logger.Error(UnsupportedMountType.Error())
 		return result, UnsupportedMountType
+	}
+	// Expect simple one-level JSON, remap interface{} straight to string
+	for key,val := range secretData {
+		result[key] = strings.TrimRight(val.(string), "\r\n") // make sure a \r and/or \n didn't make it into the secret
 	}
 	// Check that we have all required keys present
 	for _, key := range requiredKeys {
