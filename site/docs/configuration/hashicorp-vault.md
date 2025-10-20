@@ -99,6 +99,7 @@ databases:
         mountType: database
         mountName: database
         secretPath: mydb_exporter
+        useAsProxyFor: c##exporter
 ```
 
 ### Authentication
