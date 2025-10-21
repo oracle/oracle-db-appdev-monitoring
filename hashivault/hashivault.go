@@ -17,6 +17,13 @@ import (
 	vault "github.com/hashicorp/vault/api"
 )
 
+const (
+	MountTypeKVv1 = "kvv1"
+	MountTypeKVv2 = "kvv2"
+	MountTypeDatabase = "database"
+	MountTypeLogical = "logical"
+)
+
 var UnsupportedMountType = errors.New("Unsupported HashiCorp Vault mount type")
 var RequiredKeyMissing = errors.New("Required key missing from HashiCorp Vault secret")
 
@@ -77,11 +84,11 @@ func (c HashicorpVaultClient) getVaultSecret(mountType string, mount string, pat
 	result := map[string]string{}
 	var err error
 	var secretData map[string]interface{}
-	if mountType == "kvv2" || mountType == "kvv1" {
+	if mountType == MountTypeKVv1 || mountType == MountTypeKVv2 {
 		// Handle simple key-value secrets
 		var secret *vault.KVSecret
 		c.logger.Info("Making call to HashiCorp Vault", "mountType", mountType, "mountName", mount, "secretPath", path, "expectedKeys", requiredKeys)
-		if mountType == "kvv2" {
+		if mountType == MountTypeKVv2 {
 			secret, err = c.client.KVv2(mount).Get(context.TODO(), path)
 		} else {
 			secret, err = c.client.KVv1(mount).Get(context.TODO(), path)
@@ -91,11 +98,11 @@ func (c HashicorpVaultClient) getVaultSecret(mountType string, mount string, pat
 			return result, err
 		}
 		secretData = secret.Data
-	} else if mountType == "database" || mountType == "logical" {
+	} else if mountType == MountTypeDatabase || mountType == MountTypeLogical {
 		// Handle other types of secrets, for example database roles, just using the Logical() backend
 		var secret *vault.Secret
 		var secretPath string
-		if mountType == "database" {
+		if mountType == MountTypeDatabase {
 			secretPath = fmt.Sprintf("%s/creds/%s", mount, path)
 		} else {
 			secretPath = fmt.Sprintf("%s/%s", mount, path)

@@ -161,14 +161,14 @@ func (c ConnectConfig) GetQueryTimeout() int {
 }
 
 func (h HashiCorpVault) GetUsernameAttr() string {
-	if h.UsernameAttr == "" || h.MountType == "database" {
+	if h.UsernameAttr == "" || h.MountType == hashivault.MountTypeDatabase {
 		return "username"
 	}
 	return h.UsernameAttr
 }
 
 func (h HashiCorpVault) GetPasswordAttr() string {
-	if h.PasswordAttr == "" || h.MountType == "database" {
+	if h.PasswordAttr == "" || h.MountType == hashivault.MountTypeDatabase {
 		return "password"
 	}
 	return h.PasswordAttr
