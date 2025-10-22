@@ -8,10 +8,12 @@ require (
 	github.com/BurntSushi/toml v1.5.0
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/godror/godror v0.49.4
+	github.com/hashicorp/vault/api v1.22.0
 	github.com/oracle/oci-go-sdk/v65 v65.102.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/common v0.67.1
 	github.com/prometheus/exporter-toolkit v0.14.1
+	github.com/sijms/go-ora/v2 v2.9.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -41,7 +43,6 @@ require (
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2 // indirect
 	github.com/hashicorp/go-sockaddr v1.0.7 // indirect
 	github.com/hashicorp/hcl v1.0.1-vault-7 // indirect
-	github.com/hashicorp/vault/api v1.22.0 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/mdlayher/socket v0.4.1 // indirect
@@ -54,7 +55,6 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
-	github.com/sijms/go-ora/v2 v2.9.0 // indirect
 	github.com/sony/gobreaker v0.5.0 // indirect
 	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
