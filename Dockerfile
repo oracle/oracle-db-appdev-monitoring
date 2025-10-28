@@ -13,11 +13,14 @@ ENV TAGS=${TAGS:-godror}
 ARG CGO_ENABLED
 ENV CGO_ENABLED=${CGO_ENABLED:-1}
 
+ARG GO_VERSION
+ENV GO_VERSION=${GO_VERSION:-1.24.9}
+
 RUN microdnf install wget gzip gcc && \
-    wget -q https://go.dev/dl/go1.23.10.${GOOS}-${GOARCH}.tar.gz && \
+    wget -q https://go.dev/dl/go${GO_VERSION}.${GOOS}-${GOARCH}.tar.gz && \
     rm -rf /usr/local/go && \
-    tar -C /usr/local -xzf go1.23.10.${GOOS}-${GOARCH}.tar.gz && \
-    rm go1.23.10.${GOOS}-${GOARCH}.tar.gz
+    tar -C /usr/local -xzf go${GO_VERSION}.${GOOS}-${GOARCH}.tar.gz && \
+    rm go${GO_VERSION}.${GOOS}-${GOARCH}.tar.gz
 
 ENV PATH=$PATH:/usr/local/go/bin
 

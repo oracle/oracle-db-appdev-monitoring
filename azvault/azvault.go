@@ -12,7 +12,7 @@ import (
 	"github.com/prometheus/common/promslog"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/Azure/azure-sdk-for-go/sdk/keyvault/azsecrets"
+	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 )
 
 func GetVaultSecret(vaultId string, secretName string) string {

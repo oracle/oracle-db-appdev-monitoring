@@ -7,10 +7,6 @@ sidebar_position: 2
 
 List of upcoming and historic changes to the exporter.
 
-### Next, in-development
-
-- TBD
-
 ### Version 2.2.0, October 28, 2025
 
 Our current priorities to support metrics for advanced database features and use cases, like Exadata, GoldenGate, and views included in the Oracle Diagnostics Pack.
