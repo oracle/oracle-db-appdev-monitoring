@@ -67,9 +67,7 @@ build_ol() {
 
   if [[ -n "$BUILD_CONTAINERS" ]]; then
     echo "Starting $OL_IMAGE-${platform} build container"
-    docker build --platform "linux/${platform}" --target=exporter-$TARGET -t $image_artifact \
-        --build-arg GO_VERSION=$GO_VERSION --build-arg TAGS=$TAGS --build-arg CGO_ENABLED=$CGO_ENABLED \
-        --build-arg BASE_IMAGE=$BASE_IMAGE --build-arg GOARCH=$platform --build-arg GOOS=linux --build-arg VERSION=$VERSION .
+    PLATFORM=$platform make docker-platform
   fi
 
   if [[ -n "BUILD_OL8" ]]; then
