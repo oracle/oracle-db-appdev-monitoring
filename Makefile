@@ -4,6 +4,7 @@ ARCH_TYPE      ?= $(subst x86_64,amd64,$(patsubst i%86,386,$(ARCH)))
 GOOS           ?= $(shell go env GOOS)
 GOARCH         ?= $(shell go env GOARCH)
 TAGS           ?= godror
+PLATFORM       ?= amd64
 DOCKER_TARGET  ?= exporter-godror
 CGO_ENABLED    ?= 1
 VERSION        ?= 2.2.0
@@ -91,11 +92,24 @@ clean:
 push-images:
 	@make --no-print-directory push-oraclelinux-image
 	
-docker:
-	docker build --no-cache --target=$(DOCKER_TARGET) --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)-amd64" --build-arg BASE_IMAGE=$(ORACLE_LINUX_BASE_IMAGE) --build-arg GOARCH=amd64 .
+docker: docker-amd
 
 docker-arm:
-	docker buildx build --target=$(DOCKER_TARGET) --platform linux/arm64 --load --no-cache --progress=plain $(BUILD_ARGS) -t "$(IMAGE_ID)-arm64" --build-arg BASE_IMAGE=$(ORACLE_LINUX_BASE_IMAGE) --build-arg GOARCH=arm64 .
+	@$(MAKE) PLATFORM=arm64 docker-platform
+
+docker-amd:
+	@$(MAKE) PLATFORM=amd64 docker-platform
+
+docker-platform:
+	@echo "Building Docker image for $(PLATFORM)..."
+	docker build --no-cache --target=$(DOCKER_TARGET) \
+		--platform linux/$(PLATFORM) \
+		--progress=plain $(BUILD_ARGS) \
+		-t "$(IMAGE_ID)-$(PLATFORM)" \
+		--build-arg BASE_IMAGE=$(ORACLE_LINUX_BASE_IMAGE) \
+		--build-arg GOARCH=$(PLATFORM) \
+		--build-arg CGO_ENABLED=$(CGO_ENABLED) \
+		--build-arg TAGS=$(TAGS) .
 
 push-oraclelinux-image:
 	docker push $(IMAGE_ID)
@@ -112,4 +126,5 @@ podman-push:
 
 podman-release: podman-build podman-push
 
-.PHONY: version build deps go-test clean docker podman-build podman-push podman-release
+.PHONY: version build deps go-test clean docker docker-arm docker-platform docker-amd \
+        podman-build podman-push podman-release
