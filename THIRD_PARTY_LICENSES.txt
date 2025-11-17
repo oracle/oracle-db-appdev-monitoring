@@ -60,7 +60,7 @@ Copyright 2017 Microsoft Corporation. All rights reserved.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-github.com/Azure/azure-sdk-for-go/sdk/keyvault/azsecrets
+github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets
 
 == License Type
 SPDX:MIT
@@ -71,7 +71,7 @@ Copyright (c) Microsoft Corporation. All rights reserved.
 --------------------------------- (separator) ----------------------------------
 
 == Dependency
-github.com/Azure/azure-sdk-for-go/sdk/keyvault/internal
+github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal
 
 == License Type
 SPDX:MIT
@@ -102,17 +102,6 @@ SPDX:MIT
 == Copyright
 Copyright (c) 2013 TOML authors
 Copyright 2010 The Go Authors.  All rights reserved.
-
---------------------------------- (separator) ----------------------------------
-
-== Dependency
-github.com/VictoriaMetrics/easyproto
-
-== License Type
-SPDX:Apache-2.0
-
-== Copyright
-Copyright 2023-2024 VictoriaMetrics, Inc.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -209,7 +198,8 @@ Copyright 2019 Square Inc.
 github.com/gofrs/flock
 
 == License Type
-=== BSD-3-Clause-4e7459b3
+=== BSD-3-Clause-ccdad8f4
+Copyright (c) 2018-2024, The Gofrs
 Copyright (c) 2015-2020, Tim Heckman
 All rights reserved.
 
@@ -244,8 +234,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Copyright (c) 2015-2020, Tim Heckman
 Copyright 2015 Tim Heckman. All rights reserved.
 Copyright 2018 The Go Authors. All rights reserved.
-Copyright 2018 The Gofrs. All rights reserved.
-
+Copyright 2018-2024 The Gofrs. All rights reserved.
 
 --------------------------------- (separator) ----------------------------------
 
@@ -1803,4 +1792,4 @@ the Mozilla Public License, v. 2.0.
 
 === ATTRIBUTION-HELPER-GENERATED:
 === Attribution helper version: {Major:0 Minor:11 GitVersion:0.10.0-116-g2a434e4d-dirty GitCommit:2a434e4d7eea22d4dfd2d1cf04909239d05562b1 GitTreeState:dirty BuildDate:2025-04-29T00:30:45Z GoVersion:go1.22.4 Compiler:gc Platform:linux/amd64}
-=== License file based on go.mod with md5 sum:  6cc83417e41baf616c93ce69e9c0cbb2
+=== License file based on go.mod with md5 sum:  ca4151fddc683472717049863d0b84e9
