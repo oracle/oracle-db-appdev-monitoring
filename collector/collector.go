@@ -1,4 +1,4 @@
-// Copyright (c) 2021, 2025, Oracle and/or its affiliates.
+// Copyright (c) 2021, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 // Portions Copyright (c) 2016 Seth Miller <seth@sethmiller.me>
 
@@ -65,7 +65,7 @@ func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
 
 	for dbname, dbconfig := range m.Databases {
 		logger.Info("Initializing database", "database", dbname)
-		database := NewDatabase(logger, dbname, dbconfig)
+		database := NewDatabase(logger, m.DatabaseLabel(), dbname, dbconfig)
 		databases = append(databases, database)
 		wg.Add(1)
 		go func() {
@@ -92,7 +92,7 @@ func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
 			Namespace: namespace,
 			Subsystem: exporterName,
 			Name:      "scrape_errors_total",
-			Help:      "Total number of times an error occured scraping a Oracle database.",
+			Help:      "Total number of times an error occured scraping a Oracle AI Database.",
 		}, []string{"collector"}),
 		error: prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: namespace,
@@ -247,7 +247,7 @@ func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- er
 		errChan <- err
 		return 1
 	}
-	e.logger.Debug("Successfully pinged Oracle database: "+maskDsn(d.Config.URL), "database", d.Name)
+	e.logger.Debug("Successfully pinged Oracle AI Database: "+maskDsn(d.Config.URL), "database", d.Name)
 
 	metricsToScrape := 0
 	for _, metric := range e.metricsToScrape {
@@ -405,7 +405,13 @@ func (e *Exporter) ScrapeMetric(d *Database, ch chan<- prometheus.Metric, m *Met
 func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric, m *Metric) error {
 	metricsCount := 0
 	constLabels := d.constLabels(e.constLabels())
-	e.logger.Debug("labels", constLabels)
+
+	if duplicatedLabels(constLabels, m.GetLabels()) {
+		e.logger.Warn("metric has duplicated labels, skipping", "metric", m.ID(), "labels", m.GetLabels(), "database", d.Name)
+		return nil
+	}
+
+	e.logger.Debug("Constant labels", "labels", constLabels)
 	genericParser := func(row map[string]string) error {
 		// Construct labels value
 		labelsValues := []string{}
@@ -428,6 +434,7 @@ func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric,
 			// Build metric desc
 			suffix := metricNameSuffix(row, metric, m.FieldToAppend)
 			fqname := prometheus.BuildFQName(namespace, m.Context, suffix)
+
 			desc := prometheus.NewDesc(
 				fqname,
 				metricHelp,
@@ -531,6 +538,21 @@ func (e *Exporter) initCache() {
 	for _, d := range e.databases {
 		d.initCache(e.metricsToScrape)
 	}
+}
+
+func duplicatedLabels(constLabels map[string]string, labels []string) bool {
+	labelSet := map[string]bool{}
+	for k := range constLabels {
+		labelSet[k] = true
+	}
+
+	for _, label := range labels {
+		if labelSet[label] {
+			return true
+		}
+	}
+
+	return false
 }
 
 func getMetricType(metricType string, metricsType map[string]string) prometheus.ValueType {

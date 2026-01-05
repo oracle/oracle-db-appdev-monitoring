@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script builds release artifacts for the Oracle Database Metrics Exporter.
+# This script builds release artifacts for the Oracle AI Database Metrics Exporter.
 # You must have a working docker socket, and docker or aliased docker command.
 # It is designed to run on MacOS aarch64, creating the darwin-arm64 on the local host.
 # Artifacts for linux-arm64, linux-amd64 are built in containers.

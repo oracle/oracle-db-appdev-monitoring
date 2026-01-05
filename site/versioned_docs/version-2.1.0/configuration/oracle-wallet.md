@@ -37,7 +37,7 @@ docker run -it --rm \
 
 ### mTLS for multiple databases with Oracle Wallet
 
-The Oracle Database Metrics exporter uses ODPI-C, which can only initalize the TNS aliases from a `tnsnames.ora` file once per process. To work around this, the exporter can be configured to read from a "combined" `tnsnames.ora` file containing all TNS aliases for connections in a multi-database configuration.
+The Oracle AI Database Metrics exporter uses ODPI-C, which can only initalize the TNS aliases from a `tnsnames.ora` file once per process. To work around this, the exporter can be configured to read from a "combined" `tnsnames.ora` file containing all TNS aliases for connections in a multi-database configuration.
 
 1. For each database the exporter will connect to, download the corresponding wallet files. If you're using ADB/ATP-S, download the regional wallet instead of the instance wallet if the databases are in the same region.
 

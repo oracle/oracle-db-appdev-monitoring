@@ -5,13 +5,13 @@ sidebar_position: 2
 
 # Monitoring Transactional Event Queues
 
-[Oracle Transactional Event Queues](https://docs.oracle.com/en/database/oracle/oracle-database/23/adque/index.html) ("TxEventQ") is a fault-tolerant, scalable, real-time messaging backbone offered by converged Oracle Database that allows you to build an enterprise-class event-driven architectures.
+[Oracle Transactional Event Queues](https://docs.oracle.com/en/database/oracle/oracle-database/23/adque/index.html) ("TxEventQ") is a fault-tolerant, scalable, real-time messaging backbone offered by converged Oracle AI Database that allows you to build an enterprise-class event-driven architectures.
 
 Access to the real-time broker, producer, and consumer metrics in a single dashboard and receiving alerts for issues allows teams to understand the state of their system.
 
 The exporter includes a set of metrics for monitoring TxEventQ and a pre-built Grafana dashboard.
 
-> Note: The metrics are written for Oracle Database 21c or later.
+> Note: The metrics are written for Oracle AI Database 21c or later.
 
 ### How to create some traffic with PL/SQL
 
@@ -114,4 +114,4 @@ A Grafana dashboard for Transactional Event Queues is provided [in this file](ht
 
 The dashboard will look like this:
 
-![Oracle Database Dashboard](/img/txeventq-dashboard-v2.png)
+![Oracle AI Database Dashboard](/img/txeventq-dashboard-v2.png)

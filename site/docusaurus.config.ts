@@ -5,8 +5,8 @@ import type * as Preset from '@docusaurus/preset-classic';
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  title: 'Oracle Database Metrics Exporter',
-  tagline: 'OpenTelemetry Metrics for your Oracle Database instances',
+  title: 'Oracle AI Database Metrics Exporter',
+  tagline: 'OpenTelemetry Metrics for your Oracle AI Database instances',
   favicon: 'img/favicon-32x32.png',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
@@ -58,9 +58,9 @@ const config: Config = {
     // Replace with your project's social card
     image: 'img/logo.png',
     navbar: {
-      title: 'Oracle Database Metrics Exporter',
+      title: 'Oracle AI Database Metrics Exporter',
       logo: {
-        alt: 'Oracle Database Metrics Exporter Logo',
+        alt: 'Oracle AI Database Metrics Exporter Logo',
         src: 'img/logo_home.png',
       },
       items: [

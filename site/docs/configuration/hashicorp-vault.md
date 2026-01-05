@@ -40,7 +40,7 @@ databases:
 Instead of fixed database credentials Vault also supports dynamic credentials that are created every time application requests them. This
 makes sure the credentials always have a short time-to-live and even if they leak, they quickly become invalid.
 
-Follow [Vault documentation on how to set up Oracle database plugin for Vault](https://developer.hashicorp.com/vault/docs/secrets/databases/oracle).
+Follow [Vault documentation on how to set up Oracle AI Database plugin for Vault](https://developer.hashicorp.com/vault/docs/secrets/databases/oracle).
 
 A few additional notes about connecting exporter to CDB. NB! Below are just example commands, adjust them to fit your environment.
 
@@ -68,7 +68,7 @@ GRANT SELECT on v_$sql to c##vaultadmin;
 GRANT ALTER SYSTEM to c##vaultadmin WITH ADMIN OPTION;
 ```
 
-Create no authentication user in Oracle database, that has actual monitoring privileges.
+Create no authentication user in Oracle AI Database, that has actual monitoring privileges.
 
 ```sql
 CREATE USER c##exporter NO AUTHENTICATION;

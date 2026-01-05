@@ -84,7 +84,7 @@ deps:
 
 go-test:
 	@echo "Run tests"
-	GOOS=$(OS_TYPE) GOARCH=$(ARCH_TYPE) go test -coverprofile="test-coverage.out" $$(go list ./... | grep -v /vendor/)
+	GOOS=$(OS_TYPE) GOARCH=$(ARCH_TYPE) go test --tags goora -coverprofile="test-coverage.out" $$(go list ./... | grep -v /vendor/)
 
 clean:
 	rm -rf ./dist glibc-*.apk oracle-*.rpm

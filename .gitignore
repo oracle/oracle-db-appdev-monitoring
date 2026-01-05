@@ -10,3 +10,5 @@ oci8.pc
 **/target/
 .DS_Store
 
+test-coverage.out
+

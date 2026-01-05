@@ -5,7 +5,7 @@ sidebar_position: 2
 
 # Default Metrics
 
-The exporter includes [default metrics](https://github.com/oracle/oracle-db-appdev-monitoring/blob/main/collector/default_metrics.toml) for Oracle Database, and process-specific metrics on the `go` runtime.
+The exporter includes [default metrics](https://github.com/oracle/oracle-db-appdev-monitoring/blob/main/collector/default_metrics.toml) for Oracle AI Database, and process-specific metrics on the `go` runtime.
 
 You can find the exporter's metric schema in the [Custom Metrics configuration](../configuration/custom-metrics.md#metric-schema).
 
@@ -100,7 +100,7 @@ oracledb_top_sql_elapsed{database="db1",sql_id="bj9ajtpfh9f41",sql_text=" declar
 oracledb_top_sql_elapsed{database="db1",sql_id="bq819r502v7u2",sql_text="select originating_timestamp, module_id, execution_cont"} 3.676572
 oracledb_top_sql_elapsed{database="db1",sql_id="ddrfu7d7hbkym",sql_text=" select count(1), partition_id                         "} 1.870379
 oracledb_top_sql_elapsed{database="db1",sql_id="f6w8rqdkx0bnv",sql_text="SELECT * FROM ( SELECT /*+ ordered use_nl(o c cu h) ind"} 1.895947
-# HELP oracledb_up Whether the Oracle database server is up.
+# HELP oracledb_up Whether the Oracle AI Database server is up.
 # TYPE oracledb_up gauge
 oracledb_up{database="db1"} 1
 # HELP oracledb_wait_time_administrative counter metric from system_wait_class view in Oracle.

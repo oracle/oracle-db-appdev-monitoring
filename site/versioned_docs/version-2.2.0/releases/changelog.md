@@ -34,7 +34,7 @@ Thank you to the following people for their suggestions and contributions:
 - Increased the default query timeout for the `top_sql` metric to 10 seconds (previously 5 seconds).
 - Metrics using the `scrapeinterval` property will no longer be scraped on every request if they have a cached value. This only applies when the metrics exporter is configured to scrape metrics _on request_, rather than on a global interval.
 - Metrics using the `fieldtoappend` property now support labels. The `wait_time` and `activity` default metrics use the `fieldtoappend` property, and now properly display their labels. 
-- Fix `wait_time` default metric to work with Oracle Database 19c.
+- Fix `wait_time` default metric to work with Oracle AI Database 19c.
 - Fix an issue where the exporter would unnecessarily scrape metrics with a custom scrape interval.
 
 Thank you to the following people for their suggestions and contributions:
@@ -227,7 +227,7 @@ This release includes the following changes:
 
 - Support for running the exporter on ARM processors (darwin and linux).
 - Updated some third-party dependencies.
-- Updated the "test/demo environment" to use newer version of Oracle Database (23.5.0.24.07) and faster startup.
+- Updated the "test/demo environment" to use newer version of Oracle AI Database (23.5.0.24.07) and faster startup.
 
 ### Version 1.4.0, September 4, 2024
 
@@ -316,6 +316,6 @@ The first production release, v1.0, includes the following features:
 - A Grafana dashboard is provided for Transactional Event Queues, and
 - A pre-built container image is provided, based on Oracle Linux, and optimized for size and security.
 
-Note that this exporter uses a different Oracle Database driver which in turn uses code directly written by Oracle to access the database.  This driver does require an Oracle client.  In this initial release, the client is bundled into the container image, however we intend to make that optional in order to minimize the image size.
+Note that this exporter uses a different Oracle AI Database driver which in turn uses code directly written by Oracle to access the database.  This driver does require an Oracle client.  In this initial release, the client is bundled into the container image, however we intend to make that optional in order to minimize the image size.
 
 The interfaces for this version have been kept as close as possible to those of earlier alpha releases in this repository to assist with migration.  However, it should be expected that there may be breaking changes in future releases.

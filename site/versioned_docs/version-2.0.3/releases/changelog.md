@@ -177,7 +177,7 @@ This release includes the following changes:
 
 - Support for running the exporter on ARM processors (darwin and linux).
 - Updated some third-party dependencies.
-- Updated the "test/demo environment" to use newer version of Oracle Database (23.5.0.24.07) and faster startup.
+- Updated the "test/demo environment" to use newer version of Oracle AI Database (23.5.0.24.07) and faster startup.
 
 ### Version 1.4.0, September 4, 2024
 
@@ -266,6 +266,6 @@ The first production release, v1.0, includes the following features:
 - A Grafana dashboard is provided for Transactional Event Queues, and
 - A pre-built container image is provided, based on Oracle Linux, and optimized for size and security.
 
-Note that this exporter uses a different Oracle Database driver which in turn uses code directly written by Oracle to access the database.  This driver does require an Oracle client.  In this initial release, the client is bundled into the container image, however we intend to make that optional in order to minimize the image size.
+Note that this exporter uses a different Oracle AI Database driver which in turn uses code directly written by Oracle to access the database.  This driver does require an Oracle client.  In this initial release, the client is bundled into the container image, however we intend to make that optional in order to minimize the image size.
 
 The interfaces for this version have been kept as close as possible to those of earlier alpha releases in this repository to assist with migration.  However, it should be expected that there may be breaking changes in future releases.
