@@ -1,4 +1,4 @@
-// Copyright (c) 2025, Oracle and/or its affiliates.
+// Copyright (c) 2025, 2026, Oracle and/or its affiliates.
 
 package collector
 
@@ -33,7 +33,8 @@ type Database struct {
 	// Given a metric's scrape configuration, it may not be computed on the same interval as other metrics.
 	MetricsCache *MetricsCache
 
-	Valid bool
+	Valid         bool
+	DatabaseLabel string
 }
 
 type MetricsCache struct {

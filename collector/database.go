@@ -1,4 +1,4 @@
-// Copyright (c) 2025, Oracle and/or its affiliates.
+// Copyright (c) 2025, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package collector
@@ -21,7 +21,7 @@ const (
 func (d *Database) UpMetric(exporterLabels map[string]string) prometheus.Metric {
 	desc := prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "up"),
-		"Whether the Oracle database server is up.",
+		"Whether the Oracle AI Database server is up.",
 		nil,
 		d.constLabels(exporterLabels),
 	)
@@ -32,7 +32,7 @@ func (d *Database) UpMetric(exporterLabels map[string]string) prometheus.Metric 
 }
 
 func (d *Database) constLabels(labels map[string]string) map[string]string {
-	labels["database"] = d.Name
+	labels[d.DatabaseLabel] = d.Name
 
 	// configured per-database labels added to constLabels
 	for label, value := range d.Config.Labels {
@@ -41,14 +41,15 @@ func (d *Database) constLabels(labels map[string]string) map[string]string {
 	return labels
 }
 
-func NewDatabase(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) *Database {
+func NewDatabase(logger *slog.Logger, dblabel, dbname string, dbconfig DatabaseConfig) *Database {
 	db := connect(logger, dbname, dbconfig)
 	return &Database{
-		Name:    dbname,
-		Up:      0,
-		Session: db,
-		Config:  dbconfig,
-		Valid:   true,
+		Name:          dbname,
+		Up:            0,
+		Session:       db,
+		Config:        dbconfig,
+		Valid:         true,
+		DatabaseLabel: dblabel,
 	}
 }
 

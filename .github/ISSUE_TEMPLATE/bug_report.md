@@ -19,7 +19,7 @@ assignees: ""
 
 ## Environment
 - OS:
-- Oracle Database version:
+- Oracle AI Database version:
 - Exporter version:
 
 ## Screenshots / Logs

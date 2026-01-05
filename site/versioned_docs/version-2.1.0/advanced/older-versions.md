@@ -5,11 +5,11 @@ sidebar_position: 4
 
 # Older Database Versions
 
-In general, fixes and features are not provided for older database versions. However, it is possible to configure the Oracle Database Metrics Exporter to scrape older versions of Oracle Database.
+In general, fixes and features are not provided for older database versions. However, it is possible to configure the Oracle AI Database Metrics Exporter to scrape older versions of Oracle AI Database.
 
 ### Known Issues with Older Database Versions
 
-If you are running an unsupported version of Oracle Database, you may encounter the following issues:
+If you are running an unsupported version of Oracle AI Database, you may encounter the following issues:
 
 - Metrics using modern SQL syntax may not work. For compatibility, you can disable or modify these metrics.
 - The exporter uses a "thick" database client. Ensure your database client libraries are compatible with your database version.

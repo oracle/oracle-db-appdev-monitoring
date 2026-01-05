@@ -17,7 +17,7 @@ The exporter initialization is as follows:
 - Create an `Exporter` object
 - Register exporter in prometheus library
 - Launching a web server to handle incoming requests
-- Attempt connection to any configured Oracle Database servers
+- Attempt connection to any configured Oracle AI Database servers
 
 These operations are mainly done in the `main` function.
 

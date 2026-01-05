@@ -16,9 +16,9 @@ In this section you will find information on running the exporter.
 
 You can run the exporter in a local container using a container image from [Oracle Container Registry](https://container-registry.oracle.com).  The container image is available in the "observability-exporter" repository in the "Database" category.  No authentication or license presentment/acceptance are required to pull this image from the registry.
 
-### Oracle Database Free
+### Oracle AI Database Free
 
-If you need an Oracle Database to test the exporter, you can use this command to start up an instance of [Oracle Database Free](https://www.oracle.com/database/free/) which also requires no authentication or license presentment/acceptance to pull the image.
+If you need an Oracle AI Database to test the exporter, you can use this command to start up an instance of [Oracle AI Database Free](https://www.oracle.com/database/free/) which also requires no authentication or license presentment/acceptance to pull the image.
 
 ```bash
 docker run --name free23ai \
@@ -53,7 +53,7 @@ docker inspect free23ai | grep IPA
 
 ### Exporter
 
-You need to give the exporter the connection details for the Oracle Database that you want it to run against.  You can use a simple connection, or a wallet.
+You need to give the exporter the connection details for the Oracle AI Database that you want it to run against.  You can use a simple connection, or a wallet.
 
 ### Simple connection
 
@@ -131,13 +131,13 @@ The following example puts the logfile in the current location with the filename
 If you prefer to provide configuration via a [config file](../configuration/config-file.md), you may do so with the `--config.file` argument. The use of a config file over command line arguments is preferred. If a config file is not provided, the "default" database connection is managed by command line arguments.
 
 ```yaml
-# Example Oracle Database Metrics Exporter Configuration file.
+# Example Oracle AI Database Metrics Exporter Configuration file.
 # Environment variables of the form ${VAR_NAME} will be expanded.
 # If you include a config value that contains a '$' character, escape that '$' with another '$', e.g.,
 # "$test$pwd" => "$$test$$pwd"
 # Otherwise, the value will be expanded as an environment variable.
 
-# Example Oracle Database Metrics Exporter Configuration file.
+# Example Oracle AI Database Metrics Exporter Configuration file.
 # Environment variables of the form ${VAR_NAME} will be expanded.
 
 databases:
@@ -158,16 +158,16 @@ databases:
     ## Metrics query timeout for this database, in seconds
     queryTimeout: 5
 
-    ## Rely on Oracle Database External Authentication by network or OS
+    ## Rely on Oracle AI Database External Authentication by network or OS
     # externalAuth: false
     ## Database role
     # role: SYSDBA
-    ## Path to Oracle Database wallet, if using wallet
+    ## Path to Oracle AI Database wallet, if using wallet
     # tnsAdmin: /path/to/database/wallet
 
     ### Connection settings:
-    ### Either the go-sql or Oracle Database connection pool may be used.
-    ### To use the Oracle Database connection pool over the go-sql connection pool,
+    ### Either the go-sql or Oracle AI Database connection pool may be used.
+    ### To use the Oracle AI Database connection pool over the go-sql connection pool,
     ### set maxIdleConns to zero and configure the pool* settings.
 
     ### Connection pooling settings for the go-sql connection pool
@@ -176,12 +176,12 @@ databases:
     ## Max idle connections for this database using go-sql connection pool
     maxIdleConns: 10
 
-    ### Connection pooling settings for the Oracle Database connection pool
-    ## Oracle Database connection pool increment.
+    ### Connection pooling settings for the Oracle AI Database connection pool
+    ## Oracle AI Database connection pool increment.
     # poolIncrement: 1
-    ## Oracle Database Connection pool maximum size
+    ## Oracle AI Database Connection pool maximum size
     # poolMaxConnections: 15
-    ## Oracle Database Connection pool minimum size
+    ## Oracle AI Database Connection pool minimum size
     # poolMinConnections: 15
 
     ## Arbitrary labels to add to each metric scraped from this database
@@ -215,7 +215,7 @@ log:
 
 ### Docker Compose
 
-If you would like to set up a test environment with the exporter, you can use the provided "Docker Compose" file in this repository which will start an Oracle Database instance, the exporter, Prometheus and Grafana.
+If you would like to set up a test environment with the exporter, you can use the provided "Docker Compose" file in this repository which will start an Oracle AI Database instance, the exporter, Prometheus and Grafana.
 
 ```bash
 cd docker-compose
@@ -228,4 +228,4 @@ Once the containers are all running, you can access the services using these URL
 
 - [Exporter](http://localhost:9161/metrics)
 - [Prometheus](http://localhost:9090) - try a query for "oracle".
-- [Grafana](http://localhost:3000) - username is "admin" and password is "grafana".  An Oracle Database dashboard is provisioned and configured to use data from the exporter.
+- [Grafana](http://localhost:3000) - username is "admin" and password is "grafana".  An Oracle AI Database dashboard is provisioned and configured to use data from the exporter.

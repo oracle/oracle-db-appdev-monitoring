@@ -9,9 +9,9 @@ You can run the exporter in Kubernetes using provided manifests.
 
 To run the exporter in Kubernetes, you must complete the following steps.  All steps must be completed in the same Kunernetes namespace.  The examples below assume you want to use a namespace called `exporter`, you must change the commands if you wish to use a different namespace.
 
-### Create a secret with credentials for connecting to the Oracle Database
+### Create a secret with credentials for connecting to the Oracle AI Database
 
-Create a secret with the Oracle database user and password that the exporter should use to connect to the database using this command.  You must specify the correct user and password for your environment.  This example uses `pdbadmin` as the user and `Welcome12345` as the password:
+Create a secret with the Oracle AI Database user and password that the exporter should use to connect to the database using this command.  You must specify the correct user and password for your environment.  This example uses `pdbadmin` as the user and `Welcome12345` as the password:
 
 ```bash
 kubectl create secret generic db-secret \
@@ -59,7 +59,7 @@ kubectl create cm db-metrics-txeventq-exporter-config \
     -n exporter
 ```
 
-### Deploy the Oracle Database Observability exporter
+### Deploy the Oracle AI Database Observability exporter
 
 A sample Kubernetes manifest is provided [here](https://github.com/oracle/oracle-db-appdev-monitoring/blob/main/kubernetes/metrics-exporter-deployment.yaml).  You must edit this file to set the namespace you wish to use, the database connect string to use, and if you have any custom metrics, you will need to uncomment and customize some sections in this file.
 

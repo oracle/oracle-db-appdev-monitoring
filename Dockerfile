@@ -35,7 +35,7 @@ RUN CGO_ENABLED=${CGO_ENABLED} GOOS=${GOOS} GOARCH=${GOARCH} go build --tags=${T
 
 FROM ${BASE_IMAGE:-ghcr.io/oracle/oraclelinux:8-slim} AS exporter-godror
 LABEL org.opencontainers.image.authors="Oracle America, Inc."
-LABEL org.opencontainers.image.description="Oracle Database Observability Exporter"
+LABEL org.opencontainers.image.description="Oracle AI Database Observability Exporter"
 
 ARG VERSION
 ENV VERSION=${VERSION:-1.0.0}

@@ -3,7 +3,7 @@ title: Builds
 sidebar_position: 3
 ---
 
-The Oracle Database Metrics Exporter publishes cross-platform builds for each release.
+The Oracle AI Database Metrics Exporter publishes cross-platform builds for each release.
 
 Binaries:
 - linux/amd64
@@ -26,7 +26,7 @@ Download pre-built binaries from the metrics exporter [GitHub Releases page](htt
 docker pull container-registry.oracle.com/database/observability-exporter:${VERSION}
 ```
 
-### Build the Oracle Database Metrics Exporter
+### Build the Oracle AI Database Metrics Exporter
 
 Follow these steps to build the metrics exporter on a Ubuntu Linux system.
 

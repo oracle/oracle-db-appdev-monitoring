@@ -11,4 +11,4 @@ A sample Grafana dashboard definition is provided [in this directory](https://gi
 
 The dashboard shows some basic information, as shown below:
 
-![Oracle Database Dashboard](/img/oracledb-dashboard.png)
+![Oracle AI Database Dashboard](/img/oracledb-dashboard.png)

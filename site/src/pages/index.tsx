@@ -34,7 +34,7 @@ export default function Home(): ReactNode {
   return (
     <Layout
       title={`${siteConfig.title}`}
-      description="OpenTelemetry Metrics for your Oracle Database instances">
+      description="OpenTelemetry Metrics for your Oracle AI Database instances">
       <HomepageHeader />
       <main>
         <HomepageFeatures />

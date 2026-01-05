@@ -1,4 +1,4 @@
-// Copyright (c) 2025, Oracle and/or its affiliates.
+// Copyright (c) 2025, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package collector
@@ -6,8 +6,8 @@ package collector
 import (
 	"fmt"
 	"github.com/oracle/oracle-db-appdev-monitoring/azvault"
-	"github.com/oracle/oracle-db-appdev-monitoring/ocivault"
 	"github.com/oracle/oracle-db-appdev-monitoring/hashivault"
+	"github.com/oracle/oracle-db-appdev-monitoring/ocivault"
 	"github.com/prometheus/exporter-toolkit/web"
 	"gopkg.in/yaml.v2"
 	"log/slog"
@@ -75,18 +75,19 @@ type AZVault struct {
 }
 
 type HashiCorpVault struct {
-	Socket         string `yaml:"proxySocket"`
-	MountType      string `yaml:"mountType"`
-	MountName      string `yaml:"mountName"`
-	SecretPath     string `yaml:"secretPath"`
-	UsernameAttr   string `yaml:"usernameAttribute"`
-	PasswordAttr   string `yaml:"passwordAttribute"`
-	AsProxy		   string `yaml:"useAsProxyFor"`
+	Socket       string `yaml:"proxySocket"`
+	MountType    string `yaml:"mountType"`
+	MountName    string `yaml:"mountName"`
+	SecretPath   string `yaml:"secretPath"`
+	UsernameAttr string `yaml:"usernameAttribute"`
+	PasswordAttr string `yaml:"passwordAttribute"`
+	AsProxy      string `yaml:"useAsProxyFor"`
 	// Private to avoid making multiple calls
 	fetchedSecert map[string]string
 }
 
 type MetricsFilesConfig struct {
+	DatabaseLabel  string `yaml:"databaseLabel"`
 	Default        string
 	Custom         []string
 	ScrapeInterval *time.Duration `yaml:"scrapeInterval"`
@@ -96,6 +97,13 @@ type LoggingConfig struct {
 	LogDisable     *int           `yaml:"disable"`
 	LogInterval    *time.Duration `yaml:"interval"`
 	LogDestination string         `yaml:"destination"`
+}
+
+func (m *MetricsConfiguration) DatabaseLabel() string {
+	if len(m.Metrics.DatabaseLabel) == 0 {
+		return "database"
+	}
+	return m.Metrics.DatabaseLabel
 }
 
 func (m *MetricsConfiguration) LogDestination() string {

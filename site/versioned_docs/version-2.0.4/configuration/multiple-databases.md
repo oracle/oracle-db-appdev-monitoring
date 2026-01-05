@@ -14,7 +14,7 @@ If you're connecting to multiple databases using mTLS, see [mTLS for multiple da
 The following settings configure the exporter to scrape multiple databases, "db1", and "db2", simultaneously:
 
 ```yaml
-# Example Oracle Database Metrics Exporter Configuration file.
+# Example Oracle AI Database Metrics Exporter Configuration file.
 # Environment variables of the form ${VAR_NAME} will be expanded.
 
 databases:
@@ -36,16 +36,16 @@ databases:
     ## Metrics query timeout for this database, in seconds
     queryTimeout: 5
 
-    ## Rely on Oracle Database External Authentication by network or OS
+    ## Rely on Oracle AI Database External Authentication by network or OS
     # externalAuth: false
     ## Database role
     # role: SYSDBA
-    ## Path to Oracle Database wallet, if using wallet
+    ## Path to Oracle AI Database wallet, if using wallet
     # tnsAdmin: /path/to/database/wallet
 
     ### Connection settings:
-    ### Either the go-sql or Oracle Database connection pool may be used.
-    ### To use the Oracle Database connection pool over the go-sql connection pool,
+    ### Either the go-sql or Oracle AI Database connection pool may be used.
+    ### To use the Oracle AI Database connection pool over the go-sql connection pool,
     ### set maxIdleConns to zero and configure the pool* settings.
 
     ### Connection pooling settings for the go-sql connection pool
@@ -54,12 +54,12 @@ databases:
     ## Max idle connections for this database using go-sql connection pool
     maxIdleConns: 10
 
-    ### Connection pooling settings for the Oracle Database connection pool
-    ## Oracle Database connection pool increment.
+    ### Connection pooling settings for the Oracle AI Database connection pool
+    ## Oracle AI Database connection pool increment.
     # poolIncrement: 1
-    ## Oracle Database Connection pool maximum size
+    ## Oracle AI Database Connection pool maximum size
     # poolMaxConnections: 15
-    ## Oracle Database Connection pool minimum size
+    ## Oracle AI Database Connection pool minimum size
     # poolMinConnections: 15
 
     ### Arbitrary labels to add to each metric scraped from this database
@@ -82,16 +82,16 @@ databases:
     ## Metrics query timeout for this database, in seconds
     queryTimeout: 5
 
-    ## Rely on Oracle Database External Authentication by network or OS
+    ## Rely on Oracle AI Database External Authentication by network or OS
     # externalAuth: false
     ## Database role
     # role: SYSDBA
-    ## Path to Oracle Database wallet, if using wallet
+    ## Path to Oracle AI Database wallet, if using wallet
     # tnsAdmin: /path/to/database/wallet
 
     ### Connection settings:
-    ### Either the go-sql or Oracle Database connection pool may be used.
-    ### To use the Oracle Database connection pool over the go-sql connection pool,
+    ### Either the go-sql or Oracle AI Database connection pool may be used.
+    ### To use the Oracle AI Database connection pool over the go-sql connection pool,
     ### set maxIdleConns to zero and configure the pool* settings.
 
     ### Connection pooling settings for the go-sql connection pool
@@ -100,12 +100,12 @@ databases:
     ## Max idle connections for this database using go-sql connection pool
     maxIdleConns: 10
 
-    ### Connection pooling settings for the Oracle Database connection pool
-    ## Oracle Database connection pool increment.
+    ### Connection pooling settings for the Oracle AI Database connection pool
+    ## Oracle AI Database connection pool increment.
     # poolIncrement: 1
-    ## Oracle Database Connection pool maximum size
+    ## Oracle AI Database Connection pool maximum size
     # poolMaxConnections: 15
-    ## Oracle Database Connection pool minimum size
+    ## Oracle AI Database Connection pool minimum size
     # poolMinConnections: 15
 
     ### Arbitrary labels to add to each metric scraped from this database

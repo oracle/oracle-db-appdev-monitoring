@@ -15,7 +15,7 @@ const FeatureList: FeatureItem[] = [
     Svg: require('@site/static/img/logo.svg').default,
     description: (
       <>
-        Run the Oracle Database Metrics Exporter as a local binary, container, or in Kubernetes.
+        Run the Oracle AI Database Metrics Exporter as a local binary, container, or in Kubernetes.
           Use pre-built AMD64 and ARM64 images to easily get started.
       </>
     ),
