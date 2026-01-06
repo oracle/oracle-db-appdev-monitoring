@@ -48,7 +48,6 @@ func NewDatabase(logger *slog.Logger, dblabel, dbname string, dbconfig DatabaseC
 		Up:            0,
 		Session:       db,
 		Config:        dbconfig,
-		Valid:         true,
 		DatabaseLabel: dblabel,
 	}
 }
@@ -70,21 +69,29 @@ func (d *Database) WarmupConnectionPool(logger *slog.Logger) {
 	if poolSize > 100 { // defensively cap poolsize
 		poolSize = 100
 	}
-	warmup := func(i int) {
+	warmup := func(i int) error {
 		time.Sleep(100 * time.Millisecond)
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
 		conn, err := d.Session.Conn(ctx)
 		if err != nil {
-			logger.Debug("Failed to open database connection on warmup", "conn", i, "error", err, "database", d.Name)
-			return
+			return err
 		}
 		connections = append(connections, conn)
+		return nil
 	}
-	for i := 0; i < poolSize; i++ {
-		warmup(i + 1)
-	}
+
+	func() {
+		for i := 0; i < poolSize; i++ {
+			// short circuit warmup for inaccessible databases
+			if err := warmup(i + 1); err != nil {
+				d.Up = 0
+				logger.Error("Failed warmup database connection pool", "conn", i, "error", err, "database", d.Name)
+				return
+			}
+		}
+	}()
 
 	logger.Debug("Warmed connection pool", "total", len(connections), "database", d.Name)
 	for i, conn := range connections {
@@ -117,11 +124,16 @@ func (d *Database) ping(logger *slog.Logger) error {
 }
 
 func (d *Database) IsValid() bool {
-	return d.Valid
+	if d.invalidUntil == nil {
+		return true
+	}
+	return time.Now().After(*d.invalidUntil)
 }
 
 func (d *Database) invalidate() {
-	d.Valid = false
+	invalidDuration := 5 * time.Minute
+	until := time.Now().Add(invalidDuration)
+	d.invalidUntil = &until
 }
 
 func initdb(logger *slog.Logger, dbname string, dbconfig DatabaseConfig, db *sql.DB) {

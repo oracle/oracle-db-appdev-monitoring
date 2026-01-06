@@ -33,7 +33,7 @@ type Database struct {
 	// Given a metric's scrape configuration, it may not be computed on the same interval as other metrics.
 	MetricsCache *MetricsCache
 
-	Valid         bool
+	invalidUntil  *time.Time
 	DatabaseLabel string
 }
 

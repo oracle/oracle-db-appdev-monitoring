@@ -11,9 +11,12 @@ List of upcoming and historic changes to the exporter.
 
 - Metrics with duplicated labels no longer cause a panic. For each metric with a duplicated label, the exporter logs a warning message and skips collecting that metric. On finding warning messages, the user should adjust the exporter configuration to remove any duplicated labels.
 - The default `database` label applied to each metric may be renamed using the `metrics.databaseLabel` configuration option.
+- Connections to invalidated databases (due to user credentials or locked accounts) will be reattempted after a 5 minute backoff.
+- On startup, database connection pool warmup will short circuit if an error is encountered. The exporter will periodically attempt to reconnect to this database, and will not block collecting metrics from other databases.
 
 Thank you to the following people for their suggestions and contributions:
 - [@wes-pro](https://github.com/wes-pro)
+- [@kirxcore](https://github.com/kirxcore)
 
 ### Version 2.2.0, October 28, 2025
 
