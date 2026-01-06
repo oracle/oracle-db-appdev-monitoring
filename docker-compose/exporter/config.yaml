@@ -55,6 +55,8 @@ databases:
 
 
 metrics:
+  ## How long to wait before attempting to reconnect to an invalid database (login or locked user)
+  # connectionBackoff: 5m
   ## How often to scrape metrics. If not provided, metrics will be scraped on request.
   # scrapeInterval: 15s
   ## Path to default metrics file.

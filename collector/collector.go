@@ -242,7 +242,7 @@ func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- er
 		return 1
 	}
 	// If ping fails, we will try again on the next iteration of metrics scraping
-	if err := d.ping(e.logger); err != nil {
+	if err := d.ping(e.logger, e.MetricsConfiguration.ConnectionBackoff()); err != nil {
 		e.logger.Error("Error pinging database", "error", err, "database", d.Name)
 		errChan <- err
 		return 1

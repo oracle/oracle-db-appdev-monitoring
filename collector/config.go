@@ -87,10 +87,11 @@ type HashiCorpVault struct {
 }
 
 type MetricsFilesConfig struct {
-	DatabaseLabel  string `yaml:"databaseLabel"`
-	Default        string
-	Custom         []string
-	ScrapeInterval *time.Duration `yaml:"scrapeInterval"`
+	DatabaseLabel     string `yaml:"databaseLabel"`
+	Default           string
+	Custom            []string
+	ScrapeInterval    *time.Duration `yaml:"scrapeInterval"`
+	ConnectionBackoff *time.Duration `yaml:"connectionBackoff"`
 }
 
 type LoggingConfig struct {
@@ -393,4 +394,11 @@ func (m *MetricsConfiguration) checkDuplicatedDatabases(logger *slog.Logger) {
 			logger.Warn("duplicated database connections", "database connections", strings.Join(v, ", "), "count", len(v))
 		}
 	}
+}
+
+func (m *MetricsConfiguration) ConnectionBackoff() time.Duration {
+	if m.Metrics.ConnectionBackoff == nil {
+		return 5 * time.Minute
+	}
+	return *m.Metrics.ConnectionBackoff
 }

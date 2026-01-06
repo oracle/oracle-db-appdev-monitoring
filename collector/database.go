@@ -103,14 +103,14 @@ func (d *Database) WarmupConnectionPool(logger *slog.Logger) {
 
 // ping the database. If the database is disconnected, try to reconnect.
 // If the database type is unknown, try to reload it.
-func (d *Database) ping(logger *slog.Logger) error {
+func (d *Database) ping(logger *slog.Logger, backoff time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	err := d.Session.PingContext(ctx)
 	if err != nil {
 		d.Up = 0
 		if isInvalidCredentialsError(err) {
-			d.invalidate()
+			d.invalidate(backoff)
 			return err
 		}
 		// If database is closed, try to reconnect
@@ -130,9 +130,8 @@ func (d *Database) IsValid() bool {
 	return time.Now().After(*d.invalidUntil)
 }
 
-func (d *Database) invalidate() {
-	invalidDuration := 5 * time.Minute
-	until := time.Now().Add(invalidDuration)
+func (d *Database) invalidate(backoff time.Duration) {
+	until := time.Now().Add(backoff)
 	d.invalidUntil = &until
 }
 
