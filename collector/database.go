@@ -48,7 +48,6 @@ func NewDatabase(logger *slog.Logger, dblabel, dbname string, dbconfig DatabaseC
 		Up:            0,
 		Session:       db,
 		Config:        dbconfig,
-		Valid:         true,
 		DatabaseLabel: dblabel,
 	}
 }
@@ -70,21 +69,29 @@ func (d *Database) WarmupConnectionPool(logger *slog.Logger) {
 	if poolSize > 100 { // defensively cap poolsize
 		poolSize = 100
 	}
-	warmup := func(i int) {
+	warmup := func(i int) error {
 		time.Sleep(100 * time.Millisecond)
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
 		conn, err := d.Session.Conn(ctx)
 		if err != nil {
-			logger.Debug("Failed to open database connection on warmup", "conn", i, "error", err, "database", d.Name)
-			return
+			return err
 		}
 		connections = append(connections, conn)
+		return nil
 	}
-	for i := 0; i < poolSize; i++ {
-		warmup(i + 1)
-	}
+
+	func() {
+		for i := 0; i < poolSize; i++ {
+			// short circuit warmup for inaccessible databases
+			if err := warmup(i + 1); err != nil {
+				d.Up = 0
+				logger.Error("Failed warmup database connection pool", "conn", i, "error", err, "database", d.Name)
+				return
+			}
+		}
+	}()
 
 	logger.Debug("Warmed connection pool", "total", len(connections), "database", d.Name)
 	for i, conn := range connections {
@@ -96,14 +103,14 @@ func (d *Database) WarmupConnectionPool(logger *slog.Logger) {
 
 // ping the database. If the database is disconnected, try to reconnect.
 // If the database type is unknown, try to reload it.
-func (d *Database) ping(logger *slog.Logger) error {
+func (d *Database) ping(logger *slog.Logger, backoff time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	err := d.Session.PingContext(ctx)
 	if err != nil {
 		d.Up = 0
 		if isInvalidCredentialsError(err) {
-			d.invalidate()
+			d.invalidate(backoff)
 			return err
 		}
 		// If database is closed, try to reconnect
@@ -117,11 +124,15 @@ func (d *Database) ping(logger *slog.Logger) error {
 }
 
 func (d *Database) IsValid() bool {
-	return d.Valid
+	if d.invalidUntil == nil {
+		return true
+	}
+	return time.Now().After(*d.invalidUntil)
 }
 
-func (d *Database) invalidate() {
-	d.Valid = false
+func (d *Database) invalidate(backoff time.Duration) {
+	until := time.Now().Add(backoff)
+	d.invalidUntil = &until
 }
 
 func initdb(logger *slog.Logger, dbname string, dbconfig DatabaseConfig, db *sql.DB) {

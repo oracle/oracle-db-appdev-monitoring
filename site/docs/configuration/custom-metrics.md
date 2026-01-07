@@ -14,6 +14,8 @@ exporter, use the `metrics` configuration in the [config file](./config-file.md)
 metrics:
   ## How often to scrape metrics. If not provided, metrics will be scraped on request.
   # scrapeInterval: 15s
+  ## How long to wait before attempting to reconnect to an invalid database (login or locked user)
+  # connectionBackoff: 5m
   ## Path to default metrics file.
   default: default-metrics.toml
   ## Paths to any custom metrics files (TOML or YAML)

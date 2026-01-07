@@ -73,6 +73,9 @@ metrics:
   # databaseLabel: database
   ## How often to scrape metrics. If not provided, metrics will be scraped on request.
   # scrapeInterval: 15s
+  ## How long to wait before attempting to reconnect to an invalid database (login or locked user).
+  ## Defaults to 5 minutes.
+  # connectionBackoff: 5m
   ## Path to default metrics file.
   default: default-metrics.toml
   ## Paths to any custom metrics files
