@@ -11,7 +11,7 @@ require (
 	github.com/hashicorp/vault/api v1.22.0
 	github.com/oracle/oci-go-sdk/v65 v65.103.0
 	github.com/prometheus/client_golang v1.23.2
-	github.com/prometheus/common v0.67.2
+	github.com/prometheus/common v0.67.3
 	github.com/prometheus/exporter-toolkit v0.15.0
 	github.com/sijms/go-ora/v2 v2.9.0
 	gopkg.in/yaml.v2 v2.4.0
