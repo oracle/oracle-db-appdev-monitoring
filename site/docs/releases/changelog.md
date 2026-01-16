@@ -13,6 +13,8 @@ List of upcoming and historic changes to the exporter.
 - The default `database` label applied to each metric may be renamed using the `metrics.databaseLabel` configuration option.
 - Connections to invalidated databases (due to user credentials or locked accounts) will be reattempted after a 5 minute backoff.
 - On startup, database connection pool warmup will short circuit if an error is encountered. The exporter will periodically attempt to reconnect to this database, and will not block collecting metrics from other databases.
+- Update third-party dependencies.
+- Update Go runtime to 1.24.11.
 
 Thank you to the following people for their suggestions and contributions:
 - [@wes-pro](https://github.com/wes-pro)
@@ -27,8 +29,8 @@ Our current priorities to support metrics for advanced database features and use
 - Move `oracledb_dbtype` metric to the default metrics. You may now disable or override this metric like any other database metric.
 - Document required database permissions for the exporter.
 - Fix an issue where some metrics would not be cached when using a per-metric scrape interval with a global scrape interval.
-- Update third party dependencies
-- Update Go runtime to 1.24.9
+- Update third party dependencies.
+- Update Go runtime to 1.24.9.
 
 Thank you to the following people for their suggestions and contributions:
 - [@MansuyDavid](https://github.com/MansuyDavid)
