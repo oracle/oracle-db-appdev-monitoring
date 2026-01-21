@@ -95,7 +95,7 @@ For example, for the darwin-arm64 platform:
 
 ```
 dist/
-├── oracledb_exporter-2.2.0.darwin-arm64
+├── oracledb_exporter-2.2.1.darwin-arm64
 │   └── oracledb_exporter
-└── oracledb_exporter-2.2.0.darwin-arm64.tar.gz
+└── oracledb_exporter-2.2.1.darwin-arm64.tar.gz
 ```

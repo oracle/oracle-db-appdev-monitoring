@@ -94,7 +94,7 @@ docker run -it --rm \
     -e DB_PASSWORD=Welcome12345 \
     -e DB_CONNECT_STRING=free23ai:1521/freepdb \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:2.2.0
+    container-registry.oracle.com/database/observability-exporter:2.2.1
 ```
 
 ## Standalone Binary

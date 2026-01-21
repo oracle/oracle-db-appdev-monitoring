@@ -73,7 +73,7 @@ build_ol() {
                                     export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin && \
                                     git clone --depth 1 https://github.com/oracle/oracle-db-appdev-monitoring.git && \
                                     cd oracle-db-appdev-monitoring && \
-                                    make go-build TAGS=$TAGS CGO_ENABLED=$CGO_ENABLED"
+                                    make go-build VERSION=$VERSION TAGS=$TAGS CGO_ENABLED=$CGO_ENABLED"
 
   docker cp "$container:/oracle-db-appdev-monitoring/dist/$filename" dist
 
@@ -89,8 +89,8 @@ build_ubuntu() {
                                       apt-get -y install podman qemu-user-static golang gcc-aarch64-linux-gnu git make && \
                                       git clone --depth 1 https://github.com/oracle/oracle-db-appdev-monitoring.git && \
                                       cd oracle-db-appdev-monitoring && \
-                                      make go-build-linux-amd64 TAGS=$TAGS CGO_ENABLED=$CGO_ENABLED && \
-                                      make go-build-linux-gcc-arm64 TAGS=$TAGS CGO_ENABLED=$CGO_ENABLED"
+                                      make go-build-linux-amd64 VERSION=$VERSION TAGS=$TAGS CGO_ENABLED=$CGO_ENABLED && \
+                                      make go-build-linux-gcc-arm64 VERSION=$VERSION  TAGS=$TAGS CGO_ENABLED=$CGO_ENABLED"
 
 
   docker cp "$container:/oracle-db-appdev-monitoring/dist/oracledb_exporter-${VERSION}.linux-amd64.tar.gz" dist
@@ -117,7 +117,7 @@ if [[ -n "$BUILD_DARWIN" ]]; then
   build_darwin_local
 fi
 
-if [[ -m "BUILD_OL8" ]]; then
+if [[ -n "$BUILD_OL8" ]]; then
   echo "Building OL8 binaries"
   # Create OL8 linux artifacts for glibc 2.28
   build_ol_platform "arm64"
@@ -128,8 +128,8 @@ fi
 # build containers
 if [[ -n "$BUILD_CONTAINERS" ]]; then
   echo "Building container images"
-  make docker-arm
-  make docker-amd
+  make docker-arm VERSION=$VERSION
+  make docker-amd VERSION=$VERSION
   echo "Build complete for container images"
 fi
 

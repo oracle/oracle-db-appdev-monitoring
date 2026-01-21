@@ -32,7 +32,7 @@ docker run -it --rm \
     -e DB_CONNECT_STRING=devdb_tp \
     -v ./wallet:/wallet \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:2.2.0
+    container-registry.oracle.com/database/observability-exporter:2.2.1
 ```
 
 ### mTLS for multiple databases with Oracle Wallet
