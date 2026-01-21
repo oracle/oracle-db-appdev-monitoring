@@ -7,10 +7,6 @@ sidebar_position: 2
 
 List of upcoming and historic changes to the exporter.
 
-### Next, in-development
-
-TBD
-
 ### Version 2.2.1, January 21, 2026
 
 - Metrics with duplicated labels no longer cause a panic. For each metric with a duplicated label, the exporter logs a warning message and skips collecting that metric. On finding warning messages, the user should adjust the exporter configuration to remove any duplicated labels.

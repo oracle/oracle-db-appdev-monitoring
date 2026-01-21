@@ -65,28 +65,21 @@ build_ol() {
   local image_tar=${image_artifact}.tar
   local filename="oracledb_exporter-${VERSION}.linux-${platform}.tar.gz"
 
-  if [[ -n "$BUILD_CONTAINERS" ]]; then
-    echo "Starting $OL_IMAGE-${platform} build container"
-    PLATFORM=$platform make docker-platform
-  fi
+  docker run -d --privileged --platform "linux/${platform}" --name "${container}" "${OL_IMAGE}" tail -f /dev/null
+  docker exec "${container}" bash -c "dnf install -y wget git make gcc && \
+                                    wget -q https://go.dev/dl/go${GO_VERSION}.linux-${platform}.tar.gz && \
+                                    rm -rf /usr/local/go && \
+                                    tar -C /usr/local -xzf go${GO_VERSION}.linux-${platform}.tar.gz && \
+                                    export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin && \
+                                    git clone --depth 1 https://github.com/oracle/oracle-db-appdev-monitoring.git && \
+                                    cd oracle-db-appdev-monitoring && \
+                                    make go-build VERSION=$VERSION TAGS=$TAGS CGO_ENABLED=$CGO_ENABLED"
 
-  if [[ -n "BUILD_OL8" ]]; then
-    docker run -d --privileged --platform "linux/${platform}" --name "${container}" "${OL_IMAGE}" tail -f /dev/null
-    docker exec "${container}" bash -c "dnf install -y wget git make gcc && \
-                                      wget -q https://go.dev/dl/go${GO_VERSION}.linux-${platform}.tar.gz && \
-                                      rm -rf /usr/local/go && \
-                                      tar -C /usr/local -xzf go${GO_VERSION}.linux-${platform}.tar.gz && \
-                                      export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin && \
-                                      git clone --depth 1 https://github.com/oracle/oracle-db-appdev-monitoring.git && \
-                                      cd oracle-db-appdev-monitoring && \
-                                      make go-build TAGS=$TAGS CGO_ENABLED=$CGO_ENABLED"
+  docker cp "$container:/oracle-db-appdev-monitoring/dist/$filename" dist
 
-    docker cp "$container:/oracle-db-appdev-monitoring/dist/$filename" dist
-
-    echo "Build complete for $OL_IMAGE-${platform}"
-    docker stop "$container"
-    docker rm "$container"
-  fi
+  echo "Build complete for $OL_IMAGE-${platform}"
+  docker stop "$container"
+  docker rm "$container"
 }
 
 build_ubuntu() {
@@ -96,8 +89,8 @@ build_ubuntu() {
                                       apt-get -y install podman qemu-user-static golang gcc-aarch64-linux-gnu git make && \
                                       git clone --depth 1 https://github.com/oracle/oracle-db-appdev-monitoring.git && \
                                       cd oracle-db-appdev-monitoring && \
-                                      make go-build-linux-amd64 TAGS=$TAGS CGO_ENABLED=$CGO_ENABLED && \
-                                      make go-build-linux-gcc-arm64 TAGS=$TAGS CGO_ENABLED=$CGO_ENABLED"
+                                      make go-build-linux-amd64 VERSION=$VERSION TAGS=$TAGS CGO_ENABLED=$CGO_ENABLED && \
+                                      make go-build-linux-gcc-arm64 VERSION=$VERSION  TAGS=$TAGS CGO_ENABLED=$CGO_ENABLED"
 
 
   docker cp "$container:/oracle-db-appdev-monitoring/dist/oracledb_exporter-${VERSION}.linux-amd64.tar.gz" dist
@@ -113,7 +106,7 @@ rename_glibc() {
   local f1="oracledb_exporter-${VERSION}.linux-${platform}.tar.gz"
   local f2="oracledb_exporter-${VERSION}.linux-${platform}-glibc-${OL8_GLIBC_VERSION}.tar.gz"
 
-  mv "out/$f1" "out/$f2" 2>/dev/null
+  mv "dist/$f1" "dist/$f2" 2>/dev/null
 }
 
 # clean dist directory before build
@@ -123,10 +116,23 @@ rm -r dist/* 2>/dev/null
 if [[ -n "$BUILD_DARWIN" ]]; then
   build_darwin_local
 fi
-# Create OL8 linux artifacts and containers for glibc 2.28
-# OL8 Linux artifacts are built on OL8 containers
-build_ol_platform "arm64"
-build_ol_platform "amd64"
+
+if [[ -n "$BUILD_OL8" ]]; then
+  echo "Building OL8 binaries"
+  # Create OL8 linux artifacts for glibc 2.28
+  build_ol_platform "arm64"
+  build_ol_platform "amd64"
+  echo "Build complete for OL8 binaries"
+fi
+
+# build containers
+if [[ -n "$BUILD_CONTAINERS" ]]; then
+  echo "Building container images"
+  make docker-arm VERSION=$VERSION
+  make docker-amd VERSION=$VERSION
+  echo "Build complete for container images"
+fi
+
 
 
 if [[ -n "$BUILD_UBUNTU" ]]; then
