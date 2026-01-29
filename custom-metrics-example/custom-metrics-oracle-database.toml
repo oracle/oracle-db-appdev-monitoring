@@ -1,0 +1,57 @@
+    [[metric]]
+    context = "uptime"
+    metricsdesc = { uptime_seconds = "Gauge metric representing the Oracle database uptime in seconds." }
+    request = '''
+    select
+      (sysdate - startup_time) * 24 * 60 * 60 as uptime_seconds
+    from
+      v$instance
+    '''
+    [[metric]]
+    context = "ag_cluster_size"
+    metricsdesc = { cluster_size = "Gauge metric representing the number of nodes in the Oracle RAC cluster." }
+    request = '''
+    select count(*) as cluster_size from gv$instance
+    '''
+    [[metric]]
+    context = "pod_role"
+    labels = ["role"]
+    metricsdesc = { role_status = "Gauge metric set to 1 for the current Oracle pod role." }
+    request = '''
+    select database_role as role, 1 as role_status
+    from v$database
+    '''
+    [[metric]]
+    context = "compilations"
+    metricsdesc = { compilations_total = "Counter metric for total SQL compilations." }
+    metricstype = { compilations_total = "counter" }
+    request = '''
+    select sum(value) as compilations_total
+    from v$sysstat
+    where name = 'SQL*Net roundtrips to/from client'
+    '''
+    [[metric]]
+    context = "batch_requests"
+    metricsdesc = { batch_requests_total = "Counter metric for total batch SQL requests executed." }
+    metricstype = { batch_requests_total = "counter" }
+    request = '''
+    select value as batch_requests_total
+    from v$sysstat
+    where name = 'execute count'
+    '''
+    [[metric]]
+    context = "log_growth"
+    metricsdesc = { archived_logs_bytes = "Gauge metric representing total size of archived redo logs in bytes." }
+    request = '''
+    select sum(blocks * block_size) as archived_logs_bytes
+    from v$archived_log
+    where archived = 'YES'
+    '''
+    [[metric]]
+    context = "connections"
+    metricsdesc = { sessions_current = "Gauge metric representing the current number of active Oracle sessions." }
+    request = '''
+    select count(*) as sessions_current
+    from v$session
+    where status = 'ACTIVE'
+    '''
