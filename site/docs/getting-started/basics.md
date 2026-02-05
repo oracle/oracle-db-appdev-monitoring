@@ -19,6 +19,8 @@ For the built-in default metrics, the exporter database database user must have 
 ```
 dba_tablespace_usage_metrics
 dba_tablespaces
+dba_temp_free_space
+gv$instance
 gv$system_wait_class
 gv$asm_diskgroup_stat
 gv$datafile
