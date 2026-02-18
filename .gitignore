@@ -1,4 +1,4 @@
-dist/
+dist/**
 *.rpm
 .idea
 *.apk
@@ -13,3 +13,4 @@ oci8.pc
 
 test-coverage.out
 
+!**/.gitkeep
