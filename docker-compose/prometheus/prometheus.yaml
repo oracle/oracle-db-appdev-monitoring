@@ -10,12 +10,12 @@ scrape_configs:
     metrics_path: /metrics
     scheme: http
     static_configs:
-    - targets:
-      - localhost:9090
-  - job_name: 'oracle-exporter'
-    metrics_path: '/metrics'
+      - targets:
+          - localhost:9090
+  - job_name: "oracle-exporter"
+    metrics_path: "/metrics"
     scrape_interval: 15s
     scrape_timeout: 10s
     static_configs:
-    - targets: 
-      - exporter:9161
+      - targets:
+          - exporter:9161

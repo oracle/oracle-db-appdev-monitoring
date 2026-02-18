@@ -1,0 +1,52 @@
+extends: default
+
+ignore: |
+  .venv/
+  docs/themes/
+  .github/
+  helm/templates/
+  opentofu/modules/*/templates/
+  src/client/spring_ai/templates/
+
+rules:
+  line-length:
+    max: 120
+    level: warning
+
+  indentation:
+    spaces: 2
+    indent-sequences: true
+
+  # Helm templates often use truthy values like yes/no, on/off
+  truthy:
+    allowed-values: ['true', 'false', 'yes', 'no', 'on', 'off']
+    check-keys: false
+
+  # Allow both quoted and unquoted strings
+  quoted-strings:
+    quote-type: any
+    required: false
+
+  # Don't require document start marker (---)
+  document-start: disable
+
+  # More lenient on comments
+  comments:
+    min-spaces-from-content: 1
+
+  # Disable for commented-out examples in Helm values
+  comments-indentation: disable
+
+  # Allow empty values (common in Helm templates)
+  empty-values:
+    forbid-in-block-mappings: false
+    forbid-in-flow-mappings: false
+
+  # Brackets and braces (lenient for Helm)
+  brackets:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+
+  braces:
+    min-spaces-inside: 0
+    max-spaces-inside: 1

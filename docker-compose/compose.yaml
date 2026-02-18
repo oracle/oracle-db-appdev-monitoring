@@ -1,10 +1,9 @@
-
 services:
   prometheus:
     image: prom/prometheus
     container_name: prometheus
     command:
-      - '--config.file=/etc/prometheus/prometheus.yaml'
+      - "--config.file=/etc/prometheus/prometheus.yaml"
     ports:
       - 9090:9090
     restart: unless-stopped
@@ -62,7 +61,7 @@ services:
     image: container-registry.oracle.com/database/observability-exporter:2.2.1
     container_name: exporter
     command:
-      - '--config.file=/exporter/config.yaml'
+      - "--config.file=/exporter/config.yaml"
       # - '--log.level=debug'
       # - '--database.maxIdleConns=10'
       # - '--database.maxOpenConns=10'
@@ -76,7 +75,7 @@ services:
     volumes:
       - ./exporter:/exporter
 
-    depends_on: 
+    depends_on:
       free23ai:
         condition: service_healthy
       second23ai:

@@ -9,6 +9,7 @@ oci8.pc
 .vscode
 **/target/
 .DS_Store
+.gomodcache/**
 
 test-coverage.out
 
