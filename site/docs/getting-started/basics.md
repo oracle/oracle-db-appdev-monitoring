@@ -14,7 +14,7 @@ In this section you will find information on running the exporter.
 
 ## Database Permissions
 
-For the built-in default metrics, the exporter database database user must have the `SELECT_CATALOG_ROLE` privilege and/or `SELECT` permission on the following objects:
+For the built-in default metrics, the exporter database database user must have the `CREATE SESSION` and `SELECT_CATALOG_ROLE` privileges and/or `SELECT` permission on the following objects:
 
 ```
 dba_tablespace_usage_metrics
@@ -150,7 +150,7 @@ You may provide the connection details using these variables:
 - `ORACLE_HOME` is the location of the Oracle Instant Client, e.g., `/lib/oracle/21/client64/lib`.
 - `TNS_ADMIN` is the location of your (unzipped) wallet.  The `DIRECTORY` set in the `sqlnet.ora` file must match the path that it will be mounted on inside the container.
 
-The following example puts the logfile in the current location with the filename `alert.log` and loads the default matrics file (`default-metrics,toml`) from the current location.
+The following example puts the logfile in the current location with the filename `alert.log` and loads the default matrics file (`default-metrics.toml`) from the current location.
 
 If you prefer to provide configuration via a [config file](../configuration/config-file.md), you may do so with the `--config.file` argument. The use of a config file over command line arguments is preferred. If a config file is not provided, the "default" database connection is managed by command line arguments.
 
@@ -182,12 +182,11 @@ databases:
     ## Metrics query timeout for this database, in seconds
     queryTimeout: 5
 
-    ## Rely on Oracle AI Database External Authentication by network or OS
-    # externalAuth: false
     ## Database role
     # role: SYSDBA
-    ## Path to Oracle AI Database wallet, if using wallet
-    # tnsAdmin: /path/to/database/wallet
+    ## Path to TNS configuration directory (tnsnames.ora, sqlnet.ora, wallet files)
+    ## Equivalent to TNS_ADMIN environment variable
+    # tnsAdmin: /path/to/tns/admin
 
     ### Connection settings:
     ### Either the go-sql or Oracle AI Database connection pool may be used.
