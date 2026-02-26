@@ -5,6 +5,7 @@ GOOS           ?= $(shell go env GOOS)
 GOARCH         ?= $(shell go env GOARCH)
 TAGS           ?= godror
 PLATFORM       ?= amd64
+DOCKER_PLATFORMS ?= linux/amd64,linux/arm64
 DOCKER_TARGET  ?= exporter-godror
 CGO_ENABLED    ?= 1
 VERSION        ?= 2.2.1
@@ -13,7 +14,7 @@ GOFLAGS        := -ldflags "$(LDFLAGS) -s -w" --tags $(TAGS)
 BUILD_ARGS      = --build-arg VERSION=$(VERSION)
 OUTDIR          = ./dist
 
-IMAGE_NAME     ?= container-registry.oracle.com/database/observability-exporter
+IMAGE_NAME     ?= ghcr.io/kubedb/oracle-exporter
 IMAGE_ID       ?= $(IMAGE_NAME):$(VERSION)
 IMAGE_ID_LATEST?= $(IMAGE_NAME):latest
 
@@ -125,6 +126,21 @@ podman-push:
 	podman manifest push $(IMAGE_ID)
 
 podman-release: podman-build podman-push
+
+
+.PHONY: release
+docker-release:
+	@echo "Building and pushing multi-arch image ($(DOCKER_PLATFORMS))..."
+	DOCKER_CLI_EXPERIMENTAL=enabled docker buildx build \
+		--platform $(DOCKER_PLATFORMS) \
+		--progress=plain \
+		--build-arg BASE_IMAGE=$(ORACLE_LINUX_BASE_IMAGE) \
+		--build-arg VERSION=$(VERSION) \
+		--build-arg CGO_ENABLED=$(CGO_ENABLED) \
+		--build-arg TAGS=$(TAGS) \
+		-t $(IMAGE_ID) \
+		-t $(IMAGE_ID_LATEST) \
+		--push .
 
 .PHONY: version build deps go-test clean docker docker-arm docker-platform docker-amd \
         podman-build podman-push podman-release
