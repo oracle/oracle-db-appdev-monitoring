@@ -1,6 +1,6 @@
 module github.com/oracle/oracle-db-appdev-monitoring
 
-go 1.24.11
+go 1.25.7
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.13.1
@@ -9,7 +9,7 @@ require (
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/godror/godror v0.50.0
 	github.com/hashicorp/vault/api v1.22.0
-	github.com/oracle/oci-go-sdk/v65 v65.106.0
+	github.com/oracle/oci-go-sdk/v65 v65.108.3
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/common v0.67.5
 	github.com/prometheus/exporter-toolkit v0.15.1

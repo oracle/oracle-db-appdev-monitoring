@@ -11,6 +11,11 @@ List of upcoming and historic changes to the exporter.
 
 TBD
 
+### Version 2.2.2, March 2, 2026
+
+- Update third-party dependencies.
+- Update Go runtime to 1.25.7.
+
 ### Version 2.2.1, January 21, 2026
 
 - Metrics with duplicated labels no longer cause a panic. For each metric with a duplicated label, the exporter logs a warning message and skips collecting that metric. On finding warning messages, the user should adjust the exporter configuration to remove any duplicated labels.
