@@ -12,7 +12,7 @@
 # - darwin-arm64 binary tarball
 
 # Example usage:
-# ./build-all-macos.sh 2.2.0 godror
+# ./build-all-macos.sh -v 2.2.2 -t godror -cmuo
 
 USAGE="Usage: $0 [-v VERSION] [-t TARGET] [-cmuo]"
 
@@ -37,7 +37,7 @@ OL_IMAGE="oraclelinux:8"
 BASE_IMAGE="ghcr.io/oracle/oraclelinux:8-slim"
 UBUNTU_IMAGE="ubuntu:24.04"
 OL8_GLIBC_VERSION="2.28"
-GO_VERSION="1.24.11"
+GO_VERSION="1.25.7"
 
 if [[ "${TARGET}" == "goora" ]]; then
   TAGS="goora"
