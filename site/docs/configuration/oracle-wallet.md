@@ -1,9 +1,59 @@
 ---
-title: Oracle Wallet (mTLS)
+title: Authentication and Oracle Wallet (mTLS)
 sidebar_position: 4
 ---
 
-# Using a Wallet 
+# Authentication Overview
+
+The Oracle AI Database Metrics Exporter supports the following authenticaiton mechanisms:
+
+- Username/password authentication using the config file.
+- Wallet authentication with TLS/mTLS, including using the wallet as a Secure External Password Store (SEPS).
+- Loading database passwords from a file or external secret storage (OCI Vault, Azure Vault, or HashiCorp Vault).
+- OS Auth, or "External Auth".
+
+### Username/password authentication
+
+```yaml
+databases:
+  mydb:
+    url: mydb:1521/service_name
+    username: myuser
+    password: mypassword
+```
+
+You may also supply the username and password with environment variables:
+
+```yaml
+databases:
+  mydb:
+    url: mydb:1521/service_name
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+```
+
+### Using a password file
+
+The exporter may also read the database password from a file. The file should contain only the database password with no leading or trailing characters.
+```yaml
+databases:
+  mydb:
+    url: mydb:1521/service_name
+    username: ${DB_USERNAME}
+    ## Database password file
+    ## If specified, will load the database password from a file.
+    passwordFile: ${DB_PASSWORD_FILE}
+```
+
+### Using an external secret store
+
+The exporter supports loading database username and password information from the following secret store implementations. Refer to the corresponding documentation links for individual configuration:
+
+- [OCI Vault](./oci-vault.md)
+- [Azure Vault](./azure-vault.md)
+- [HashiCorp Vault](./hashicorp-vault.md)
+
+### Using a Wallet 
 
 For mutual TLS (mTLS) connections, you must use an Oracle Wallet.
 
@@ -33,6 +83,29 @@ docker run -it --rm \
     -v ./wallet:/wallet \
     -p 9161:9161 \
     container-registry.oracle.com/database/observability-exporter:2.2.2
+```
+
+### Oracle Wallet SEPS configuration
+
+
+
+```bash
+# Create the wallet
+orapki wallet create -wallet <wallet location> -pwd <wallet_password> -auto_login
+
+mkstore -wrl <wallet location> -createCredential <alias name> <common user> <account_password>
+```
+
+```yaml
+databases:
+  mydb:
+    url: mydb_high
+    # Do not provide a username and password, indicating to the exporter
+    # that credentials should be loaded from the Oracle Wallet
+    # username:
+    # password:
+   
+    # ... remaining database configuration for "mydb"
 ```
 
 ### mTLS for multiple databases with Oracle Wallet
@@ -106,4 +179,20 @@ Then, run the exporter with the config file:
 
 ```shell
 ./oracledb_exporter --config.file=my-config-file.yaml
+```
+
+### OS Auth, or "External Auth"
+
+The exporter supports Oracle AI Databaes OS Auth for passwordless authentication. To enable OS Auth from exporter, provide only the database username:
+
+```yaml
+databases:
+  mydb:
+    url: mydb_high
+    username: exporter_user
+    # Do not provide a password, indicating to the exporter
+    # that OS Auth should be used
+    # password:
+   
+    # ... remaining database configuration for "mydb"
 ```
