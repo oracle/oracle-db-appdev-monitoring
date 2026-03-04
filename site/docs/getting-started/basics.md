@@ -14,27 +14,29 @@ In this section you will find information on running the exporter.
 
 ## Database Permissions
 
-For the built-in default metrics, the exporter database database user must have the `SELECT_CATALOG_ROLE` privilege and/or `SELECT` permission on the following objects:
+For the built-in default metrics, the exporter database database user must have the `SELECT_CATALOG_ROLE` privilege and/or the following object permissions:
 
 ```
-dba_tablespace_usage_metrics
-dba_tablespaces
-dba_temp_free_space
-gv$instance
-gv$system_wait_class
-gv$asm_diskgroup_stat
-gv$datafile
-gv$sysstat
-gv$process
-gv$waitclassmetric
-gv$session
-gv$resource_limit
-gv$parameter
-gv$database
-gv$sqlstats
-gv$sysmetric
-v$diag_alert_ext (for alert logs only)
+grant select on sys.dba_tablespace_usage_metrics to exporteruser;
+grant select on sys.dba_tablespaces to exporteruser;
+grant select on sys.dba_temp_free_space to exporteruser;
+grant select on sys.gv_$instance to exporteruser;
+grant select on sys.gv_$system_wait_class to exporteruser;
+grant select on sys.gv_$asm_diskgroup_stat to exporteruser;
+grant select on sys.gv_$datafile to exporteruser;
+grant select on sys.gv_$sysstat to exporteruser;
+grant select on sys.gv_$process to exporteruser;
+grant select on sys.gv_$waitclassmetric to exporteruser;
+grant select on sys.gv_$session to exporteruser;
+grant select on sys. gv_$resource_limit to exporteruser;
+grant select on sys.gv_$parameter to exporteruser;
+grant select on sys.gv_$database to exporteruser;
+grant select on sys.gv_$sqlstats to exporteruser;
+grant select on sys.gv_$sysmetric to exporteruser;
+grant select on sys.v_$diag_alert_ext to exporteruser; -- for alert logs only
 ```
+
+Additional permissions may be required for custom metrics, depending on the tables and views used.
 
 ## Docker, Podman, etc
 
