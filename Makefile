@@ -12,6 +12,7 @@ LDFLAGS        := -X main.Version=$(VERSION)
 GOFLAGS        := -ldflags "$(LDFLAGS) -s -w" --tags $(TAGS)
 BUILD_ARGS      = --build-arg VERSION=$(VERSION)
 OUTDIR          = ./dist
+COMPOSE_CONFIG_FILE ?= config.yaml
 
 IMAGE_NAME     ?= container-registry.oracle.com/database/observability-exporter
 IMAGE_ID       ?= $(IMAGE_NAME):$(VERSION)
@@ -91,7 +92,13 @@ clean:
 
 push-images:
 	@make --no-print-directory push-oraclelinux-image
-	
+
+docker-compose:
+	(COMPOSE_CONFIG_FILE=$(COMPOSE_CONFIG_FILE) cd docker-compose ; docker compose up -d)
+
+docker-compose-down:
+	(cd docker-compose ; docker compose down)
+
 docker: docker-amd
 
 docker-arm:
@@ -126,5 +133,5 @@ podman-push:
 
 podman-release: podman-build podman-push
 
-.PHONY: version build deps go-test clean docker docker-arm docker-platform docker-amd \
+.PHONY: version build deps go-test clean docker-compose docker docker-arm docker-platform docker-amd \
         podman-build podman-push podman-release
