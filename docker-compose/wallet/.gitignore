@@ -1,0 +1,8 @@
+# If testing with Oracle Wallet, place wallet files in this directory
+*.sso
+*.p12
+*.pem
+*.jks
+*.properties
+README
+*.ora

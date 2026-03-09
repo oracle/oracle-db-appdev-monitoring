@@ -1,8 +1,7 @@
 # Example Oracle AI Database Metrics Exporter Configuration file.
 # Environment variables of the form ${VAR_NAME} will be expanded.
 
-# Example Oracle AI Database Metrics Exporter Configuration file.
-# Environment variables of the form ${VAR_NAME} will be expanded.
+# Test with two container databases
 
 databases:
   ## Path on which metrics will be served
