@@ -1,4 +1,4 @@
-// Copyright (c) 2025, Oracle and/or its affiliates.
+// Copyright (c) 2025, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package collector
@@ -72,5 +72,6 @@ func loadMetricsConfig(_customMetrics string, metrics *Metrics) error {
 			return fmt.Errorf("cannot load yaml based metrics: %w", err)
 		}
 	}
+	metrics.normalizeIdentifiers()
 	return nil
 }

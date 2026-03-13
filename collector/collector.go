@@ -463,7 +463,7 @@ func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric,
 				constLabels,
 			)
 			// process histogram metric, then cache and send metric through channel
-			if m.MetricsType[strings.ToLower(metric)] == "histogram" {
+			if m.MetricsType[metric] == "histogram" {
 				count, err := strconv.ParseUint(strings.TrimSpace(row["count"]), 10, 64)
 				if err != nil {
 					e.logger.Error("Unable to convert count value to int (metric=" + metric +
