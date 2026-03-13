@@ -82,6 +82,12 @@ func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
 			Name:      "last_scrape_duration_seconds",
 			Help:      "Duration of the last scrape of metrics from Oracle DB.",
 		}),
+		databaseDuration: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace: namespace,
+			Subsystem: exporterName,
+			Name:      "last_database_scrape_duration_seconds",
+			Help:      "Duration of the last scrape of metrics from an Oracle DB.",
+		}, []string{m.DatabaseLabel()}),
 		totalScrapes: prometheus.NewCounter(prometheus.CounterOpts{
 			Namespace: namespace,
 			Subsystem: exporterName,
@@ -170,6 +176,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	now := time.Now()
 	e.scrape(ch, &now)
 	ch <- e.duration
+	e.databaseDuration.Collect(ch)
 	ch <- e.totalScrapes
 	ch <- e.error
 	e.scrapeErrors.Collect(ch)
@@ -224,6 +231,7 @@ func (e *Exporter) scheduledScrape(tick *time.Time) {
 
 	// report metadata metrics
 	metricCh <- e.duration
+	e.databaseDuration.Collect(metricCh)
 	metricCh <- e.totalScrapes
 	metricCh <- e.error
 	e.scrapeErrors.Collect(metricCh)
@@ -234,18 +242,26 @@ func (e *Exporter) scheduledScrape(tick *time.Time) {
 	wg.Wait()
 }
 
-func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- error, d *Database, tick *time.Time) int {
+func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- error, d *Database, tick *time.Time) {
+	// collect total scrape time per database
+	dbScrapeStart := time.Now()
+	wg := &sync.WaitGroup{}
+	defer func() {
+		wg.Wait()
+		e.databaseDuration.WithLabelValues(d.Name).Set(time.Since(dbScrapeStart).Seconds())
+	}()
+
 	// If the database configuration is invalid, do not attempt to ping or reestablish the database connection.
 	if !d.IsValid() {
 		e.logger.Warn("Invalid database configuration, will not attempt reconnection", "database", d.Name)
 		errChan <- fmt.Errorf("database %s is invalid, will not be scraped", d.Name)
-		return 1
+		return
 	}
 	// If ping fails, we will try again on the next iteration of metrics scraping
 	if err := d.ping(e.logger, e.MetricsConfiguration.ConnectionBackoff()); err != nil {
 		e.logger.Error("Error pinging database", "error", err, "database", d.Name)
 		errChan <- err
-		return 1
+		return
 	}
 	e.logger.Debug("Successfully pinged Oracle AI Database: "+maskDsn(d.Config.URL), "database", d.Name)
 
@@ -254,7 +270,9 @@ func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- er
 		metric := metric //https://golang.org/doc/faq#closures_and_goroutines
 		isScrapeMetric := isScrapeMetric(e.logger, tick, metric, d)
 		metricsToScrape++
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			// If the metric doesn't need to be scraped, send the cached values
 			if !isScrapeMetric {
 				d.MetricsCache.SendAll(ch, metric)
@@ -317,7 +335,6 @@ func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- er
 			}
 		}()
 	}
-	return metricsToScrape
 }
 
 func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
@@ -329,32 +346,34 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 	}
 
 	// Scrape all databases
-	asyncTasksCh := make(chan int)
+	var wg sync.WaitGroup
 	for _, db := range e.databases {
 		db := db
+		wg.Add(1)
 		go func() {
-			asyncTasksCh <- e.scrapeDatabase(ch, errChan, db, tick)
+			defer wg.Done()
+			e.scrapeDatabase(ch, errChan, db, tick)
 		}()
 	}
-	totalTasks := 0
-	for _ = range e.databases {
-		totalTasks += <-asyncTasksCh
-	}
 
-	e.afterScrape(begun, totalTasks, errChan)
-}
+	go func() {
+		wg.Wait()
+		close(errChan)
+	}()
 
-func (e *Exporter) afterScrape(begun time.Time, tasks int, errChan chan error) {
-	// Receive all scrape errors
 	totalErrors := 0.0
-	for i := 0; i < tasks; i++ {
-		scrapeError := <-errChan
+	for scrapeError := range errChan {
 		if scrapeError != nil {
 			totalErrors++
 		}
 	}
+
+	e.afterScrape(begun, totalErrors)
+}
+
+func (e *Exporter) afterScrape(begun time.Time, totalErrors float64) {
 	e.duration.Set(time.Since(begun).Seconds())
-	e.error.Set(float64(totalErrors))
+	e.error.Set(totalErrors)
 }
 
 // this is used by the log exporter to share the database connection
