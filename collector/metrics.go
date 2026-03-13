@@ -1,4 +1,4 @@
-// Copyright (c) 2024, 2025, Oracle and/or its affiliates.
+// Copyright (c) 2024, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl
 
 package collector
@@ -112,6 +112,46 @@ func (m *Metric) IsEnabledForDatabase(d *Database) bool {
 		return true
 	}
 	return false
+}
+
+func (m *Metric) normalizeIdentifiers() {
+	// The configured metric key is used to read the SQL row value, and row keys are lowercased.
+	normalizedDesc := make(map[string]string, len(m.MetricsDesc))
+	for name, desc := range m.MetricsDesc {
+		normalizedDesc[strings.ToLower(name)] = desc
+	}
+	m.MetricsDesc = normalizedDesc
+
+	normalizedTypes := make(map[string]string, len(m.MetricsType))
+	for name, metricType := range m.MetricsType {
+		normalizedTypes[strings.ToLower(name)] = metricType
+	}
+	m.MetricsType = normalizedTypes
+
+	// A histogram metric defined with mixed case will stop matching its bucket metadata.
+	normalizedBuckets := make(map[string]map[string]string, len(m.MetricsBuckets))
+	for name, buckets := range m.MetricsBuckets {
+		normalizedName := strings.ToLower(name)
+		normalizedFields := make(map[string]string, len(buckets))
+		for field, value := range buckets {
+			normalizedFields[strings.ToLower(field)] = value
+		}
+		normalizedBuckets[normalizedName] = normalizedFields
+	}
+	m.MetricsBuckets = normalizedBuckets
+
+	// mixed-case label names are not allowed
+	for i, label := range m.Labels {
+		m.Labels[i] = strings.ToLower(label)
+	}
+	// mixed-case field-to-append values are not allowed
+	m.FieldToAppend = strings.ToLower(m.FieldToAppend)
+}
+
+func (metrics Metrics) normalizeIdentifiers() {
+	for _, metric := range metrics.Metric {
+		metric.normalizeIdentifiers()
+	}
 }
 
 func (metrics Metrics) toMap() map[string]*Metric {

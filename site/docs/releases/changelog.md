@@ -11,9 +11,11 @@ List of upcoming and historic changes to the exporter.
 
 - Add per-database scrape duration metrics to complement the existing exporter-wide scrape duration metric.
 - Add per-database scrape error counters while preserving the existing global scrape error counter.
+- Normalize loaded metric identifiers to lowercase so mixed-case custom metric names, labels, histogram fields, and `fieldtoappend` values are handled correctly.
 
 Thank you to the following people for their suggestions and contributions:
 - [@wes-pro](https://github.com/wes-pro)
+- [@MansuyDavid](https://github.com/MansuyDavid)
 
 ### Version 2.2.2, March 2, 2026
 
