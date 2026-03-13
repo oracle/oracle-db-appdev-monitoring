@@ -98,8 +98,8 @@ func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
 			Namespace: namespace,
 			Subsystem: exporterName,
 			Name:      "scrape_errors_total",
-			Help:      "Total number of times an error occured scraping a Oracle AI Database.",
-		}, []string{"collector"}),
+			Help:      "Total scrape errors from a Oracle AI Database instance.",
+		}, []string{"collector", m.DatabaseLabel()}),
 		error: prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: exporterName,
@@ -325,7 +325,7 @@ func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- er
 						"error", scrapeError,
 						"database", d.Name)
 				}
-				e.scrapeErrors.WithLabelValues(metric.Context).Inc()
+				e.scrapeErrors.WithLabelValues(metric.Context, d.Name).Inc()
 			} else {
 				e.logger.Debug("Successfully scraped metric",
 					"Context", metric.Context,
@@ -356,11 +356,13 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 		}()
 	}
 
+	// wait for database scrapes to complete before closing the error channel
 	go func() {
 		wg.Wait()
 		close(errChan)
 	}()
 
+	// receive results from scrape tasks
 	totalErrors := 0.0
 	for scrapeError := range errChan {
 		if scrapeError != nil {
@@ -376,7 +378,7 @@ func (e *Exporter) afterScrape(begun time.Time, totalErrors float64) {
 	e.error.Set(totalErrors)
 }
 
-// this is used by the log exporter to share the database connection
+// GetDBs is used by the log exporter to share the database connection
 func (e *Exporter) GetDBs() []*Database {
 	return e.databases
 }
