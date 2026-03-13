@@ -9,7 +9,11 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, in-development
 
-TBD
+- Add per-database scrape duration metrics to complement the existing exporter-wide scrape duration metric.
+- Add per-database scrape error counters while preserving the existing global scrape error counter.
+
+Thank you to the following people for their suggestions and contributions:
+- [@wes-pro](https://github.com/wes-pro)
 
 ### Version 2.2.2, March 2, 2026
 
