@@ -93,7 +93,7 @@ clean:
 push-images:
 	@make --no-print-directory push-oraclelinux-image
 
-docker-compose:
+docker-compose-up:
 	(COMPOSE_CONFIG_FILE=$(COMPOSE_CONFIG_FILE) cd docker-compose ; docker compose up -d)
 
 docker-compose-down:
@@ -133,5 +133,5 @@ podman-push:
 
 podman-release: podman-build podman-push
 
-.PHONY: version build deps go-test clean docker-compose docker docker-arm docker-platform docker-amd \
+.PHONY: version build deps go-test clean docker-compose-up docker-compose-down docker docker-arm docker-platform docker-amd \
         podman-build podman-push podman-release
