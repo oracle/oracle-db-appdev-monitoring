@@ -44,4 +44,8 @@ log:
   # disable: 0
 ```
 
+### Multiple Databases and Alert Log export
+
+If the exporter is configured to scrape multiple databases, it is recommended to set the `logging.perDatabaseFiles` property to `true`, creating a separate log file for each database.  
+
 When `perDatabaseFiles` is enabled and `destination` is `/opt/exporter/alert.log`, a database named `db2` writes to `/opt/exporter/alert-db2.log`.
