@@ -78,6 +78,7 @@ type Config struct {
 
 // Metric is an object description
 type Metric struct {
+	ID               string
 	Context          string
 	Labels           []string
 	MetricsDesc      map[string]string

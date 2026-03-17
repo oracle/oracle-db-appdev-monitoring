@@ -327,6 +327,7 @@ func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- er
 				}
 				e.scrapeErrors.WithLabelValues(metric.Context, d.Name).Inc()
 			} else {
+				d.MetricsCache.SetLastScraped(metric, tick)
 				e.logger.Debug("Successfully scraped metric",
 					"Context", metric.Context,
 					"MetricDesc", fmt.Sprint(metric.MetricsDesc),
@@ -428,7 +429,7 @@ func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric,
 	constLabels := d.constLabels(e.constLabels())
 
 	if duplicatedLabels(constLabels, m.GetLabels()) {
-		e.logger.Warn("metric has duplicated labels, skipping", "metric", m.ID(), "labels", m.GetLabels(), "database", d.Name)
+		e.logger.Warn("metric has duplicated labels, skipping", "metric", m.ID, "labels", m.GetLabels(), "database", d.Name)
 		return nil
 	}
 

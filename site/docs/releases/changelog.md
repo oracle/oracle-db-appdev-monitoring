@@ -11,10 +11,12 @@ List of upcoming and historic changes to the exporter.
 
 - Add per-database scrape duration metrics to complement the existing exporter-wide scrape duration metric.
 - Add per-database scrape error counters while preserving the existing global scrape error counter.
-- Normalize loaded metric identifiers to lowercase so mixed-case custom metric names, labels, histogram fields, and `fieldtoappend` values are handled correctly.
+- Normalize loaded metric identifiers to lowercase so mixed-case custom metric names, descriptions, labels, histogram fields, and `fieldtoappend` values are handled correctly.
 - Alert log records now include their source database name in the exported JSON output.
-- Add the `log.perDatabaseFiles` configuration option to write alert logs to per-database files such as `alert-db2.log`.
+- Add the `log.perDatabaseFiles` configuration option to write alert logs to per-database files such as `alert-db2.log`. This is recommended when scraping multiple databases from a single exporter.
 - Fix alert log export when nullable database fields such as `execution_context_id` are returned as `NULL`.
+- Fix metrics caching where metrics scrape failures could improperly invalidate entries in the metrics cache.
+- Fix a metrics file-loading issue an invalid metrics file failed to fall on the packaged default metrics. 
 
 Thank you to the following people for their suggestions and contributions:
 - [@wes-pro](https://github.com/wes-pro)
