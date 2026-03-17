@@ -94,7 +94,7 @@ push-images:
 	@make --no-print-directory push-oraclelinux-image
 
 docker-compose-up:
-	(COMPOSE_CONFIG_FILE=$(COMPOSE_CONFIG_FILE) cd docker-compose ; docker compose up -d)
+	(cd docker-compose ; COMPOSE_CONFIG_FILE=$(COMPOSE_CONFIG_FILE) docker compose up -d)
 
 docker-compose-down:
 	(cd docker-compose ; docker compose down)
