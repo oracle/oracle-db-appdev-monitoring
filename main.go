@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 	"syscall"
 	"time"
@@ -175,7 +176,11 @@ func main() {
 	if m.LogDisable() == 1 {
 		logger.Info("log.disable set to 1, so will not export the alert logs")
 	} else {
-		logger.Info(fmt.Sprintf("Exporting alert logs to %s", m.LogDestination()))
+		if m.LogPerDatabaseFiles() {
+			logger.Info(fmt.Sprintf("Exporting an alert log file per database to %s", filepath.Dir(m.LogDestination())))
+		} else {
+			logger.Info(fmt.Sprintf("Exporting alert logs to %s", m.LogDestination()))
+		}
 		logTicker := time.NewTicker(m.LogInterval())
 		defer logTicker.Stop()
 
@@ -184,7 +189,7 @@ func main() {
 				<-logTicker.C
 				logger.Debug("updating alert log")
 				for _, db := range exporter.GetDBs() {
-					alertlog.UpdateLog(m.LogDestination(), logger, db)
+					alertlog.UpdateLog(m.LogDestination(), m.LogPerDatabaseFiles(), logger, db)
 				}
 
 			}

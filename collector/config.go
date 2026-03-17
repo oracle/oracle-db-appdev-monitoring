@@ -95,9 +95,10 @@ type MetricsFilesConfig struct {
 }
 
 type LoggingConfig struct {
-	LogDisable     *int           `yaml:"disable"`
-	LogInterval    *time.Duration `yaml:"interval"`
-	LogDestination string         `yaml:"destination"`
+	LogDisable          *int           `yaml:"disable"`
+	LogInterval         *time.Duration `yaml:"interval"`
+	LogDestination      string         `yaml:"destination"`
+	LogPerDatabaseFiles *bool          `yaml:"perDatabaseFiles"`
 }
 
 func (m *MetricsConfiguration) DatabaseLabel() string {
@@ -117,6 +118,13 @@ func (m *MetricsConfiguration) LogInterval() time.Duration {
 
 func (m *MetricsConfiguration) LogDisable() int {
 	return *m.Logging.LogDisable
+}
+
+func (m *MetricsConfiguration) LogPerDatabaseFiles() bool {
+	if m.Logging.LogPerDatabaseFiles == nil {
+		return false
+	}
+	return *m.Logging.LogPerDatabaseFiles
 }
 
 func (m *MetricsConfiguration) ScrapeInterval() time.Duration {
@@ -312,6 +320,9 @@ func (m *MetricsConfiguration) mergeLoggingConfig(cfg *Config) {
 	}
 	if m.Logging.LogInterval == nil {
 		m.Logging.LogInterval = cfg.LoggingConfig.LogInterval
+	}
+	if m.Logging.LogPerDatabaseFiles == nil {
+		m.Logging.LogPerDatabaseFiles = cfg.LoggingConfig.LogPerDatabaseFiles
 	}
 	if len(m.Logging.LogDestination) == 0 {
 		m.Logging.LogDestination = cfg.LoggingConfig.LogDestination
