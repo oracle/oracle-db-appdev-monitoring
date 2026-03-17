@@ -40,7 +40,7 @@ func (e *Exporter) reloadMetrics() {
 
 func (e *Exporter) merge(metrics *Metrics) {
 	for _, metric := range metrics.Metric {
-		e.metricsToScrape[metric.ID()] = metric
+		e.metricsToScrape[metric.ID] = metric
 	}
 }
 

@@ -5,6 +5,7 @@ package collector
 
 import (
 	"log/slog"
+	"maps"
 	"slices"
 	"strconv"
 	"strings"
@@ -34,9 +35,6 @@ func isScrapeMetric(logger *slog.Logger, tick *time.Time, metric *Metric, d *Dat
 		// If the metric's scrape interval is less than the time elapsed since the last scrape,
 		// we should scrape the metric.
 		interval < tick.Sub(*lastScraped)
-	if shouldScrape {
-		d.MetricsCache.SetLastScraped(metric, tick)
-	}
 	return shouldScrape
 }
 
@@ -79,12 +77,16 @@ func parseFloat(logger *slog.Logger, metric, metricHelp string, row map[string]s
 	return valueFloat, true
 }
 
-func (m *Metric) ID() string {
+func createMetricID(m *Metric) string {
 	sb := strings.Builder{}
+
 	sb.WriteString(m.Context)
-	for desc := range m.MetricsDesc {
-		sb.WriteString(desc)
+
+	for _, key := range slices.Sorted(maps.Keys(m.MetricsDesc)) {
+		sb.WriteString("_")
+		sb.WriteString(key)
 	}
+
 	return sb.String()
 }
 
@@ -146,6 +148,7 @@ func (m *Metric) normalizeIdentifiers() {
 	}
 	// mixed-case field-to-append values are not allowed
 	m.FieldToAppend = strings.ToLower(m.FieldToAppend)
+	m.ID = createMetricID(m)
 }
 
 func (metrics Metrics) normalizeIdentifiers() {
@@ -157,7 +160,7 @@ func (metrics Metrics) normalizeIdentifiers() {
 func (metrics Metrics) toMap() map[string]*Metric {
 	m := map[string]*Metric{}
 	for _, metric := range metrics.Metric {
-		m[metric.ID()] = metric
+		m[metric.ID] = metric
 	}
 	return m
 }

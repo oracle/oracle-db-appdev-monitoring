@@ -23,13 +23,15 @@ func (e *Exporter) DefaultMetrics() map[string]*Metric {
 		if err := loadMetricsConfig(filepath.Clean(e.Metrics.Default), &metricsToScrape); err != nil {
 			e.logger.Error(fmt.Sprintf("there was an issue while loading specified default metrics file at: %s, proceeding to run with default metrics.", e.Metrics.Default),
 				"error", err)
+		} else {
+			return metricsToScrape.toMap()
 		}
-		return metricsToScrape.toMap()
 	}
 
 	if _, err := toml.Decode(defaultMetricsToml, &metricsToScrape); err != nil {
 		e.logger.Error("failed to load default metrics", "error", err)
 		panic(errors.New("Error while loading " + defaultMetricsToml))
 	}
+	metricsToScrape.normalizeIdentifiers()
 	return metricsToScrape.toMap()
 }
