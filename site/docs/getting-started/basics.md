@@ -246,8 +246,7 @@ log:
 If you would like to set up a test environment with the exporter, you can use the provided "Docker Compose" file in this repository which will start an Oracle AI Database instance, the exporter, Prometheus and Grafana.
 
 ```bash
-cd docker-compose
-docker-compose up -d
+make docker-compose-up
 ```
 
 The containers will take a short time to start.  The first time, the Oracle container might take a few minutes to start while it creates the database instance, but this is a one-time operation, and subequent restarts will be much faster (a few seconds).
