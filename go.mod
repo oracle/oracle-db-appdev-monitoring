@@ -9,7 +9,7 @@ require (
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/godror/godror v0.50.0
 	github.com/hashicorp/vault/api v1.22.0
-	github.com/oracle/oci-go-sdk/v65 v65.109.1
+	github.com/oracle/oci-go-sdk/v65 v65.109.2
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/common v0.67.5
 	github.com/prometheus/exporter-toolkit v0.15.1
