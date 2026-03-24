@@ -90,14 +90,35 @@ log:
   ## Set disable to 1 to disable logging
   # disable: 0
 
-# Optionally configure prometheus webserver
+# Optionally configure the Prometheus web server
 #web:
 #  listenAddresses: [':9161']
 #  systemdSocket: true|false
 #  configFile: /path/to/webconfigfile
 ```
 
-From the exporter configuration file, you may optionally load database credentials from [OCI Vault](./oci-vault.md), [Azure Vault](./azure-vault.md), or [HashiCorp Vault](./hashicorp-vault.md)..
+From the exporter configuration file, you may optionally load database credentials from [OCI Vault](./oci-vault.md), [Azure Vault](./azure-vault.md), or [HashiCorp Vault](./hashicorp-vault.md).
+
+### Web server configuration
+
+The optional `web` section configures the Prometheus Exporter Toolkit web server used by the exporter. These settings are passed directly to the toolkit, so you can use the same web server configuration patterns that are used by other Prometheus exporters.
+
+```yaml
+web:
+  listenAddresses: [':9161']
+  systemdSocket: false
+  configFile: /etc/metrics-exporter/web-config.yml
+```
+
+The `web` properties are:
+
+- `listenAddresses`: One or more addresses for the exporter HTTP server to bind to. For example, `[':9161']` listens on port `9161` on all interfaces.
+- `systemdSocket`: Enables systemd socket activation. When set to `true`, systemd provides the listening socket.
+- `configFile`: Path to a Prometheus Exporter Toolkit web configuration file. Configure TLS, basic authentication, and other supported web server features in this file.
+
+Configure web server security settings such as TLS and basic authentication through `web.configFile`. Those settings should be defined in the Prometheus Exporter Toolkit configuration file, not as exporter-specific properties in the main exporter config file.
+
+For the supported web configuration file format, see the [Prometheus Exporter Toolkit web configuration documentation](https://github.com/prometheus/exporter-toolkit/blob/master/docs/web-configuration.md).
 
 ### Scrape on request vs. Scrape on interval
 

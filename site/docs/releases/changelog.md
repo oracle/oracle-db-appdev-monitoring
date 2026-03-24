@@ -14,6 +14,7 @@ List of upcoming and historic changes to the exporter.
 - Normalize loaded metric identifiers to lowercase so mixed-case custom metric names, descriptions, labels, histogram fields, and `fieldtoappend` values are handled correctly.
 - Alert log records now include their source database name in the exported JSON output.
 - Add the `log.perDatabaseFiles` configuration option to write alert logs to per-database files such as `alert-db2.log`. This is recommended when scraping multiple databases from a single exporter.
+- Document that TLS, basic authentication, and other Prometheus web server security settings should be configured through `web.configFile` using Prometheus Exporter Toolkit configuration.
 - Fix alert log export when nullable database fields such as `execution_context_id` are returned as `NULL`.
 - Fix metrics caching where metrics scrape failures could improperly invalidate entries in the metrics cache.
 - Fix a metrics file-loading issue an invalid metrics file failed to fall on the packaged default metrics. 
