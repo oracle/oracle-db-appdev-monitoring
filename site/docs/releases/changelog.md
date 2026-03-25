@@ -18,6 +18,11 @@ List of upcoming and historic changes to the exporter.
 - Fix alert log export when nullable database fields such as `execution_context_id` are returned as `NULL`.
 - Fix metrics caching where metrics scrape failures could improperly invalidate entries in the metrics cache.
 - Fix a metrics file-loading issue an invalid metrics file failed to fall on the packaged default metrics. 
+<<<<<<< Updated upstream
+=======
+- Update third-party dependencies.
+- Update Go runtime to 1.26.1.
+>>>>>>> Stashed changes
 
 Thank you to the following people for their suggestions and contributions:
 - [@wes-pro](https://github.com/wes-pro)
