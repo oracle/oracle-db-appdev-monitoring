@@ -30,8 +30,8 @@ import (
 	// Required for debugging
 	// _ "net/http/pprof"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/alertlog"
-	"github.com/oracle/oracle-db-appdev-monitoring/collector"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/alertlog"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/collector"
 )
 
 var (
