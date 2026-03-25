@@ -76,7 +76,6 @@ func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) *sql.D
 	// note that this just configures the connection, it does not actually connect until later
 	// when we call db.Ping()
 	db := sql.OpenDB(godror.NewConnector(P))
-	initdb(logger, dbname, dbconfig, db)
 	return db
 }
 

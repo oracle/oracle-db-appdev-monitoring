@@ -51,7 +51,6 @@ func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) *sql.D
 
 	// Configure connection pool (sql.DB handles pooling)
 	setConnectionPool(logger, dbname, dbconfig, db)
-	initdb(logger, dbname, dbconfig, db)
 	return db
 }
 

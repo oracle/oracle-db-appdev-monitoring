@@ -196,9 +196,16 @@ func main() {
 		}()
 	}
 
-	// start the main server thread
 	server := &http.Server{}
-	if err := web.ListenAndServe(server, m.Web.Flags(), logger); err != nil {
+	serverErr := make(chan error, 1)
+	go func() {
+		serverErr <- web.ListenAndServe(server, m.Web.Flags(), logger)
+	}()
+
+	go exporter.InitializeDatabases()
+
+	// start the main server thread
+	if err := <-serverErr; err != nil {
 		logger.Error("Listening error", "error", err)
 		os.Exit(1)
 	}

@@ -52,6 +52,10 @@ func NewDatabase(logger *slog.Logger, dblabel, dbname string, dbconfig DatabaseC
 	}
 }
 
+func (d *Database) StartupReady() bool {
+	return d.startupReady.Load()
+}
+
 // initCache resets the metrics cached. Used on startup and when metrics are reloaded.
 func (d *Database) initCache(metrics map[string]*Metric) {
 	d.MetricsCache = NewMetricsCache(metrics)
@@ -60,7 +64,9 @@ func (d *Database) initCache(metrics map[string]*Metric) {
 // WarmupConnectionPool serially acquires connections to "warm up" the connection pool.
 // This is a workaround for a perceived bug in ODPI_C where rapid acquisition of connections
 // results in a SIGABRT.
-func (d *Database) WarmupConnectionPool(logger *slog.Logger) {
+func (d *Database) WarmupConnectionPool(logger *slog.Logger, backoff time.Duration) {
+	defer d.startupReady.Store(true)
+
 	var connections []*sql.Conn
 	poolSize := d.Config.GetMaxOpenConns()
 	if poolSize < 1 {
@@ -82,11 +88,14 @@ func (d *Database) WarmupConnectionPool(logger *slog.Logger) {
 		return nil
 	}
 
+	initdb(logger, d.Name, d.Config, d.Session)
+
 	func() {
 		for i := 0; i < poolSize; i++ {
 			// short circuit warmup for inaccessible databases
 			if err := warmup(i + 1); err != nil {
 				d.Up = 0
+				d.invalidate(backoff)
 				logger.Error("Failed warmup database connection pool", "conn", i, "error", err, "database", d.Name)
 				return
 			}
