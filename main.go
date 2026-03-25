@@ -38,12 +38,18 @@ import (
 	"github.com/oracle/oracle-db-appdev-monitoring/v2/restart"
 )
 
+const fallbackVersion = "0.0.0.dev"
+
 var (
-	// Version will be set at build time.
-	Version = "0.0.0.dev"
+	// Version will either be set at build time with an argument or by the go's
+	// build in module versioning system.
+	Version = fallbackVersion
 )
 
 func syncBuildVersion() {
+	if buildInfo, ok := debug.ReadBuildInfo(); ok && Version == fallbackVersion {
+		Version = buildInfo.Main.Version
+	}
 	if version.Version == "" {
 		version.Version = Version
 	}
