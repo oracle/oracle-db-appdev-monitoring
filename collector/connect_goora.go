@@ -51,7 +51,6 @@ func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) *sql.D
 
 	// Configure connection pool (sql.DB handles pooling)
 	setConnectionPool(logger, dbname, dbconfig, db)
-	initdb(logger, dbname, dbconfig, db)
 	return db
 }
 
@@ -80,4 +79,21 @@ func isInvalidCredentialsError(err error) bool {
 		return false
 	}
 	return oraErr.ErrCode == ora01017code || oraErr.ErrCode == ora28000code
+}
+
+func isTemporaryConnectionError(err error) bool {
+	if err == nil {
+		return false
+	}
+	var oraErr *network.OracleError
+	ok := errors.As(err, &oraErr)
+	if !ok {
+		return false
+	}
+	switch oraErr.ErrCode {
+	case ora01033code, ora03113code, ora03114code, ora12537code:
+		return true
+	default:
+		return false
+	}
 }

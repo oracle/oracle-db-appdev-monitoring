@@ -48,7 +48,6 @@ func maskDsn(dsn string) string {
 // NewExporter creates a new Exporter instance
 func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
 	var databases []*Database
-	wg := &sync.WaitGroup{}
 
 	var allConstLabels []string
 	// All the metrics of the same name need to have the same set of labels
@@ -64,16 +63,10 @@ func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
 	}
 
 	for dbname, dbconfig := range m.Databases {
-		logger.Info("Initializing database", "database", dbname)
+		logger.Info("Registering database", "database", dbname)
 		database := NewDatabase(logger, m.DatabaseLabel(), dbname, dbconfig)
 		databases = append(databases, database)
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			database.WarmupConnectionPool(logger)
-		}()
 	}
-	wg.Wait()
 	e := &Exporter{
 		mu: &sync.Mutex{},
 		duration: prometheus.NewGauge(prometheus.GaugeOpts{
@@ -114,6 +107,15 @@ func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
 	e.metricsToScrape = e.DefaultMetrics()
 	e.initCache()
 	return e
+}
+
+func (e *Exporter) InitializeDatabases() {
+	for _, database := range e.databases {
+		e.logger.Info("Starting database connection warmup", "database", database.Name)
+		if err := database.WarmupConnectionPool(e.logger, e.MetricsConfiguration.ConnectionBackoff()); err != nil {
+			e.logger.Error("Database startup warmup failed", "error", err, "database", database.Name)
+		}
+	}
 }
 
 func (e *Exporter) constLabels() map[string]string {
@@ -252,9 +254,14 @@ func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- er
 	}()
 
 	// If the database configuration is invalid, do not attempt to ping or reestablish the database connection.
-	if !d.IsValid() {
-		e.logger.Warn("Invalid database configuration, will not attempt reconnection", "database", d.Name)
+	if retryAfter := d.IsValid(); retryAfter != nil {
+		e.logger.Warn("Invalid database configuration", "database", d.Name, "retry_after", retryAfter)
 		errChan <- fmt.Errorf("database %s is invalid, will not be scraped", d.Name)
+		return
+	}
+	if !d.StartupReady() {
+		e.logger.Info("Database connection in progress", "database", d.Name)
+		errChan <- nil
 		return
 	}
 	// If ping fails, we will try again on the next iteration of metrics scraping

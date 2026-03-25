@@ -6,16 +6,22 @@ package collector
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 )
 
 const (
 	ora01017code = 1017
+	ora01033code = 1033
 	ora28000code = 28000
+	ora03113code = 3113
+	ora03114code = 3114
+	ora12537code = 12537
 )
 
 func (d *Database) UpMetric(exporterLabels map[string]string) prometheus.Metric {
@@ -49,7 +55,12 @@ func NewDatabase(logger *slog.Logger, dblabel, dbname string, dbconfig DatabaseC
 		Session:       db,
 		Config:        dbconfig,
 		DatabaseLabel: dblabel,
+		reconnectMU:   sync.Mutex{},
 	}
+}
+
+func (d *Database) StartupReady() bool {
+	return d.startupReady.Load()
 }
 
 // initCache resets the metrics cached. Used on startup and when metrics are reloaded.
@@ -60,7 +71,18 @@ func (d *Database) initCache(metrics map[string]*Metric) {
 // WarmupConnectionPool serially acquires connections to "warm up" the connection pool.
 // This is a workaround for a perceived bug in ODPI_C where rapid acquisition of connections
 // results in a SIGABRT.
-func (d *Database) WarmupConnectionPool(logger *slog.Logger) {
+func (d *Database) WarmupConnectionPool(logger *slog.Logger, backoff time.Duration) error {
+	defer d.startupReady.Store(true)
+	return d.warmupSession(logger, backoff, d.Session)
+}
+
+func (d *Database) warmupSession(logger *slog.Logger, backoff time.Duration, session *sql.DB) error {
+	if session == nil {
+		d.Up = 0
+		d.invalidate(backoff)
+		return errors.New("database session is not initialized")
+	}
+
 	var connections []*sql.Conn
 	poolSize := d.Config.GetMaxOpenConns()
 	if poolSize < 1 {
@@ -74,7 +96,7 @@ func (d *Database) WarmupConnectionPool(logger *slog.Logger) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		conn, err := d.Session.Conn(ctx)
+		conn, err := session.Conn(ctx)
 		if err != nil {
 			return err
 		}
@@ -82,16 +104,17 @@ func (d *Database) WarmupConnectionPool(logger *slog.Logger) {
 		return nil
 	}
 
-	func() {
-		for i := 0; i < poolSize; i++ {
-			// short circuit warmup for inaccessible databases
-			if err := warmup(i + 1); err != nil {
-				d.Up = 0
-				logger.Error("Failed warmup database connection pool", "conn", i, "error", err, "database", d.Name)
-				return
-			}
+	initdb(logger, d.Name, d.Config, session)
+
+	for i := 0; i < poolSize; i++ {
+		// short circuit warmup for inaccessible databases
+		if err := warmup(i + 1); err != nil {
+			d.Up = 0
+			d.invalidate(backoff)
+			logger.Debug("Failed warmup database connection pool", "conn", i, "error", err, "database", d.Name)
+			return err
 		}
-	}()
+	}
 
 	logger.Debug("Warmed connection pool", "total", len(connections), "database", d.Name)
 	for i, conn := range connections {
@@ -99,40 +122,81 @@ func (d *Database) WarmupConnectionPool(logger *slog.Logger) {
 			logger.Debug("Failed to return database connection to pool on warmup", "conn", i+1, "error", err, "database", d.Name)
 		}
 	}
+	d.Up = 1
+	d.clearInvalid()
+	return nil
+}
+
+func (d *Database) reconnect(logger *slog.Logger, backoff time.Duration) error {
+	d.reconnectMU.Lock()
+	defer d.reconnectMU.Unlock()
+
+	logger.Info("Reconnecting database session", "database", d.Name)
+
+	session := connect(logger, d.Name, d.Config)
+	if err := d.warmupSession(logger, backoff, session); err != nil {
+		if session != nil {
+			_ = session.Close()
+		}
+		return err
+	}
+
+	oldSession := d.Session
+	d.Session = session
+	if oldSession != nil && oldSession != session {
+		_ = oldSession.Close()
+	}
+	return nil
 }
 
 // ping the database. If the database is disconnected, try to reconnect.
 // If the database type is unknown, try to reload it.
 func (d *Database) ping(logger *slog.Logger, backoff time.Duration) error {
+	if d.Session == nil {
+		return d.reconnect(logger, backoff)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	err := d.Session.PingContext(ctx)
 	if err != nil {
 		d.Up = 0
-		if isInvalidCredentialsError(err) {
+		if isInvalidCredentialsError(err) || isTemporaryConnectionError(err) {
 			d.invalidate(backoff)
 			return err
 		}
-		// If database is closed, try to reconnect
-		if strings.Contains(err.Error(), "sql: database is closed") {
-			d.Session = connect(logger, d.Name, d.Config)
+		// If database is closed, rebuild the handle and rerun init/warmup.
+		if isClosedDatabaseError(err) {
+			return d.reconnect(logger, backoff)
 		}
 		return err
 	}
 	d.Up = 1
+	d.clearInvalid()
 	return nil
 }
 
-func (d *Database) IsValid() bool {
+func (d *Database) IsValid() *time.Duration {
 	if d.invalidUntil == nil {
-		return true
+		return nil
 	}
-	return time.Now().After(*d.invalidUntil)
+	retryAfter := time.Until(*d.invalidUntil)
+	if retryAfter <= 0 {
+		return nil
+	}
+	return &retryAfter
 }
 
 func (d *Database) invalidate(backoff time.Duration) {
 	until := time.Now().Add(backoff)
 	d.invalidUntil = &until
+}
+
+func (d *Database) clearInvalid() {
+	d.invalidUntil = nil
+}
+
+func isClosedDatabaseError(err error) bool {
+	return errors.Is(err, sql.ErrConnDone) || strings.Contains(err.Error(), "sql: database is closed")
 }
 
 func initdb(logger *slog.Logger, dbname string, dbconfig DatabaseConfig, db *sql.DB) {

@@ -129,8 +129,11 @@ func readLastMatchingLogRecord(logDestination, database string, perDatabaseFiles
 
 // UpdateLog appends newly queried alert log records for a database to the configured log destination.
 func UpdateLog(logDestination string, perDatabaseFiles bool, logger *slog.Logger, d *collector.Database) {
+	if !d.StartupReady() {
+		return
+	}
 	// Do not try to query the alert log if the database configuration is invalid.
-	if !d.IsValid() {
+	if d.IsValid() != nil {
 		return
 	}
 	now := time.Now()

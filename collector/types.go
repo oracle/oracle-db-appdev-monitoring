@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -37,6 +38,9 @@ type Database struct {
 
 	invalidUntil  *time.Time
 	DatabaseLabel string
+	startupReady  atomic.Bool
+
+	reconnectMU sync.Mutex
 }
 
 type MetricsCache struct {

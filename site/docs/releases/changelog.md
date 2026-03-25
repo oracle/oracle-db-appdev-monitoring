@@ -15,6 +15,8 @@ List of upcoming and historic changes to the exporter.
 - Alert log records now include their source database name in the exported JSON output.
 - Add the `log.perDatabaseFiles` configuration option to write alert logs to per-database files such as `alert-db2.log`. This is recommended when scraping multiple databases from a single exporter.
 - Document that TLS, basic authentication, and other Prometheus web server security settings should be configured through `web.configFile` using Prometheus Exporter Toolkit configuration.
+- Start the exporter web server before initializing database connections and warming connection pools, so unavailable databases do not block the metrics endpoint from coming up.
+- Improve database `ping` handling so transient connection errors enter backoff and closed connections are rebuilt and warmed before reuse.
 - Fix alert log export when nullable database fields such as `execution_context_id` are returned as `NULL`.
 - Fix metrics caching where metrics scrape failures could improperly invalidate entries in the metrics cache.
 - Fix a metrics file-loading issue an invalid metrics file failed to fall on the packaged default metrics.
@@ -24,6 +26,8 @@ List of upcoming and historic changes to the exporter.
 Thank you to the following people for their suggestions and contributions:
 - [@wes-pro](https://github.com/wes-pro)
 - [@MansuyDavid](https://github.com/MansuyDavid)
+- [baranchn](https://github.com/baranchn)
+- [@kirxcore](https://github.com/kirxcore)
 
 ### Version 2.2.2, March 2, 2026
 
