@@ -133,7 +133,7 @@ func UpdateLog(logDestination string, perDatabaseFiles bool, logger *slog.Logger
 		return
 	}
 	// Do not try to query the alert log if the database configuration is invalid.
-	if !d.IsValid() {
+	if d.IsValid() != nil {
 		return
 	}
 	now := time.Now()

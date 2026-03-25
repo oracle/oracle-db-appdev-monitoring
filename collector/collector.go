@@ -112,7 +112,9 @@ func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
 func (e *Exporter) InitializeDatabases() {
 	for _, database := range e.databases {
 		e.logger.Info("Starting database connection warmup", "database", database.Name)
-		database.WarmupConnectionPool(e.logger, e.MetricsConfiguration.ConnectionBackoff())
+		if err := database.WarmupConnectionPool(e.logger, e.MetricsConfiguration.ConnectionBackoff()); err != nil {
+			e.logger.Error("Database startup warmup failed", "error", err, "database", database.Name)
+		}
 	}
 }
 
@@ -252,8 +254,8 @@ func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- er
 	}()
 
 	// If the database configuration is invalid, do not attempt to ping or reestablish the database connection.
-	if !d.IsValid() {
-		e.logger.Warn("Invalid database configuration, will not attempt reconnection", "database", d.Name)
+	if retryAfter := d.IsValid(); retryAfter != nil {
+		e.logger.Warn("Invalid database configuration", "database", d.Name, "retry_after", retryAfter)
 		errChan <- fmt.Errorf("database %s is invalid, will not be scraped", d.Name)
 		return
 	}

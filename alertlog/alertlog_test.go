@@ -9,6 +9,11 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"io"
+	"log/slog"
+
+	"github.com/oracle/oracle-db-appdev-monitoring/collector"
 )
 
 func TestNullStringValue(t *testing.T) {
@@ -154,5 +159,17 @@ func TestRetryTrackerRecordSuccessResetsState(t *testing.T) {
 	shouldRetry, retryAfter := tracker.shouldRetry("db2", now)
 	if !shouldRetry {
 		t.Fatalf("expected retry to be allowed after success reset, got retry_after=%v", retryAfter)
+	}
+}
+
+func TestUpdateLogSkipsWhenStartupNotReady(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logPath := filepath.Join(t.TempDir(), "alert.log")
+	db := &collector.Database{Name: "db1"}
+
+	UpdateLog(logPath, false, logger, db)
+
+	if _, err := os.Stat(logPath); !os.IsNotExist(err) {
+		t.Fatalf("expected log file to not be created while startup is in progress, got err=%v", err)
 	}
 }
