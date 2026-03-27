@@ -20,14 +20,16 @@ List of upcoming and historic changes to the exporter.
 - Fix alert log export when nullable database fields such as `execution_context_id` are returned as `NULL`.
 - Fix metrics caching where metrics scrape failures could improperly invalidate entries in the metrics cache.
 - Fix a metrics file-loading issue an invalid metrics file failed to fall on the packaged default metrics.
+- Fix a username/password encoding bug when using the `go-ora` driver.
 - Update third-party dependencies.
 - Update Go runtime to 1.26.1.
 
-Thank you to the following people for their suggestions and contributions:
+Thank you to the following users for their suggestions and contributions:
 - [@wes-pro](https://github.com/wes-pro)
 - [@MansuyDavid](https://github.com/MansuyDavid)
 - [baranchn](https://github.com/baranchn)
 - [@kirxcore](https://github.com/kirxcore)
+- [finnure](https://github.com/finnure)
 
 ### Version 2.2.2, March 2, 2026
 
