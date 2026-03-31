@@ -12,7 +12,7 @@
 # - darwin-arm64 binary tarball
 
 # Example usage:
-# ./build-all-macos.sh -v 2.2.2 -t godror -cmuo
+# ./build-all-macos.sh -v 2.3.0 -t godror -cmuo
 
 USAGE="Usage: $0 [-v VERSION] [-t TARGET] [-cmuo]"
 
