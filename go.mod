@@ -14,7 +14,7 @@ require (
 	github.com/prometheus/common v0.67.5
 	github.com/prometheus/exporter-toolkit v0.15.1
 	github.com/sijms/go-ora/v2 v2.9.0
-	gopkg.in/yaml.v2 v2.4.0
+	go.yaml.in/yaml/v2 v2.4.3
 )
 
 require (
@@ -58,7 +58,6 @@ require (
 	github.com/sony/gobreaker v1.0.0 // indirect
 	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
-	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	golang.org/x/crypto v0.47.0 // indirect
 	golang.org/x/exp v0.0.0-20260112195511-716be5621a96 // indirect
 	golang.org/x/net v0.49.0 // indirect

@@ -9,7 +9,7 @@ import (
 	"github.com/oracle/oracle-db-appdev-monitoring/hashivault"
 	"github.com/oracle/oracle-db-appdev-monitoring/ocivault"
 	"github.com/prometheus/exporter-toolkit/web"
-	"gopkg.in/yaml.v2"
+	"go.yaml.in/yaml/v2"
 	"log/slog"
 	"os"
 	"strings"
