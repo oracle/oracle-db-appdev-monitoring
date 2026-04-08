@@ -21,6 +21,7 @@ List of upcoming and historic changes to the exporter.
 - Fix metrics caching where metrics scrape failures could improperly invalidate entries in the metrics cache.
 - Fix a metrics file-loading issue an invalid metrics file failed to fall on the packaged default metrics.
 - Fix a username/password encoding bug when using the `go-ora` driver.
+- Use the `godror` database driver by default. Build with `-tags goora` to use the no-CGO `go-ora` driver instead.
 - Update third-party dependencies.
 - Update Go runtime to 1.26.1.
 
@@ -30,6 +31,7 @@ Thank you to the following users for their suggestions and contributions:
 - [baranchn](https://github.com/baranchn)
 - [@kirxcore](https://github.com/kirxcore)
 - [finnure](https://github.com/finnure)
+- [@ptodev](https://github.com/ptodev)
 
 ### Version 2.2.2, March 2, 2026
 
