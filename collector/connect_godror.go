@@ -1,7 +1,7 @@
 // Copyright (c) 2025, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
-//go:build godror
+//go:build !goora
 
 package collector
 
@@ -9,10 +9,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/godror/godror"
-	"github.com/godror/godror/dsn"
 	"log/slog"
 	"time"
+
+	"github.com/godror/godror"
+	"github.com/godror/godror/dsn"
 )
 
 func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) *sql.DB {
