@@ -37,7 +37,7 @@ OL_IMAGE="oraclelinux:8"
 BASE_IMAGE="ghcr.io/oracle/oraclelinux:8-slim"
 UBUNTU_IMAGE="ubuntu:24.04"
 OL8_GLIBC_VERSION="2.28"
-GO_VERSION="1.26.1"
+GO_VERSION="1.26.2"
 
 if [[ "${TARGET}" == "goora" ]]; then
   TAGS="goora"
@@ -139,4 +139,3 @@ if [[ -n "$BUILD_UBUNTU" ]]; then
   # Create Linux artifacts and containers
   build_ubuntu
 fi
-
