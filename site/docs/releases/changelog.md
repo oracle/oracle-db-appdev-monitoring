@@ -23,7 +23,7 @@ List of upcoming and historic changes to the exporter.
 - Fix a username/password encoding bug when using the `go-ora` driver.
 - Use the `godror` database driver by default. Build with `-tags goora` to use the no-CGO `go-ora` driver instead.
 - Update third-party dependencies.
-- Update Go runtime to 1.26.1.
+- Update Go runtime to 1.26.2.
 
 Thank you to the following users for their suggestions and contributions:
 - [@wes-pro](https://github.com/wes-pro)

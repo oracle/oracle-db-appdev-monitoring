@@ -22,7 +22,7 @@ List of upcoming and historic changes to the exporter.
 - Fix a metrics file-loading issue an invalid metrics file failed to fall on the packaged default metrics.
 - Fix a username/password encoding bug when using the `go-ora` driver.
 - Update third-party dependencies.
-- Update Go runtime to 1.26.1.
+- Update Go runtime to 1.26.2.
 
 Thank you to the following users for their suggestions and contributions:
 - [@wes-pro](https://github.com/wes-pro)
