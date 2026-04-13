@@ -85,6 +85,17 @@ docker run -it --rm \
     container-registry.oracle.com/database/observability-exporter:2.3.0
 ```
 
+:::tip Troubleshooting ORA-01017 with Wallet Authentication
+If you experience an `ORA-01017: invalid username/password; logon denied` error when using a wallet for authentication, you may need to create a `sqlnet.ora` file in your wallet directory (or `TNS_ADMIN` directory) with the following content:
+
+```
+WALLET_LOCATION=(SOURCE=(METHOD=FILE)(METHOD_DATA=(DIRECTORY=<directory where wallet is>)))
+SQLNET.WALLET_OVERRIDE = TRUE
+```
+
+Replace `<directory where wallet is>` with the actual path to your wallet files.
+:::
+
 ### Oracle Wallet SEPS configuration
 
 
