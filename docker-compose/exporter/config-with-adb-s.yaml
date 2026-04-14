@@ -1,0 +1,36 @@
+# Test with ADB-S
+# Set the following environment variables
+# ADB_USERNAME=<username for ADB-S instance>
+# ADB_PASSWORD=<password for ADB-S instance>
+# ADB_TNS_ALIAS=<TNS alias for ADB-S instance>
+# TNS_ADMIN=/exporter/wallet
+databases:
+  adb:
+    # The TNS_ADMIN environment variable must be set to the wallet path
+    # export TNS_ADMIN=/exporter/wallet
+    username: ${ADB_USERNAME}
+    password: ${ADB_PASSWORD}
+    url: ${ADB_TNS_ALIAS}
+    tnsAdmin: ${TNS_ADMIN}
+    queryTimeout: 5
+
+
+metrics:
+  ## How long to wait before attempting to reconnect to an invalid database (login or locked user)
+  # connectionBackoff: 5m
+  ## How often to scrape metrics. If not provided, metrics will be scraped on request.
+  # scrapeInterval: 15s
+  ## Path to default metrics file.
+  default: default-metrics.toml
+  ## Paths to any custom metrics files
+  custom:
+    - /exporter/txeventq-metrics.toml
+    - /exporter/more-txeventq-metrics.toml
+
+log:
+  # Path of log file
+  destination: /tmp/alert.log
+  # Interval of log updates
+  interval: 15s
+  ## Set disable to 1 to disable logging
+  # disable: 0
