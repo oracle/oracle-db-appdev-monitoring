@@ -135,3 +135,20 @@ podman-release: podman-build podman-push
 
 .PHONY: version build deps go-test clean docker-compose-up docker-compose-down docker docker-arm docker-platform docker-amd \
         podman-build podman-push podman-release
+
+
+###########################################################
+## PAGS
+###########################################################
+
+pags-docker-build:
+	docker build --no-cache \
+		--progress=plain $(BUILD_ARGS) \
+		-t "$(IMAGE_ID):${VERSION}" \
+		--build-arg BASE_IMAGE=$(ORACLE_LINUX_BASE_IMAGE) \
+		--build-arg CGO_ENABLED=$(CGO_ENABLED) \
+		--network host \
+		--build-arg TAGS=$(TAGS) .
+
+pags-docker-push:
+	docker push "${IMAGE_ID}:${VERSION}"
