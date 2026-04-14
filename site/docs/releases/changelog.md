@@ -7,7 +7,11 @@ sidebar_position: 2
 
 List of upcoming and historic changes to the exporter.
 
-### 2.3.0, Upcoming
+### Next, TBD
+
+TBD
+
+### 2.3.0, April 14th, 2026
 
 - Add per-database scrape duration metrics to complement the existing exporter-wide scrape duration metric.
 - Add per-database scrape error counters while preserving the existing global scrape error counter.
