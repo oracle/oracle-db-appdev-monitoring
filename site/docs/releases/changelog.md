@@ -9,7 +9,8 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
-TBD
+- Add an initial GitHub Actions workflow to run `make go-test` and `make go-build` on approved pull requests targeting `main` and on pushes to `main`.
+- Add `CODEOWNERS` protection for GitHub workflow files.
 
 ### 2.3.0, April 14th, 2026
 
