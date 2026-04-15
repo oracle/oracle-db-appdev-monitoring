@@ -1,0 +1,3 @@
+# Protect workflow changes and the ownership file itself.
+.github/workflows/* @anders-swanson @andytael @markxnelson @gotsysdba
+.github/CODEOWNERS @anders-swanson @andytael @markxnelson @gotsysdba
