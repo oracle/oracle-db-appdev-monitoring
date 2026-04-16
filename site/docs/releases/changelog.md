@@ -9,8 +9,12 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
+- Add the exporter release `version` label to `oracledb_exporter_build_info`, matching the standard Prometheus build info metric shape.
 - Add an initial GitHub Actions workflow to run `make go-test` and `make go-build` on approved pull requests targeting `main` and on pushes to `main`.
 - Add `CODEOWNERS` protection for GitHub workflow files.
+
+Thank you to the following users for their suggestions and contributions:
+- [jens-ho](https://github.com/jens-ho)
 
 ### 2.3.0, April 14th, 2026
 
