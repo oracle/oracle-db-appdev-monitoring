@@ -53,7 +53,15 @@ var (
 	toolkitFlags       = webflag.AddFlags(kingpin.CommandLine, ":9161")
 )
 
+func syncBuildVersion() {
+	if version.Version == "" {
+		version.Version = Version
+	}
+}
+
 func main() {
+	syncBuildVersion()
+
 	promLogConfig := &promslog.Config{}
 	flag.AddFlags(kingpin.CommandLine, promLogConfig)
 	kingpin.HelpFlag.Short('\n')
