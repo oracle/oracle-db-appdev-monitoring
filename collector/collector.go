@@ -14,6 +14,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -24,7 +25,6 @@ import (
 )
 
 var (
-	hashMap      = make(map[int][]byte)
 	namespace    = "oracledb"
 	exporterName = "exporter"
 )
@@ -68,7 +68,8 @@ func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
 		databases = append(databases, database)
 	}
 	e := &Exporter{
-		mu: &sync.Mutex{},
+		mu:                  &sync.Mutex{},
+		customMetricsHashes: map[string][]byte{},
 		duration: prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: exporterName,
@@ -392,20 +393,22 @@ func (e *Exporter) GetDBs() []*Database {
 }
 
 func (e *Exporter) checkIfMetricsChanged() bool {
-	for i, _customMetrics := range e.CustomMetricsFiles() {
+	for _, _customMetrics := range e.CustomMetricsFiles() {
 		if len(_customMetrics) == 0 {
 			continue
 		}
+		cleanPath := filepath.Clean(_customMetrics)
 		e.logger.Debug("Checking modifications in following metrics definition file:" + _customMetrics)
 		h := sha256.New()
-		if err := hashFile(h, _customMetrics); err != nil {
+		if err := hashFile(h, cleanPath); err != nil {
 			e.logger.Error("Unable to get file hash", "error", err)
 			return false
 		}
+		sum := h.Sum(nil)
 		// If any of files has been changed reload metrics
-		if !bytes.Equal(hashMap[i], h.Sum(nil)) {
+		if !bytes.Equal(e.customMetricsHashes[cleanPath], sum) {
 			e.logger.Info(_customMetrics + " has been changed. Reloading metrics...")
-			hashMap[i] = h.Sum(nil)
+			e.customMetricsHashes[cleanPath] = sum
 			return true
 		}
 	}
