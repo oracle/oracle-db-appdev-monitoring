@@ -15,16 +15,17 @@ import (
 // Exporter collects Oracle DB metrics. It implements prometheus.Collector.
 type Exporter struct {
 	*MetricsConfiguration
-	mu               *sync.Mutex
-	metricsToScrape  map[string]*Metric
-	duration, error  prometheus.Gauge
-	databaseDuration *prometheus.GaugeVec
-	totalScrapes     prometheus.Counter
-	scrapeErrors     *prometheus.CounterVec
-	scrapeResults    []prometheus.Metric
-	databases        []*Database
-	logger           *slog.Logger
-	allConstLabels   []string
+	mu                  *sync.Mutex
+	metricsToScrape     map[string]*Metric
+	customMetricsHashes map[string][]byte
+	duration, error     prometheus.Gauge
+	databaseDuration    *prometheus.GaugeVec
+	totalScrapes        prometheus.Counter
+	scrapeErrors        *prometheus.CounterVec
+	scrapeResults       []prometheus.Metric
+	databases           []*Database
+	logger              *slog.Logger
+	allConstLabels      []string
 }
 
 type Database struct {
