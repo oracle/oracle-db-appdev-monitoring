@@ -9,10 +9,14 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
+- Pin the demo Docker Compose `prom/prometheus` and `grafana/grafana` images to immutable digests instead of floating tags.
+- Fall back to the default HashiCorp Vault client configuration when `vault.hashicorp.proxySocket` is not configured, preventing a nil-pointer panic while still allowing environment-based Vault configuration.
 - Remove production use of the OCI SDK `example/helpers` package in Vault integrations so OCI Vault and HashiCorp Vault lookup failures return errors instead of terminating the exporter process.
 - Escape the configured metrics path before rendering the landing page link, preventing self-XSS through `web.telemetry-path`.
 - Fix alert log tail reads to scan backward in fixed-size chunks with a maximum line-length cap, avoiding quadratic string rebuilds on large final log lines.
-- Add a per-database `connMaxLifetime` setting with a default of `30m`, so pooled connections are recycled instead of being reused indefinitely.
+- Add a per-database `connMaxLifetime` setting with a default of `30m`, so pooled connections are recycled instead of being reused indefinitely. You may set this to 0 to get the prior default behavior.
+- Ignore invalid `RESTART_INTERVAL` and `FREE_INTERVAL` values instead of panicking when creating periodic tickers.
+- Synchronize per-database session and validity state so reconnects, alert-log queries, and metric scrapes no longer race on shared database handles.
 - Fix custom metrics hot reload so invalid or partially written metric files are logged and ignored without crashing the exporter, preserving the last known good metric set.
 - Fix custom metrics reload tracking so multiple `collector.NewExporter` instances in the same Go process each load and reload custom metrics independently.
 - Add the exporter release `version` label to `oracledb_exporter_build_info`, matching the standard Prometheus build info metric shape.

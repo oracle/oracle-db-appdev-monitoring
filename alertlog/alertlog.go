@@ -183,12 +183,13 @@ func UpdateLog(logDestination string, perDatabaseFiles bool, logger *slog.Logger
 		from v$diag_alert_ext
 		where originating_timestamp > to_utc_timestamp_tz('%s')`, lastLogRecord.Timestamp)
 
-	rows, err := d.Session.Query(stmt)
+	rows, unlock, err := d.Query(stmt)
 	if err != nil {
 		retryAfter := databaseRetries.recordFailure(d.Name, now)
 		logger.Error("Error querying the alert logs", "error", err, "database", d.Name, "retry_after", retryAfter)
 		return
 	}
+	defer unlock()
 	defer rows.Close()
 
 	// write them to the file

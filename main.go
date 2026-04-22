@@ -157,19 +157,22 @@ func main() {
 		duration, err := time.ParseDuration(restartInterval)
 		if err != nil {
 			logger.Info("Could not parse RESTART_INTERVAL, so ignoring it")
-		}
-		ticker := time.NewTicker(duration)
-		defer ticker.Stop()
+		} else if duration <= 0 {
+			logger.Info("RESTART_INTERVAL must be greater than zero, so ignoring it")
+		} else {
+			ticker := time.NewTicker(duration)
+			defer ticker.Stop()
 
-		go func() {
-			<-ticker.C
-			logger.Info("Restarting the process...")
-			executable, _ := os.Executable()
-			execErr := syscall.Exec(executable, os.Args, os.Environ())
-			if execErr != nil {
-				panic(execErr)
-			}
-		}()
+			go func() {
+				<-ticker.C
+				logger.Info("Restarting the process...")
+				executable, _ := os.Executable()
+				execErr := syscall.Exec(executable, os.Args, os.Environ())
+				if execErr != nil {
+					panic(execErr)
+				}
+			}()
+		}
 	}
 
 	// start a ticker to free OS memory
@@ -177,17 +180,20 @@ func main() {
 		duration, err := time.ParseDuration(freeOSMemInterval)
 		if err != nil {
 			logger.Info("Could not parse FREE_INTERVAL, so ignoring it")
-		}
-		memTicker := time.NewTicker(duration)
-		defer memTicker.Stop()
+		} else if duration <= 0 {
+			logger.Info("FREE_INTERVAL must be greater than zero, so ignoring it")
+		} else {
+			memTicker := time.NewTicker(duration)
+			defer memTicker.Stop()
 
-		go func() {
-			for {
-				<-memTicker.C
-				logger.Info("attempting to free OS memory")
-				debug.FreeOSMemory()
-			}
-		}()
+			go func() {
+				for {
+					<-memTicker.C
+					logger.Info("attempting to free OS memory")
+					debug.FreeOSMemory()
+				}
+			}()
+		}
 
 	}
 

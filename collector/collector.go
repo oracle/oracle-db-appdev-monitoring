@@ -546,7 +546,7 @@ func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric,
 func (e *Exporter) generatePrometheusMetrics(d *Database, parse func(row map[string]string) error, query string, queryTimeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), queryTimeout)
 	defer cancel()
-	rows, err := d.Session.QueryContext(ctx, query)
+	rows, unlock, err := d.QueryContext(ctx, query)
 
 	if ctx.Err() == context.DeadlineExceeded {
 		return errors.New("Oracle query timed out")
@@ -556,6 +556,7 @@ func (e *Exporter) generatePrometheusMetrics(d *Database, parse func(row map[str
 		return err
 	}
 	cols, err := rows.Columns()
+	defer unlock()
 	defer rows.Close()
 
 	for rows.Next() {

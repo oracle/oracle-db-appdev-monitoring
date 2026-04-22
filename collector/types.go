@@ -42,7 +42,8 @@ type Database struct {
 	DatabaseLabel string
 	startupReady  atomic.Bool
 
-	reconnectMU sync.Mutex
+	reconnectMU        sync.RWMutex
+	reconnectAttemptMU sync.Mutex
 }
 
 type MetricsCache struct {

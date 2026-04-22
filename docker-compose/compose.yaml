@@ -1,7 +1,7 @@
 
 services:
   prometheus:
-    image: prom/prometheus
+    image: prom/prometheus@sha256:5550dc63da361dc30f6fe02ac0e4dfc736ededfef3c8d12a634db04a67824d78
     container_name: prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yaml'
@@ -13,7 +13,7 @@ services:
       - prom_data:/prometheus
 
   grafana:
-    image: grafana/grafana
+    image: grafana/grafana@sha256:0f86bada30d65ef9d0183b90c1e2682ac92d53d95da8bed322b984ea78a4a73a
     container_name: grafana
     ports:
       - 3000:3000
