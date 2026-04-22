@@ -13,6 +13,11 @@ func (z *zeroResultError) Error() string {
 	return z.err
 }
 
+func (z *zeroResultError) Is(target error) bool {
+	_, ok := target.(*zeroResultError)
+	return ok
+}
+
 func newZeroResultError() error {
 	return &zeroResultError{
 		err: "no metrics found while parsing, query returned no rows",

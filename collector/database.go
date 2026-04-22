@@ -24,6 +24,11 @@ const (
 	ora12537code = 12537
 )
 
+var (
+	connectDB           = connect
+	initDatabaseSession = initdb
+)
+
 func (d *Database) UpMetric(exporterLabels map[string]string) prometheus.Metric {
 	desc := prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "up"),
@@ -48,7 +53,7 @@ func (d *Database) constLabels(labels map[string]string) map[string]string {
 }
 
 func NewDatabase(logger *slog.Logger, dblabel, dbname string, dbconfig DatabaseConfig) *Database {
-	db := connect(logger, dbname, dbconfig)
+	db := connectDB(logger, dbname, dbconfig)
 	return &Database{
 		Name:          dbname,
 		Up:            0,
@@ -104,7 +109,7 @@ func (d *Database) warmupSession(logger *slog.Logger, backoff time.Duration, ses
 		return nil
 	}
 
-	initdb(logger, d.Name, d.Config, session)
+	initDatabaseSession(logger, d.Name, d.Config, session)
 
 	for i := 0; i < poolSize; i++ {
 		// short circuit warmup for inaccessible databases
@@ -133,7 +138,7 @@ func (d *Database) reconnect(logger *slog.Logger, backoff time.Duration) error {
 
 	logger.Info("Reconnecting database session", "database", d.Name)
 
-	session := connect(logger, d.Name, d.Config)
+	session := connectDB(logger, d.Name, d.Config)
 	if err := d.warmupSession(logger, backoff, session); err != nil {
 		if session != nil {
 			_ = session.Close()

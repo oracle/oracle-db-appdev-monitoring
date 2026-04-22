@@ -4,9 +4,13 @@
 package alertlog
 
 import (
+	"context"
 	"database/sql"
+	"database/sql/driver"
+	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,6 +18,7 @@ import (
 	"log/slog"
 
 	"github.com/oracle/oracle-db-appdev-monitoring/collector"
+	"github.com/oracle/oracle-db-appdev-monitoring/internal/testdb"
 )
 
 func TestNullStringValue(t *testing.T) {
@@ -172,4 +177,185 @@ func TestUpdateLogSkipsWhenStartupNotReady(t *testing.T) {
 	if _, err := os.Stat(logPath); !os.IsNotExist(err) {
 		t.Fatalf("expected log file to not be created while startup is in progress, got err=%v", err)
 	}
+}
+
+func TestReadLastMatchingLogRecordReturnsDefaultForEmptyFile(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "alert.log")
+	if err := os.WriteFile(logPath, nil, 0o600); err != nil {
+		t.Fatalf("write log: %v", err)
+	}
+
+	record, err := readLastMatchingLogRecord(logPath, "db1", false)
+	if err != nil {
+		t.Fatalf("read last matching log record: %v", err)
+	}
+	if record != defaultLastLogRecord {
+		t.Fatalf("expected default log record, got %#v", record)
+	}
+}
+
+func TestReadLastMatchingLogRecordReturnsErrorForMalformedJSON(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "alert.log")
+	if err := os.WriteFile(logPath, []byte("{bad json}\n"), 0o600); err != nil {
+		t.Fatalf("write log: %v", err)
+	}
+
+	if _, err := readLastMatchingLogRecord(logPath, "db1", false); err == nil {
+		t.Fatal("expected malformed json error")
+	}
+}
+
+func TestUpdateLogSkipsWhenDatabaseIsInvalid(t *testing.T) {
+	databaseRetries = retryTracker{state: map[string]databaseRetryState{}}
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logPath := filepath.Join(t.TempDir(), "alert.log")
+	db := &collector.Database{Name: "db1"}
+
+	_ = db.WarmupConnectionPool(logger, time.Minute)
+	UpdateLog(logPath, false, logger, db)
+
+	if _, err := os.Stat(logPath); !os.IsNotExist(err) {
+		t.Fatalf("expected invalid database to skip creating log file, got err=%v", err)
+	}
+}
+
+func TestUpdateLogSkipsDuringRetryBackoff(t *testing.T) {
+	now := time.Now()
+	databaseRetries = retryTracker{
+		state: map[string]databaseRetryState{
+			"db1": {retryAfter: now.Add(time.Minute)},
+		},
+	}
+
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logPath := filepath.Join(t.TempDir(), "alert.log")
+	db := readyDatabase(t, testdb.Scenario{})
+
+	UpdateLog(logPath, false, logger, db)
+
+	if _, err := os.Stat(logPath); !os.IsNotExist(err) {
+		t.Fatalf("expected retry backoff to skip creating log file, got err=%v", err)
+	}
+}
+
+func TestUpdateLogAppendsNewRecordsAndTrimsMessageNewline(t *testing.T) {
+	databaseRetries = retryTracker{state: map[string]databaseRetryState{}}
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logPath := filepath.Join(t.TempDir(), "alert.log")
+	db := readyDatabase(t, testdb.Scenario{
+		QueryFunc: func(ctx context.Context, query string, args []driver.NamedValue) testdb.QueryResult {
+			if strings.Contains(query, "v$diag_alert_ext") {
+				return testdb.QueryResult{
+					Columns: []string{"ORIGINATING_TIMESTAMP", "MODULE_ID", "EXECUTION_CONTEXT_ID", "MESSAGE_TEXT"},
+					Rows: [][]driver.Value{{
+						"2026-03-13T12:05:00.000Z",
+						"mod-1",
+						"ecid-1",
+						"line with newline\n",
+					}},
+				}
+			}
+			return testdb.QueryResult{}
+		},
+	})
+
+	UpdateLog(logPath, false, logger, db)
+
+	content, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("read log output: %v", err)
+	}
+	text := string(content)
+	if !strings.Contains(text, "\"database\":\"db1\"") || !strings.Contains(text, "\"message\":\"line with newline\"") {
+		t.Fatalf("unexpected log content %q", text)
+	}
+	if _, ok := databaseRetries.state["db1"]; ok {
+		t.Fatal("expected successful update to clear retry state")
+	}
+}
+
+func TestUpdateLogQueryFailureRecordsRetry(t *testing.T) {
+	databaseRetries = retryTracker{state: map[string]databaseRetryState{}}
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	db := readyDatabase(t, testdb.Scenario{
+		QueryFunc: func(ctx context.Context, query string, args []driver.NamedValue) testdb.QueryResult {
+			if strings.Contains(query, "v$diag_alert_ext") {
+				return testdb.QueryResult{Err: errors.New("query failed")}
+			}
+			return testdb.QueryResult{}
+		},
+	})
+
+	UpdateLog(filepath.Join(t.TempDir(), "alert.log"), false, logger, db)
+
+	if _, ok := databaseRetries.state["db1"]; !ok {
+		t.Fatal("expected query failure to record retry state")
+	}
+}
+
+func TestUpdateLogScanFailureRecordsRetry(t *testing.T) {
+	databaseRetries = retryTracker{state: map[string]databaseRetryState{}}
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	db := readyDatabase(t, testdb.Scenario{
+		QueryFunc: func(ctx context.Context, query string, args []driver.NamedValue) testdb.QueryResult {
+			if strings.Contains(query, "v$diag_alert_ext") {
+				return testdb.QueryResult{
+					Columns: []string{"ORIGINATING_TIMESTAMP", "MODULE_ID", "EXECUTION_CONTEXT_ID"},
+					Rows:    [][]driver.Value{{"2026-03-13T12:05:00.000Z", "mod-1", "ecid-1"}},
+				}
+			}
+			return testdb.QueryResult{}
+		},
+	})
+
+	UpdateLog(filepath.Join(t.TempDir(), "alert.log"), false, logger, db)
+
+	if _, ok := databaseRetries.state["db1"]; !ok {
+		t.Fatal("expected scan failure to record retry state")
+	}
+}
+
+func TestUpdateLogRowsErrorRecordsRetry(t *testing.T) {
+	databaseRetries = retryTracker{state: map[string]databaseRetryState{}}
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	db := readyDatabase(t, testdb.Scenario{
+		QueryFunc: func(ctx context.Context, query string, args []driver.NamedValue) testdb.QueryResult {
+			if strings.Contains(query, "v$diag_alert_ext") {
+				return testdb.QueryResult{
+					Columns:   []string{"ORIGINATING_TIMESTAMP", "MODULE_ID", "EXECUTION_CONTEXT_ID", "MESSAGE_TEXT"},
+					Rows:      [][]driver.Value{{"2026-03-13T12:05:00.000Z", "mod-1", "ecid-1", "message"}},
+					NextErrAt: 1,
+					NextErr:   errors.New("rows failed"),
+				}
+			}
+			return testdb.QueryResult{}
+		},
+	})
+
+	UpdateLog(filepath.Join(t.TempDir(), "alert.log"), false, logger, db)
+
+	if _, ok := databaseRetries.state["db1"]; !ok {
+		t.Fatal("expected rows.Err path to record retry state")
+	}
+}
+
+func readyDatabase(t *testing.T, scenario testdb.Scenario) *collector.Database {
+	t.Helper()
+
+	dbh, _ := testdb.New(scenario)
+	t.Cleanup(func() { _ = dbh.Close() })
+
+	db := &collector.Database{
+		Name:    "db1",
+		Session: dbh,
+		Config:  collector.DatabaseConfig{ConnectConfig: collector.ConnectConfig{MaxOpenConns: intPtr(1)}},
+	}
+	if err := db.WarmupConnectionPool(slog.New(slog.NewTextHandler(io.Discard, nil)), time.Second); err != nil {
+		t.Fatalf("warmup database: %v", err)
+	}
+	return db
+}
+
+func intPtr(v int) *int {
+	return &v
 }

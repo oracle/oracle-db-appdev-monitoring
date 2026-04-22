@@ -44,3 +44,17 @@ func TestSyncBuildVersionPreservesExplicitPrometheusVersion(t *testing.T) {
 		t.Fatalf("expected explicit prometheus version to be preserved, got %q", version.Version)
 	}
 }
+
+func TestGetEnvUsesFallbackWhenMissing(t *testing.T) {
+	t.Setenv("METRICS_EXPORTER_TEST_ENV", "")
+	if got := getEnv("METRICS_EXPORTER_TEST_ENV_MISSING", "fallback"); got != "fallback" {
+		t.Fatalf("expected fallback value, got %q", got)
+	}
+}
+
+func TestGetEnvReturnsConfiguredValue(t *testing.T) {
+	t.Setenv("METRICS_EXPORTER_TEST_ENV", "configured")
+	if got := getEnv("METRICS_EXPORTER_TEST_ENV", "fallback"); got != "configured" {
+		t.Fatalf("expected configured value, got %q", got)
+	}
+}
