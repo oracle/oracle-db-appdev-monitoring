@@ -72,6 +72,40 @@ request = "select 2 as value from dual"
 	assertMetricRequest(t, second, "custom_instances_value", "select 2 as value from dual")
 }
 
+func TestReloadMetricsKeepsLastGoodMetricsOnParseError(t *testing.T) {
+	customMetricsPath := writeCustomMetricsFixture(t, customMetricFixture)
+	exporter := newTestExporterWithCustomMetrics(customMetricsPath)
+
+	if !exporter.checkIfMetricsChanged() {
+		t.Fatal("expected initial custom metrics load to be detected")
+	}
+	if !exporter.reloadMetrics() {
+		t.Fatal("expected initial metrics reload to succeed")
+	}
+	assertMetricRequest(t, exporter, "custom_instances_value", "select 1 as value from dual")
+
+	invalidMetrics := `[[metric]]
+context = "custom_instances"
+metricsdesc = { value = "Broken custom test metric."
+request = "select 2 as value from dual"
+`
+	if err := os.WriteFile(customMetricsPath, []byte(invalidMetrics), 0o600); err != nil {
+		t.Fatalf("failed to write invalid custom metrics fixture: %v", err)
+	}
+
+	if !exporter.checkIfMetricsChanged() {
+		t.Fatal("expected invalid custom metrics update to be detected")
+	}
+	if exporter.reloadMetrics() {
+		t.Fatal("expected metrics reload to fail for invalid custom metrics")
+	}
+	assertMetricRequest(t, exporter, "custom_instances_value", "select 1 as value from dual")
+
+	if !exporter.checkIfMetricsChanged() {
+		t.Fatal("expected invalid custom metrics to continue appearing changed until a reload succeeds")
+	}
+}
+
 func newTestExporterWithCustomMetrics(customMetricsPath string) *Exporter {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	return NewExporter(logger, &MetricsConfiguration{

@@ -9,17 +9,23 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"net/url"
 	_ "github.com/sijms/go-ora/v2"
 	"github.com/sijms/go-ora/v2/network"
 	"log/slog"
+	"net/url"
 )
 
-func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) *sql.DB {
+func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.DB, error) {
 	logger.Debug("Launching connection to "+maskDsn(dbconfig.URL), "database", dbname)
 
-	password := dbconfig.GetPassword()
-	username := dbconfig.GetUsername()
+	password, err := dbconfig.GetPassword()
+	if err != nil {
+		return nil, err
+	}
+	username, err := dbconfig.GetUsername()
+	if err != nil {
+		return nil, err
+	}
 	dbconfig.ExternalAuth = password == ""
 
 	logger.Debug(fmt.Sprintf("external authentication set to %t", dbconfig.ExternalAuth), "database", dbname)
@@ -50,12 +56,12 @@ func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) *sql.D
 	db, err := sql.Open("oracle", dsn)
 	if err != nil {
 		logger.Error("Failed to create DB handle", "error", err, "database", dbname)
-		return nil
+		return nil, err
 	}
 
 	// Configure connection pool (sql.DB handles pooling)
 	setConnectionPool(logger, dbname, dbconfig, db)
-	return db
+	return db, nil
 }
 
 func setConnectionPool(logger *slog.Logger, dbname string, dbconfig DatabaseConfig, db *sql.DB) {

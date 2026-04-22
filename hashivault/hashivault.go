@@ -5,23 +5,21 @@ package hashivault
 
 import (
 	"context"
-	"strings"
 	"errors"
+	"fmt"
+	vault "github.com/hashicorp/vault/api"
+	"log/slog"
 	"net"
 	"net/http"
+	"strings"
 	"time"
-	"fmt"
-	"github.com/oracle/oci-go-sdk/v65/example/helpers"
-
-	"log/slog"
-	vault "github.com/hashicorp/vault/api"
 )
 
 const (
-	MountTypeKVv1 = "kvv1"
-	MountTypeKVv2 = "kvv2"
+	MountTypeKVv1     = "kvv1"
+	MountTypeKVv2     = "kvv2"
 	MountTypeDatabase = "database"
-	MountTypeLogical = "logical"
+	MountTypeLogical  = "logical"
 )
 
 var UnsupportedMountType = errors.New("Unsupported HashiCorp Vault mount type")
@@ -57,7 +55,7 @@ func newUnixSocketVaultClient(socketPath string) (*vault.Client, error) {
 }
 
 // createVaultClient connects to a vault client, using connection method specified with the parameters. Returns error if fails.
-func createVaultClient(logger *slog.Logger, socketPath string) (HashicorpVaultClient,error) {
+func createVaultClient(logger *slog.Logger, socketPath string) (HashicorpVaultClient, error) {
 	var vaultClient HashicorpVaultClient
 	var err error
 
@@ -69,18 +67,16 @@ func createVaultClient(logger *slog.Logger, socketPath string) (HashicorpVaultCl
 		logger.Error("Failed to connect to HashiCorp Vault", "err", err)
 	}
 	vaultClient.logger = logger
-	return vaultClient,err
+	return vaultClient, err
 }
 
-// CreateVaultClient connects to a vault client, using connection method specified with the parameters. Fatal if fails.
-func CreateVaultClient(logger *slog.Logger, socketPath string) HashicorpVaultClient {
-	c,err := createVaultClient(logger, socketPath)
-	helpers.FatalIfError(err)
-	return c
+// CreateVaultClient connects to a vault client, using connection method specified with the parameters.
+func CreateVaultClient(logger *slog.Logger, socketPath string) (HashicorpVaultClient, error) {
+	return createVaultClient(logger, socketPath)
 }
 
 // getVaultSecret fetches secret from vault using specified mount type. Returns error on failure.
-func (c HashicorpVaultClient) getVaultSecret(mountType string, mount string, path string, requiredKeys []string) (map[string]string,error) {
+func (c HashicorpVaultClient) getVaultSecret(mountType string, mount string, path string, requiredKeys []string) (map[string]string, error) {
 	result := map[string]string{}
 	var err error
 	var secretData map[string]interface{}
@@ -119,7 +115,7 @@ func (c HashicorpVaultClient) getVaultSecret(mountType string, mount string, pat
 		return result, UnsupportedMountType
 	}
 	// Expect simple one-level JSON, remap interface{} straight to string
-	for key,val := range secretData {
+	for key, val := range secretData {
 		result[key] = strings.TrimRight(val.(string), "\r\n") // make sure a \r and/or \n didn't make it into the secret
 	}
 	// Check that we have all required keys present
@@ -133,10 +129,7 @@ func (c HashicorpVaultClient) getVaultSecret(mountType string, mount string, pat
 	return result, nil
 }
 
-// GetVaultSecret fetches secret from vault using specified mount type. Fatal on failure.
-func (c HashicorpVaultClient) GetVaultSecret(mountType string, mount string, path string, requiredKeys []string) map[string]string {
-	// Public callable function that does not return an error, just exits instead. Like other vault code in this project.
-	res,err := c.getVaultSecret(mountType, mount, path, requiredKeys)
-	helpers.FatalIfError(err)
-	return res
+// GetVaultSecret fetches secret from vault using specified mount type.
+func (c HashicorpVaultClient) GetVaultSecret(mountType string, mount string, path string, requiredKeys []string) (map[string]string, error) {
+	return c.getVaultSecret(mountType, mount, path, requiredKeys)
 }

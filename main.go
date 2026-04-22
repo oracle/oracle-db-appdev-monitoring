@@ -7,6 +7,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"html"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -56,6 +57,18 @@ var (
 func syncBuildVersion() {
 	if version.Version == "" {
 		version.Version = Version
+	}
+}
+
+func landingPageHTML(metricsPath string) string {
+	escapedVersion := html.EscapeString(Version)
+	escapedMetricsPath := html.EscapeString(metricsPath)
+	return "<html><head><title>Oracle DB Exporter " + escapedVersion + "</title></head><body><h1>Oracle DB Exporter " + escapedVersion + "</h1><p><a href='" + escapedMetricsPath + "'>Metrics</a></p></body></html>"
+}
+
+func landingPageHandler(metricsPath string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(landingPageHTML(metricsPath)))
 	}
 }
 
@@ -137,9 +150,7 @@ func main() {
 		ErrorHandling: promhttp.ContinueOnError,
 	}
 	http.Handle(m.MetricsPath, promhttp.HandlerFor(prometheus.DefaultGatherer, opts))
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("<html><head><title>Oracle DB Exporter " + Version + "</title></head><body><h1>Oracle DB Exporter " + Version + "</h1><p><a href='" + m.MetricsPath + "'>Metrics</a></p></body></html>"))
-	})
+	http.HandleFunc("/", landingPageHandler(m.MetricsPath))
 
 	// start a ticker to cause rebirth
 	if enableRestart {

@@ -6,7 +6,6 @@ package collector
 
 import (
 	_ "embed"
-	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -30,7 +29,7 @@ func (e *Exporter) DefaultMetrics() map[string]*Metric {
 
 	if _, err := toml.Decode(defaultMetricsToml, &metricsToScrape); err != nil {
 		e.logger.Error("failed to load default metrics", "error", err)
-		panic(errors.New("Error while loading " + defaultMetricsToml))
+		return map[string]*Metric{}
 	}
 	metricsToScrape.normalizeIdentifiers()
 	return metricsToScrape.toMap()

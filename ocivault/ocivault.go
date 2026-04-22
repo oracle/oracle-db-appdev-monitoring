@@ -6,24 +6,28 @@ package ocivault
 import (
 	"context"
 	b64 "encoding/base64"
+	"fmt"
 	"strings"
 
 	"github.com/oracle/oci-go-sdk/v65/common"
-	"github.com/oracle/oci-go-sdk/v65/example/helpers"
 	"github.com/oracle/oci-go-sdk/v65/secrets"
 )
 
-func GetVaultSecret(vaultId string, secretName string) string {
+func GetVaultSecret(vaultId string, secretName string) (string, error) {
 	client, err := secrets.NewSecretsClientWithConfigurationProvider(common.DefaultConfigProvider())
-	helpers.FatalIfError(err)
+	if err != nil {
+		return "", fmt.Errorf("create OCI Vault client: %w", err)
+	}
 
 	req := secrets.GetSecretBundleByNameRequest{
 		SecretName: common.String(secretName),
 		VaultId:    common.String(vaultId)}
 	resp, err := client.GetSecretBundleByName(context.Background(), req)
-	helpers.FatalIfError(err)
+	if err != nil {
+		return "", fmt.Errorf("fetch OCI Vault secret %q from vault %q: %w", secretName, vaultId, err)
+	}
 	rawSecret := getSecretFromBase64(resp)
-	return strings.TrimRight(rawSecret, "\r\n") // make sure a \r and/or \n didn't make it into the secret
+	return strings.TrimRight(rawSecret, "\r\n"), nil // make sure a \r and/or \n didn't make it into the secret
 }
 
 func getSecretFromBase64(resp secrets.GetSecretBundleByNameResponse) string {

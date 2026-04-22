@@ -16,12 +16,18 @@ import (
 	"github.com/godror/godror/dsn"
 )
 
-func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) *sql.DB {
+func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.DB, error) {
 	logger.Debug("Launching connection to "+maskDsn(dbconfig.URL), "database", dbname)
 
 	var P godror.ConnectionParams
-	password := dbconfig.GetPassword()
-	username := dbconfig.GetUsername()
+	password, err := dbconfig.GetPassword()
+	if err != nil {
+		return nil, err
+	}
+	username, err := dbconfig.GetUsername()
+	if err != nil {
+		return nil, err
+	}
 	// If password is not specified, externalAuth will be true, and we'll ignore user input
 	dbconfig.ExternalAuth = password == ""
 	logger.Debug(fmt.Sprintf("external authentication set to %t", dbconfig.ExternalAuth), "database", dbname)
@@ -77,7 +83,7 @@ func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) *sql.D
 	// note that this just configures the connection, it does not actually connect until later
 	// when we call db.Ping()
 	db := sql.OpenDB(godror.NewConnector(P))
-	return db
+	return db, nil
 }
 
 func isInvalidCredentialsError(err error) bool {

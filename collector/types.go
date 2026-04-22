@@ -29,10 +29,11 @@ type Exporter struct {
 }
 
 type Database struct {
-	Name    string
-	Up      float64
-	Session *sql.DB
-	Config  DatabaseConfig
+	Name       string
+	Up         float64
+	Session    *sql.DB
+	Config     DatabaseConfig
+	connectErr error
 	// MetricsCache holds computed metrics for a database, so these metrics are available on each scrape.
 	// Given a metric's scrape configuration, it may not be computed on the same interval as other metrics.
 	MetricsCache *MetricsCache

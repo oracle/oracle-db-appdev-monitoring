@@ -4,7 +4,6 @@
 package collector
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -13,34 +12,50 @@ import (
 	"go.yaml.in/yaml/v2"
 )
 
-func (e *Exporter) reloadMetrics() {
-	// reload default metrics
-	e.metricsToScrape = e.DefaultMetrics()
-
-	// If custom metrics, load it
-	if len(e.CustomMetricsFiles()) > 0 {
-		for _, _customMetrics := range e.CustomMetricsFiles() {
-			metrics := &Metrics{}
-
-			if err := loadMetricsConfig(_customMetrics, metrics); err != nil {
-				e.logger.Error("failed to load custom metrics", "error", err)
-				panic(errors.New("Error while loading " + _customMetrics))
-			} else {
-				e.logger.Info("Successfully loaded custom metrics from " + _customMetrics)
-			}
-			// Merge custom metrics into default metrics.
-			// Any collisions (by ID) will overwrite the old metric value.
-			e.merge(metrics)
-		}
-	} else {
-		e.logger.Debug("No custom metrics defined.")
+func (e *Exporter) reloadMetrics() bool {
+	metricsToScrape, err := e.loadMetricsToScrape()
+	if err != nil {
+		e.logger.Error("failed to reload metrics; continuing with last known good metrics", "error", err)
+		return false
 	}
+
+	e.metricsToScrape = metricsToScrape
+	e.refreshCustomMetricsHashes()
 	e.initCache()
+	return true
+}
+
+func (e *Exporter) loadMetricsToScrape() (map[string]*Metric, error) {
+	metricsToScrape := e.DefaultMetrics()
+
+	if len(e.CustomMetricsFiles()) == 0 {
+		e.logger.Debug("No custom metrics defined.")
+		return metricsToScrape, nil
+	}
+
+	for _, _customMetrics := range e.CustomMetricsFiles() {
+		metrics := &Metrics{}
+
+		if err := loadMetricsConfig(_customMetrics, metrics); err != nil {
+			return nil, fmt.Errorf("failed to load custom metrics %s: %w", _customMetrics, err)
+		}
+
+		e.logger.Info("Successfully loaded custom metrics from " + _customMetrics)
+		mergeMetrics(metricsToScrape, metrics)
+	}
+
+	return metricsToScrape, nil
 }
 
 func (e *Exporter) merge(metrics *Metrics) {
 	for _, metric := range metrics.Metric {
 		e.metricsToScrape[metric.ID] = metric
+	}
+}
+
+func mergeMetrics(dst map[string]*Metric, metrics *Metrics) {
+	for _, metric := range metrics.Metric {
+		dst[metric.ID] = metric
 	}
 }
 
