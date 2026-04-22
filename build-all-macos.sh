@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # This script builds release artifacts for the Oracle AI Database Metrics Exporter.
 # You must have a working docker socket, and docker or aliased docker command.
@@ -15,6 +16,12 @@
 # ./build-all-macos.sh -v 2.3.0 -t godror -cmuo
 
 USAGE="Usage: $0 [-v VERSION] [-t TARGET] [-cmuo]"
+VERSION=""
+TARGET=""
+BUILD_CONTAINERS=""
+BUILD_DARWIN=""
+BUILD_UBUNTU=""
+BUILD_OL8=""
 
 while getopts "v:t:cmuo" opt; do
   case ${opt} in
@@ -24,12 +31,12 @@ while getopts "v:t:cmuo" opt; do
     m ) BUILD_DARWIN=true;; # Build darwin/macos binary
     u ) BUILD_UBUNTU=true;; # Build binaries on latest Ubuntu
     o ) BUILD_OL8=true;;    # Build binaries on OL8
-    \? ) echo $USAGE; exit 1;;
+    \? ) echo "$USAGE"; exit 1;;
   esac
 done
 
 if [[ -z "$VERSION" ]] || [[ -z "$TARGET" ]]; then
-  echo $USAGE
+  echo "$USAGE"
   exit 1
 fi
 
@@ -49,7 +56,7 @@ fi
 
 build_darwin_local() {
   echo "Build dawrin-arm64"
-  make go-build
+  make go-build VERSION="$VERSION" TAGS="$TAGS" CGO_ENABLED="$CGO_ENABLED"
   echo "Built for darwin-arm64"
 }
 
@@ -61,11 +68,9 @@ build_ol_platform() {
 build_ol() {
   local platform="$1"
   local container="build-${platform}"
-  local image_artifact="exporter-${platform}"
-  local image_tar=${image_artifact}.tar
   local filename="oracledb_exporter-${VERSION}.linux-${platform}.tar.gz"
 
-  docker run -d --privileged --platform "linux/${platform}" --name "${container}" "${OL_IMAGE}" tail -f /dev/null
+  docker run -d --platform "linux/${platform}" --name "${container}" "${OL_IMAGE}" tail -f /dev/null
   docker exec "${container}" bash -c "dnf install -y wget git make gcc && \
                                     wget -q https://go.dev/dl/go${GO_VERSION}.linux-${platform}.tar.gz && \
                                     rm -rf /usr/local/go && \
@@ -73,11 +78,11 @@ build_ol() {
                                     export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin && \
                                     git clone --depth 1 https://github.com/oracle/oracle-db-appdev-monitoring.git && \
                                     cd oracle-db-appdev-monitoring && \
-                                    make go-build VERSION=$VERSION TAGS=$TAGS CGO_ENABLED=$CGO_ENABLED"
+                                    make go-build VERSION=\"${VERSION}\" TAGS=\"${TAGS}\" CGO_ENABLED=\"${CGO_ENABLED}\""
 
-  docker cp "$container:/oracle-db-appdev-monitoring/dist/$filename" dist
+  docker cp "${container}:/oracle-db-appdev-monitoring/dist/${filename}" "dist/"
 
-  echo "Build complete for $OL_IMAGE-${platform}"
+  echo "Build complete for ${OL_IMAGE}-${platform}"
   docker stop "$container"
   docker rm "$container"
 }
@@ -89,12 +94,12 @@ build_ubuntu() {
                                       apt-get -y install podman qemu-user-static golang gcc-aarch64-linux-gnu git make && \
                                       git clone --depth 1 https://github.com/oracle/oracle-db-appdev-monitoring.git && \
                                       cd oracle-db-appdev-monitoring && \
-                                      make go-build-linux-amd64 VERSION=$VERSION TAGS=$TAGS CGO_ENABLED=$CGO_ENABLED && \
-                                      make go-build-linux-gcc-arm64 VERSION=$VERSION  TAGS=$TAGS CGO_ENABLED=$CGO_ENABLED"
+                                      make go-build-linux-amd64 VERSION=\"${VERSION}\" TAGS=\"${TAGS}\" CGO_ENABLED=\"${CGO_ENABLED}\" && \
+                                      make go-build-linux-gcc-arm64 VERSION=\"${VERSION}\" TAGS=\"${TAGS}\" CGO_ENABLED=\"${CGO_ENABLED}\""
 
 
-  docker cp "$container:/oracle-db-appdev-monitoring/dist/oracledb_exporter-${VERSION}.linux-amd64.tar.gz" dist
-  docker cp "$container:/oracle-db-appdev-monitoring/dist/oracledb_exporter-${VERSION}.linux-arm64.tar.gz" dist
+  docker cp "${container}:/oracle-db-appdev-monitoring/dist/oracledb_exporter-${VERSION}.linux-amd64.tar.gz" "dist/"
+  docker cp "${container}:/oracle-db-appdev-monitoring/dist/oracledb_exporter-${VERSION}.linux-arm64.tar.gz" "dist/"
 
   docker stop "$container"
   docker rm "$container"
@@ -110,7 +115,7 @@ rename_glibc() {
 }
 
 # clean dist directory before build
-rm -r dist/* 2>/dev/null
+rm -rf dist/*
 
 # Create darwin-arm64 artifacts on local host
 if [[ -n "$BUILD_DARWIN" ]]; then
@@ -128,8 +133,8 @@ fi
 # build containers
 if [[ -n "$BUILD_CONTAINERS" ]]; then
   echo "Building container images"
-  make docker-arm VERSION=$VERSION
-  make docker-amd VERSION=$VERSION
+  make docker-arm VERSION="$VERSION"
+  make docker-amd VERSION="$VERSION"
   echo "Build complete for container images"
 fi
 
