@@ -175,6 +175,7 @@ databases:
         password: ****
         url: db2_high
         queryTimeout: 5
+        connMaxLifetime: 30m
         maxOpenConns: 10
         maxIdleConns: 10
     db1:
@@ -182,6 +183,7 @@ databases:
         password: ****
         url: db1_high
         queryTimeout: 5
+        connMaxLifetime: 30m
         maxOpenConns: 10
         maxIdleConns: 10
 ```

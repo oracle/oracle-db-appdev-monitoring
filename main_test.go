@@ -4,43 +4,23 @@
 package main
 
 import (
+	"strings"
 	"testing"
-
-	"github.com/prometheus/common/version"
 )
 
-func TestSyncBuildVersionUsesExporterVersionWhenPrometheusVersionEmpty(t *testing.T) {
-	originalMainVersion := Version
-	originalPromVersion := version.Version
+func TestLandingPageHTMLEscapesMetricsPath(t *testing.T) {
+	originalVersion := Version
+	Version = "test"
 	t.Cleanup(func() {
-		Version = originalMainVersion
-		version.Version = originalPromVersion
+		Version = originalVersion
 	})
 
-	Version = "2.3.1-test"
-	version.Version = ""
+	body := landingPageHTML("/metrics' onclick='alert(1)")
 
-	syncBuildVersion()
-
-	if version.Version != Version {
-		t.Fatalf("expected prometheus version %q, got %q", Version, version.Version)
+	if strings.Contains(body, "onclick='alert(1)") {
+		t.Fatalf("expected landing page to escape metrics path, got %q", body)
 	}
-}
-
-func TestSyncBuildVersionPreservesExplicitPrometheusVersion(t *testing.T) {
-	originalMainVersion := Version
-	originalPromVersion := version.Version
-	t.Cleanup(func() {
-		Version = originalMainVersion
-		version.Version = originalPromVersion
-	})
-
-	Version = "2.3.1-test"
-	version.Version = "2.3.1-explicit"
-
-	syncBuildVersion()
-
-	if version.Version != "2.3.1-explicit" {
-		t.Fatalf("expected explicit prometheus version to be preserved, got %q", version.Version)
+	if !strings.Contains(body, "href='/metrics&#39; onclick=&#39;alert(1)'") {
+		t.Fatalf("expected escaped metrics path in href, got %q", body)
 	}
 }

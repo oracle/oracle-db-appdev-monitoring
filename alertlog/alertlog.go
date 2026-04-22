@@ -4,6 +4,7 @@
 package alertlog
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -16,6 +17,11 @@ import (
 	"time"
 
 	"github.com/oracle/oracle-db-appdev-monitoring/collector"
+)
+
+const (
+	alertLogReadChunkSize = 4096
+	maxAlertLogLineBytes  = 1 << 20
 )
 
 type LogRecord struct {
@@ -59,22 +65,35 @@ func readLastMatchingLogRecord(logDestination, database string, perDatabaseFiles
 	}
 	defer file.Close()
 
-	var (
-		pointer  int64
-		current  string
-		stat, _  = file.Stat()
-		filesize = stat.Size()
-	)
+	stat, err := file.Stat()
+	if err != nil {
+		return LogRecord{}, err
+	}
+	filesize := stat.Size()
+	if filesize == 0 {
+		return defaultLastLogRecord, nil
+	}
+
+	currentReversed := make([]byte, 0, alertLogReadChunkSize)
 
 	flushLine := func() (LogRecord, bool, error) {
-		line := strings.TrimSpace(current)
-		current = ""
-		if line == "" {
+		if len(currentReversed) == 0 {
+			return LogRecord{}, false, nil
+		}
+
+		lineBytes := make([]byte, len(currentReversed))
+		for i, b := range currentReversed {
+			lineBytes[len(currentReversed)-1-i] = b
+		}
+		currentReversed = currentReversed[:0]
+
+		lineBytes = bytes.TrimSpace(lineBytes)
+		if len(lineBytes) == 0 {
 			return LogRecord{}, false, nil
 		}
 
 		var record LogRecord
-		if err := json.Unmarshal([]byte(line), &record); err != nil {
+		if err := json.Unmarshal(lineBytes, &record); err != nil {
 			return LogRecord{}, false, err
 		}
 
@@ -85,43 +104,41 @@ func readLastMatchingLogRecord(logDestination, database string, perDatabaseFiles
 		return record, true, nil
 	}
 
-	for {
-		if filesize == 0 {
-			break
-		}
-
-		pointer--
-		if _, err := file.Seek(pointer, io.SeekEnd); err != nil {
+	buffer := make([]byte, alertLogReadChunkSize)
+	for offset := filesize; offset > 0; {
+		start := max(offset-int64(len(buffer)), 0)
+		chunkSize := int(offset - start)
+		if _, err := file.ReadAt(buffer[:chunkSize], start); err != nil && !errors.Is(err, io.EOF) {
 			return LogRecord{}, err
 		}
 
-		char := make([]byte, 1)
-		if _, err := file.Read(char); err != nil {
-			return LogRecord{}, err
+		for i := chunkSize - 1; i >= 0; i-- {
+			if buffer[i] == '\n' || buffer[i] == '\r' {
+				record, matched, err := flushLine()
+				if err != nil {
+					return LogRecord{}, err
+				}
+				if matched {
+					return record, nil
+				}
+				continue
+			}
+
+			currentReversed = append(currentReversed, buffer[i])
+			if len(currentReversed) > maxAlertLogLineBytes {
+				return LogRecord{}, fmt.Errorf("last log line exceeds %d byte limit", maxAlertLogLineBytes)
+			}
 		}
 
-		if char[0] == '\n' || char[0] == '\r' {
-			record, matched, err := flushLine()
-			if err != nil {
-				return LogRecord{}, err
-			}
-			if matched {
-				return record, nil
-			}
-		} else {
-			current = string(char) + current
-		}
+		offset = start
+	}
 
-		if pointer == -filesize {
-			record, matched, err := flushLine()
-			if err != nil {
-				return LogRecord{}, err
-			}
-			if matched {
-				return record, nil
-			}
-			break
-		}
+	record, matched, err := flushLine()
+	if err != nil {
+		return LogRecord{}, err
+	}
+	if matched {
+		return record, nil
 	}
 
 	return defaultLastLogRecord, nil

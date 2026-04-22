@@ -16,6 +16,18 @@ import (
 	"time"
 )
 
+var (
+	getOCIVaultSecret       = ocivault.GetVaultSecret
+	getAZVaultSecret        = azvault.GetVaultSecret
+	getHashiCorpVaultSecret = func(logger *slog.Logger, cfg *HashiCorpVault, requiredKeys []string) (map[string]string, error) {
+		client, err := hashivault.CreateVaultClient(logger, cfg.Socket)
+		if err != nil {
+			return nil, err
+		}
+		return client.GetVaultSecret(cfg.MountType, cfg.MountName, cfg.SecretPath, requiredKeys)
+	}
+)
+
 type MetricsConfiguration struct {
 	ListenAddress string                    `yaml:"listenAddress"`
 	MetricsPath   string                    `yaml:"metricsPath"`
@@ -43,14 +55,15 @@ type DatabaseConfig struct {
 
 type ConnectConfig struct {
 	Role               string
-	TNSAdmin           string `yaml:"tnsAdmin"`
-	ExternalAuth       bool   `yaml:"externalAuth"`
-	MaxOpenConns       *int   `yaml:"maxOpenConns"`
-	MaxIdleConns       *int   `yaml:"maxIdleConns"`
-	PoolIncrement      *int   `yaml:"poolIncrement"`
-	PoolMaxConnections *int   `yaml:"poolMaxConnections"`
-	PoolMinConnections *int   `yaml:"poolMinConnections"`
-	QueryTimeout       *int   `yaml:"queryTimeout"`
+	TNSAdmin           string         `yaml:"tnsAdmin"`
+	ExternalAuth       bool           `yaml:"externalAuth"`
+	ConnMaxLifetime    *time.Duration `yaml:"connMaxLifetime"`
+	MaxOpenConns       *int           `yaml:"maxOpenConns"`
+	MaxIdleConns       *int           `yaml:"maxIdleConns"`
+	PoolIncrement      *int           `yaml:"poolIncrement"`
+	PoolMaxConnections *int           `yaml:"poolMaxConnections"`
+	PoolMinConnections *int           `yaml:"poolMinConnections"`
+	QueryTimeout       *int           `yaml:"queryTimeout"`
 }
 
 type VaultConfig struct {
@@ -149,6 +162,13 @@ func (c ConnectConfig) GetMaxIdleConns() int {
 	return *c.MaxIdleConns
 }
 
+func (c ConnectConfig) GetConnMaxLifetime() time.Duration {
+	if c.ConnMaxLifetime == nil {
+		return 30 * time.Minute
+	}
+	return *c.ConnMaxLifetime
+}
+
 func (c ConnectConfig) GetPoolMaxConnections() int {
 	if c.PoolMaxConnections == nil {
 		return -1
@@ -191,56 +211,64 @@ func (h HashiCorpVault) GetPasswordAttr() string {
 	return h.PasswordAttr
 }
 
-func (d DatabaseConfig) fetchHashiCorpVaultSecret() {
+func (d DatabaseConfig) fetchHashiCorpVaultSecret() error {
 	if len(d.Vault.HashiCorp.fetchedSecert) > 0 {
 		// Secret is already fetched, do nothing
-		return
+		return nil
 	}
-	vc := hashivault.CreateVaultClient(slog.Default(), d.Vault.HashiCorp.Socket)
 	// Set default username and password attribute values
 	requiredKeys := []string{d.Vault.HashiCorp.GetUsernameAttr(), d.Vault.HashiCorp.GetPasswordAttr()}
-	d.Vault.HashiCorp.fetchedSecert = vc.GetVaultSecret(d.Vault.HashiCorp.MountType, d.Vault.HashiCorp.MountName, d.Vault.HashiCorp.SecretPath, requiredKeys)
+	secret, err := getHashiCorpVaultSecret(slog.Default(), d.Vault.HashiCorp, requiredKeys)
+	if err != nil {
+		return err
+	}
+	d.Vault.HashiCorp.fetchedSecert = secret
+	return nil
 }
 
-func (d DatabaseConfig) GetUsername() string {
+func (d DatabaseConfig) GetUsername() (string, error) {
 	if d.isOCIVault() && d.Vault.OCI.UsernameSecret != "" {
-		return ocivault.GetVaultSecret(d.Vault.OCI.ID, d.Vault.OCI.UsernameSecret)
+		return getOCIVaultSecret(d.Vault.OCI.ID, d.Vault.OCI.UsernameSecret)
 	}
 	if d.isAzureVault() && d.Vault.Azure.UsernameSecret != "" {
-		return azvault.GetVaultSecret(d.Vault.Azure.ID, d.Vault.Azure.UsernameSecret)
+		return getAZVaultSecret(d.Vault.Azure.ID, d.Vault.Azure.UsernameSecret), nil
 	}
 	if d.isHashiCorpVault() && d.Vault.HashiCorp.MountType != "" && d.Vault.HashiCorp.MountName != "" && d.Vault.HashiCorp.SecretPath != "" {
-		d.fetchHashiCorpVaultSecret()
+		if err := d.fetchHashiCorpVaultSecret(); err != nil {
+			return "", err
+		}
 		userName := d.Vault.HashiCorp.fetchedSecert[d.Vault.HashiCorp.GetUsernameAttr()]
 		if d.Vault.HashiCorp.AsProxy == "" {
-			return userName
+			return userName, nil
 		} else {
-			return fmt.Sprintf("%s[%s]", userName, d.Vault.HashiCorp.AsProxy)
+			return fmt.Sprintf("%s[%s]", userName, d.Vault.HashiCorp.AsProxy), nil
 		}
 	}
-	return d.Username
+	return d.Username, nil
 }
 
-func (d DatabaseConfig) GetPassword() string {
+func (d DatabaseConfig) GetPassword() (string, error) {
 	if d.PasswordFile != "" {
 		bytes, err := os.ReadFile(d.PasswordFile)
 		if err != nil {
 			// If there is an invalid file, exporter cannot continue processing.
 			panic(fmt.Errorf("failed to read password file: %v", err))
 		}
-		return string(bytes)
+		return string(bytes), nil
 	}
 	if d.isOCIVault() && d.Vault.OCI.PasswordSecret != "" {
-		return ocivault.GetVaultSecret(d.Vault.OCI.ID, d.Vault.OCI.PasswordSecret)
+		return getOCIVaultSecret(d.Vault.OCI.ID, d.Vault.OCI.PasswordSecret)
 	}
 	if d.isAzureVault() && d.Vault.Azure.PasswordSecret != "" {
-		return azvault.GetVaultSecret(d.Vault.Azure.ID, d.Vault.Azure.PasswordSecret)
+		return getAZVaultSecret(d.Vault.Azure.ID, d.Vault.Azure.PasswordSecret), nil
 	}
 	if d.isHashiCorpVault() && d.Vault.HashiCorp.MountType != "" && d.Vault.HashiCorp.MountName != "" && d.Vault.HashiCorp.SecretPath != "" {
-		d.fetchHashiCorpVaultSecret()
-		return d.Vault.HashiCorp.fetchedSecert[d.Vault.HashiCorp.GetPasswordAttr()]
+		if err := d.fetchHashiCorpVaultSecret(); err != nil {
+			return "", err
+		}
+		return d.Vault.HashiCorp.fetchedSecert[d.Vault.HashiCorp.GetPasswordAttr()], nil
 	}
-	return d.Password
+	return d.Password, nil
 }
 
 func (d DatabaseConfig) isOCIVault() bool {

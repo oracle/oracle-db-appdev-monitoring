@@ -105,7 +105,12 @@ func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
 		databases:            databases,
 		allConstLabels:       allConstLabels,
 	}
-	e.metricsToScrape = e.DefaultMetrics()
+	metricsToScrape, err := e.loadMetricsToScrape()
+	if err != nil {
+		logger.Error("failed to load custom metrics during startup; continuing with default metrics only", "error", err)
+		metricsToScrape = e.DefaultMetrics()
+	}
+	e.metricsToScrape = metricsToScrape
 	e.initCache()
 	return e
 }
@@ -401,18 +406,34 @@ func (e *Exporter) checkIfMetricsChanged() bool {
 		e.logger.Debug("Checking modifications in following metrics definition file:" + _customMetrics)
 		h := sha256.New()
 		if err := hashFile(h, cleanPath); err != nil {
-			e.logger.Error("Unable to get file hash", "error", err)
-			return false
+			e.logger.Error("Unable to get file hash; treating metrics file as changed until a reload succeeds", "error", err, "file", cleanPath)
+			return true
 		}
 		sum := h.Sum(nil)
 		// If any of files has been changed reload metrics
 		if !bytes.Equal(e.customMetricsHashes[cleanPath], sum) {
 			e.logger.Info(_customMetrics + " has been changed. Reloading metrics...")
-			e.customMetricsHashes[cleanPath] = sum
 			return true
 		}
 	}
 	return false
+}
+
+func (e *Exporter) refreshCustomMetricsHashes() {
+	hashes := map[string][]byte{}
+	for _, _customMetrics := range e.CustomMetricsFiles() {
+		if len(_customMetrics) == 0 {
+			continue
+		}
+		cleanPath := filepath.Clean(_customMetrics)
+		h := sha256.New()
+		if err := hashFile(h, cleanPath); err != nil {
+			e.logger.Error("Unable to refresh custom metrics hash", "error", err, "file", cleanPath)
+			continue
+		}
+		hashes[cleanPath] = h.Sum(nil)
+	}
+	e.customMetricsHashes = hashes
 }
 
 func hashFile(h hash.Hash, fn string) error {
@@ -499,7 +520,7 @@ func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric,
 				}
 				d.MetricsCache.CacheAndSend(ch, m, prometheus.MustNewConstHistogram(desc, count, value, buckets, labelsValues...))
 			} else {
-				d.MetricsCache.CacheAndSend(ch, m, prometheus.MustNewConstMetric(desc, getMetricType(metric, m.MetricsType), value, labelsValues...))
+				d.MetricsCache.CacheAndSend(ch, m, prometheus.MustNewConstMetric(desc, getMetricType(e.logger, metric, m.MetricsType), value, labelsValues...))
 			}
 			metricsCount++
 		}
@@ -587,7 +608,7 @@ func duplicatedLabels(constLabels map[string]string, labels []string) bool {
 	return false
 }
 
-func getMetricType(metricType string, metricsType map[string]string) prometheus.ValueType {
+func getMetricType(logger *slog.Logger, metricType string, metricsType map[string]string) prometheus.ValueType {
 	var strToPromType = map[string]prometheus.ValueType{
 		"gauge":     prometheus.GaugeValue,
 		"counter":   prometheus.CounterValue,
@@ -600,7 +621,8 @@ func getMetricType(metricType string, metricsType map[string]string) prometheus.
 	}
 	valueType, ok := strToPromType[strings.ToLower(strType)]
 	if !ok {
-		panic(errors.New("Error while getting prometheus type " + strings.ToLower(strType)))
+		logger.Warn("Unknown prometheus metric type, defaulting to gauge", "metric", metricType, "type", strType)
+		return prometheus.GaugeValue
 	}
 	return valueType
 }

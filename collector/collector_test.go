@@ -3,7 +3,13 @@
 
 package collector
 
-import "testing"
+import (
+	"io"
+	"log/slog"
+	"testing"
+
+	"github.com/prometheus/client_golang/prometheus"
+)
 
 func TestDuplicatedLabels(t *testing.T) {
 	tests := []struct {
@@ -144,5 +150,17 @@ func TestMetricsNormalizeIdentifiers(t *testing.T) {
 			metrics.normalizeIdentifiers()
 			tt.check(t, metrics)
 		})
+	}
+}
+
+func TestGetMetricTypeDefaultsToGaugeForUnknownType(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+
+	got := getMetricType(logger, "value", map[string]string{
+		"value": "totally-unknown",
+	})
+
+	if got != prometheus.GaugeValue {
+		t.Fatalf("expected unknown metric type to default to gauge, got %v", got)
 	}
 }

@@ -48,12 +48,16 @@ func (d *Database) constLabels(labels map[string]string) map[string]string {
 }
 
 func NewDatabase(logger *slog.Logger, dblabel, dbname string, dbconfig DatabaseConfig) *Database {
-	db := connect(logger, dbname, dbconfig)
+	db, err := connect(logger, dbname, dbconfig)
+	if err != nil {
+		logger.Error("Failed to initialize database session", "error", err, "database", dbname)
+	}
 	return &Database{
 		Name:          dbname,
 		Up:            0,
 		Session:       db,
 		Config:        dbconfig,
+		connectErr:    err,
 		DatabaseLabel: dblabel,
 		reconnectMU:   sync.Mutex{},
 	}
@@ -80,6 +84,9 @@ func (d *Database) warmupSession(logger *slog.Logger, backoff time.Duration, ses
 	if session == nil {
 		d.Up = 0
 		d.invalidate(backoff)
+		if d.connectErr != nil {
+			return d.connectErr
+		}
 		return errors.New("database session is not initialized")
 	}
 
@@ -133,7 +140,13 @@ func (d *Database) reconnect(logger *slog.Logger, backoff time.Duration) error {
 
 	logger.Info("Reconnecting database session", "database", d.Name)
 
-	session := connect(logger, d.Name, d.Config)
+	session, err := connect(logger, d.Name, d.Config)
+	d.connectErr = err
+	if err != nil {
+		d.Up = 0
+		d.invalidate(backoff)
+		return err
+	}
 	if err := d.warmupSession(logger, backoff, session); err != nil {
 		if session != nil {
 			_ = session.Close()
@@ -143,6 +156,7 @@ func (d *Database) reconnect(logger *slog.Logger, backoff time.Duration) error {
 
 	oldSession := d.Session
 	d.Session = session
+	d.connectErr = nil
 	if oldSession != nil && oldSession != session {
 		_ = oldSession.Close()
 	}
@@ -204,7 +218,8 @@ func initdb(logger *slog.Logger, dbname string, dbconfig DatabaseConfig, db *sql
 	db.SetMaxIdleConns(dbconfig.GetMaxIdleConns())
 	logger.Debug(fmt.Sprintf("set max open connections to %d", dbconfig.MaxOpenConns), "database", dbname)
 	db.SetMaxOpenConns(dbconfig.GetMaxOpenConns())
-	db.SetConnMaxLifetime(0)
+	logger.Debug(fmt.Sprintf("set connection max lifetime to %s", dbconfig.GetConnMaxLifetime()), "database", dbname)
+	db.SetConnMaxLifetime(dbconfig.GetConnMaxLifetime())
 	logger.Debug(fmt.Sprintf("Successfully configured connection to %s", maskDsn(dbconfig.URL)), "database", dbname)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)

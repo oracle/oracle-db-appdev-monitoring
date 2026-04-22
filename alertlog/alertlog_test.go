@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -131,6 +132,42 @@ func TestReadLastMatchingLogRecord(t *testing.T) {
 		}
 		if record.Timestamp != "2026-03-13T12:03:00.000Z" {
 			t.Fatalf("expected latest timestamp from per-database file, got %q", record.Timestamp)
+		}
+	})
+
+	t.Run("reads large final line without trailing newline", func(t *testing.T) {
+		logPath := filepath.Join(t.TempDir(), "alert.log")
+		longMessage := strings.Repeat("x", alertLogReadChunkSize*3)
+		content := "" +
+			"{\"timestamp\":\"2026-03-13T12:00:00.000Z\",\"database\":\"db1\",\"moduleId\":\"\",\"ecid\":\"\",\"message\":\"old\"}\n" +
+			"{\"timestamp\":\"2026-03-13T12:03:00.000Z\",\"database\":\"db1\",\"moduleId\":\"\",\"ecid\":\"\",\"message\":\"" + longMessage + "\"}"
+		if err := os.WriteFile(logPath, []byte(content), 0600); err != nil {
+			t.Fatalf("write log: %v", err)
+		}
+
+		record, err := readLastMatchingLogRecord(logPath, "db1", true)
+		if err != nil {
+			t.Fatalf("read last matching log record: %v", err)
+		}
+		if record.Message != longMessage {
+			t.Fatalf("expected large final message to round-trip, got message length %d", len(record.Message))
+		}
+	})
+
+	t.Run("returns error when final line exceeds size limit", func(t *testing.T) {
+		logPath := filepath.Join(t.TempDir(), "alert.log")
+		oversizedMessage := strings.Repeat("x", maxAlertLogLineBytes)
+		content := "{\"timestamp\":\"2026-03-13T12:03:00.000Z\",\"database\":\"db1\",\"moduleId\":\"\",\"ecid\":\"\",\"message\":\"" + oversizedMessage + "\"}"
+		if err := os.WriteFile(logPath, []byte(content), 0600); err != nil {
+			t.Fatalf("write log: %v", err)
+		}
+
+		_, err := readLastMatchingLogRecord(logPath, "db1", true)
+		if err == nil {
+			t.Fatal("expected oversized final line to return an error")
+		}
+		if !strings.Contains(err.Error(), "exceeds") {
+			t.Fatalf("expected size limit error, got %v", err)
 		}
 	})
 }

@@ -197,6 +197,8 @@ databases:
     ### set maxIdleConns to zero and configure the pool* settings.
 
     ### Connection pooling settings for the go-sql connection pool
+    ## Maximum lifetime for a pooled connection before it is recycled
+    connMaxLifetime: 30m
     ## Max open connections for this database using go-sql connection pool
     maxOpenConns: 10
     ## Max idle connections for this database using go-sql connection pool
