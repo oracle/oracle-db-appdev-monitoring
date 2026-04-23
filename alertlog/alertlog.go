@@ -36,6 +36,10 @@ var defaultLastLogRecord = LogRecord{
 	Timestamp: "1900-01-01T01:01:01.001Z",
 }
 
+const alertLogQuery = `select originating_timestamp, module_id, execution_context_id, message_text
+		from v$diag_alert_ext
+		where originating_timestamp > to_utc_timestamp_tz(:1)`
+
 // nullStringValue unwraps a nullable database string, returning an empty string for NULL.
 func nullStringValue(s sql.NullString) string {
 	if s.Valid {
@@ -144,6 +148,10 @@ func readLastMatchingLogRecord(logDestination, database string, perDatabaseFiles
 	return defaultLastLogRecord, nil
 }
 
+func buildAlertLogQuery(lastTimestamp string) (string, []interface{}) {
+	return alertLogQuery, []interface{}{lastTimestamp}
+}
+
 // UpdateLog appends newly queried alert log records for a database to the configured log destination.
 func UpdateLog(logDestination string, perDatabaseFiles bool, logger *slog.Logger, d *collector.Database) {
 	if !d.StartupReady() {
@@ -179,11 +187,8 @@ func UpdateLog(logDestination string, perDatabaseFiles bool, logger *slog.Logger
 	}
 
 	// query for any new alert log entries
-	stmt := fmt.Sprintf(`select originating_timestamp, module_id, execution_context_id, message_text
-		from v$diag_alert_ext
-		where originating_timestamp > to_utc_timestamp_tz('%s')`, lastLogRecord.Timestamp)
-
-	rows, unlock, err := d.Query(stmt)
+	stmt, args := buildAlertLogQuery(lastLogRecord.Timestamp)
+	rows, unlock, err := d.Query(stmt, args...)
 	if err != nil {
 		retryAfter := databaseRetries.recordFailure(d.Name, now)
 		logger.Error("Error querying the alert logs", "error", err, "database", d.Name, "retry_after", retryAfter)

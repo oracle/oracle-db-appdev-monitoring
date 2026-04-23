@@ -81,6 +81,25 @@ func TestRetryTrackerShouldRetry(t *testing.T) {
 	}
 }
 
+func TestBuildAlertLogQueryUsesBindVariable(t *testing.T) {
+	taintedTimestamp := "2000-01-01T00:00:00Z') union all select username,null,null,account_status from dba_users--"
+
+	stmt, args := buildAlertLogQuery(taintedTimestamp)
+
+	if strings.Contains(stmt, taintedTimestamp) {
+		t.Fatalf("expected tainted timestamp to stay out of SQL text, got %q", stmt)
+	}
+	if !strings.Contains(stmt, "to_utc_timestamp_tz(:1)") {
+		t.Fatalf("expected bind placeholder in alert log query, got %q", stmt)
+	}
+	if len(args) != 1 {
+		t.Fatalf("expected one bind argument, got %d", len(args))
+	}
+	if got := args[0]; got != taintedTimestamp {
+		t.Fatalf("expected tainted timestamp to be passed as bind arg, got %#v", got)
+	}
+}
+
 func TestReadLastMatchingLogRecord(t *testing.T) {
 	t.Run("shared log returns latest record for matching database", func(t *testing.T) {
 		logPath := filepath.Join(t.TempDir(), "alert.log")
