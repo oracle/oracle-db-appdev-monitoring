@@ -60,3 +60,11 @@ log:
   interval: 15s
   ## Set disable to 1 to disable logging
   # disable: 0
+
+web:
+  ## Optional exporter HTTP server settings.
+  # listenAddresses: [':9161']
+  # configFile: /path/to/web-config.yml
+  # readHeaderTimeout: 10s
+  # readTimeout: 30s
+  # idleTimeout: 120s
