@@ -121,10 +121,7 @@ func (c HashicorpVaultClient) getVaultSecret(mountType string, mount string, pat
 		c.logger.Error(UnsupportedMountType.Error())
 		return result, UnsupportedMountType
 	}
-	// Expect simple one-level JSON, remap interface{} straight to string
-	for key, val := range secretData {
-		result[key] = strings.TrimRight(val.(string), "\r\n") // make sure a \r and/or \n didn't make it into the secret
-	}
+	c.copyStringSecretData(result, secretData)
 	// Check that we have all required keys present
 	for _, key := range requiredKeys {
 		val, keyExists := result[key]
@@ -139,4 +136,15 @@ func (c HashicorpVaultClient) getVaultSecret(mountType string, mount string, pat
 // GetVaultSecret fetches secret from vault using specified mount type.
 func (c HashicorpVaultClient) GetVaultSecret(mountType string, mount string, path string, requiredKeys []string) (map[string]string, error) {
 	return c.getVaultSecret(mountType, mount, path, requiredKeys)
+}
+
+func (c HashicorpVaultClient) copyStringSecretData(result map[string]string, secretData map[string]interface{}) {
+	for key, val := range secretData {
+		strVal, ok := val.(string)
+		if !ok {
+			c.logger.Warn("Skipping non-string HashiCorp Vault secret value", "key", key, "type", fmt.Sprintf("%T", val))
+			continue
+		}
+		result[key] = strings.TrimRight(strVal, "\r\n") // make sure a \r and/or \n didn't make it into the secret
+	}
 }

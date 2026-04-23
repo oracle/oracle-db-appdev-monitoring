@@ -6,6 +6,7 @@ package hashivault
 import (
 	"io"
 	"log/slog"
+	"reflect"
 	"testing"
 )
 
@@ -21,5 +22,53 @@ func TestCreateVaultClientFallsBackToDefaultConfigWithoutProxySocket(t *testing.
 	}
 	if client.client == nil {
 		t.Fatal("expected non-nil client when proxy socket is not configured")
+	}
+}
+
+func TestCopyStringSecretDataIgnoresNonStringValues(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	client := HashicorpVaultClient{logger: logger}
+
+	result := map[string]string{}
+	client.copyStringSecretData(result, map[string]interface{}{
+		"username": "scott\n",
+		"password": "tiger\r\n",
+		"ttl":      3600,
+		"enabled":  true,
+		"metadata": map[string]interface{}{"env": "dev"},
+		"null":     nil,
+	})
+
+	want := map[string]string{
+		"username": "scott",
+		"password": "tiger",
+	}
+	if !reflect.DeepEqual(result, want) {
+		t.Fatalf("unexpected remapped secret data: got %#v want %#v", result, want)
+	}
+}
+
+func TestCopyStringSecretDataLeavesRequiredKeyValidationToCaller(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	client := HashicorpVaultClient{logger: logger}
+
+	result := map[string]string{}
+	client.copyStringSecretData(result, map[string]interface{}{
+		"username": "scott",
+		"ttl":      3600,
+	})
+
+	requiredKeys := []string{"username", "password"}
+	for _, key := range requiredKeys {
+		val, ok := result[key]
+		if key == "password" {
+			if ok || val != "" {
+				t.Fatalf("expected missing required key %q after filtering non-string values, got ok=%v val=%q", key, ok, val)
+			}
+			continue
+		}
+		if !ok || val == "" {
+			t.Fatalf("expected required key %q to remain present, got ok=%v val=%q", key, ok, val)
+		}
 	}
 }
