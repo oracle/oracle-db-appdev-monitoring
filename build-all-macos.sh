@@ -22,6 +22,7 @@ BUILD_CONTAINERS=""
 BUILD_DARWIN=""
 BUILD_UBUNTU=""
 BUILD_OL8=""
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
 while getopts "v:t:cmuo" opt; do
   case ${opt} in
@@ -54,9 +55,26 @@ else
   CGO_ENABLED=1
 fi
 
+copy_workspace_to_container() {
+  local container="$1"
+
+  docker exec "${container}" rm -rf /oracle-db-appdev-monitoring
+  docker cp "${SCRIPT_DIR}/." "${container}:/oracle-db-appdev-monitoring"
+}
+
+linux_make_target() {
+  local platform="$1"
+
+  case "${platform}" in
+    amd64) echo "go-build-linux-amd64" ;;
+    arm64) echo "go-build-linux-arm64" ;;
+    *) echo "unsupported platform: ${platform}" >&2; exit 1 ;;
+  esac
+}
+
 build_darwin_local() {
-  echo "Build dawrin-arm64"
-  make go-build VERSION="$VERSION" TAGS="$TAGS" CGO_ENABLED="$CGO_ENABLED"
+  echo "Build darwin-arm64"
+  make go-build-darwin-arm64 VERSION="$VERSION" TAGS="$TAGS" CGO_ENABLED="$CGO_ENABLED"
   echo "Built for darwin-arm64"
 }
 
@@ -69,16 +87,19 @@ build_ol() {
   local platform="$1"
   local container="build-${platform}"
   local filename="oracledb_exporter-${VERSION}.linux-${platform}.tar.gz"
+  local make_target
+
+  make_target="$(linux_make_target "${platform}")"
 
   docker run -d --platform "linux/${platform}" --name "${container}" "${OL_IMAGE}" tail -f /dev/null
+  copy_workspace_to_container "${container}"
   docker exec "${container}" bash -c "dnf install -y wget git make gcc && \
                                     wget -q https://go.dev/dl/go${GO_VERSION}.linux-${platform}.tar.gz && \
                                     rm -rf /usr/local/go && \
                                     tar -C /usr/local -xzf go${GO_VERSION}.linux-${platform}.tar.gz && \
                                     export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin && \
-                                    git clone --depth 1 https://github.com/oracle/oracle-db-appdev-monitoring.git && \
                                     cd oracle-db-appdev-monitoring && \
-                                    make go-build VERSION=\"${VERSION}\" TAGS=\"${TAGS}\" CGO_ENABLED=\"${CGO_ENABLED}\""
+                                    make ${make_target} VERSION=\"${VERSION}\" TAGS=\"${TAGS}\" CGO_ENABLED=\"${CGO_ENABLED}\""
 
   docker cp "${container}:/oracle-db-appdev-monitoring/dist/${filename}" "dist/"
 
@@ -90,9 +111,9 @@ build_ol() {
 build_ubuntu() {
   local container="ubuntu-build"
   docker run -d --platform "linux/amd64" --name "${container}" "${UBUNTU_IMAGE}" tail -f /dev/null
+  copy_workspace_to_container "${container}"
   docker exec "${container}" bash -c "apt-get update -y && \
                                       apt-get -y install podman qemu-user-static golang gcc-aarch64-linux-gnu git make && \
-                                      git clone --depth 1 https://github.com/oracle/oracle-db-appdev-monitoring.git && \
                                       cd oracle-db-appdev-monitoring && \
                                       make go-build-linux-amd64 VERSION=\"${VERSION}\" TAGS=\"${TAGS}\" CGO_ENABLED=\"${CGO_ENABLED}\" && \
                                       make go-build-linux-gcc-arm64 VERSION=\"${VERSION}\" TAGS=\"${TAGS}\" CGO_ENABLED=\"${CGO_ENABLED}\""
