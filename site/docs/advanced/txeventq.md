@@ -78,9 +78,10 @@ end;
 
 A simple load generator is provided in [this directory](https://github.com/oracle/oracle-db-appdev-monitoring/tree/main/docker-compose/txeventq-load) which you can use to create some traffic so you can experiment with the sample dashboard.
 
-To run the sample, first update [application.yaml](https://github.com/oracle/oracle-db-appdev-monitoring/blob/main/docker-compose/txeventq-load/src/main/resources/application.yaml) with the correct IP address for your database, then start the application as follows:
+To run the sample, set `DB_PASSWORD` and, if needed, override `DB_URL` or `DB_USERNAME` for your environment before starting the application.  The default URL targets a local database at `localhost:1521/freepdb1`.
 
 ```bash
+export DB_PASSWORD='<your-demo-password>'
 mvn spring-boot:run
 ```
 

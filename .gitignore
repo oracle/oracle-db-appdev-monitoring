@@ -10,6 +10,7 @@ oci8.pc
 **/target/
 .DS_Store
 **/.cache/
+.gocache
 
 test-coverage.out
 
