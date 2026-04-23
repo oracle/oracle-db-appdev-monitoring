@@ -1,4 +1,4 @@
-## Copyright (c) 2021, 2023, Oracle and/or its affiliates.
+## Copyright (c) 2021, 2026, Oracle and/or its affiliates.
 ## Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl/
 apiVersion: apps/v1
 kind: Deployment
@@ -15,12 +15,25 @@ spec:
       labels:
         app: metrics-exporter
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: metrics-exporter
-        image: container-registry.oracle.com/database/observability-exporter:2.0.2
-        imagePullPolicy: Always
+        # Replace with the published digest for the release you intend to run, for example:
+        # image: container-registry.oracle.com/database/observability-exporter:2.3.0@sha256:<published-digest>
+        image: container-registry.oracle.com/database/observability-exporter:2.3.0
+        imagePullPolicy: IfNotPresent
         command: ["/oracledb_exporter"]
         args: ["--config.file=/config/metrics-exporter-config.yaml"]
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+          readOnlyRootFilesystem: true
         env:
           # uncomment and customize the next item if you want to provide custom metrics definitions
           #- name: CUSTOM_METRICS
@@ -45,8 +58,12 @@ spec:
         volumeMounts:
           - name: exporter-config
             mountPath: /config
+            readOnly: true
           - name: tns-admin
             mountPath: /oracle/tns_admin
+            readOnly: true
+          - name: tmp
+            mountPath: /tmp
           # uncomment and customize the next item if you want to provide custom metrics definitions
           #- name: config-volume
           #  mountPath: /oracle/observability/txeventq-metrics.toml
@@ -59,7 +76,7 @@ spec:
             memory: "128Mi"
             cpu: "500m"  
         ports:
-        - containerPort: 8080
+        - containerPort: 9161
       restartPolicy: Always
       volumes:
         - name: tns-admin
@@ -68,6 +85,8 @@ spec:
         - name: exporter-config
           configMap:
             name: metrics-exporter-config
+        - name: tmp
+          emptyDir: {}
         # uncomment and customize the next item if you want to provide custom metrics definitions
         #- name: config-volume
         #  configMap:
