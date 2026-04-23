@@ -54,12 +54,19 @@ func newUnixSocketVaultClient(socketPath string) (*vault.Client, error) {
 	return vault.NewClient(config)
 }
 
+// newDefaultVaultClient creates a Vault client using the standard environment-driven configuration.
+func newDefaultVaultClient() (*vault.Client, error) {
+	return vault.NewClient(vault.DefaultConfig())
+}
+
 // createVaultClient connects to a vault client, using connection method specified with the parameters. Returns error if fails.
 func createVaultClient(logger *slog.Logger, socketPath string) (HashicorpVaultClient, error) {
 	var vaultClient HashicorpVaultClient
 	var err error
 
-	if socketPath != "" {
+	if socketPath == "" {
+		vaultClient.client, err = newDefaultVaultClient()
+	} else {
 		// Create Vault client that uses Unix Socket
 		vaultClient.client, err = newUnixSocketVaultClient(socketPath)
 	}

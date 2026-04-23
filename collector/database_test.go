@@ -4,15 +4,90 @@
 package collector
 
 import (
+	"context"
 	"database/sql"
+	"database/sql/driver"
 	"errors"
 	"io"
 	"log/slog"
+	"strconv"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
+
+type testQueryDriver struct{}
+
+type testQueryConn struct{}
+
+type testQueryRows struct {
+	read bool
+}
+
+type testQueryConnector struct{}
+
+var testQueryDriverID atomic.Uint64
+
+func (testQueryDriver) Open(name string) (driver.Conn, error) {
+	return testQueryConn{}, nil
+}
+
+func (testQueryConnector) Connect(context.Context) (driver.Conn, error) {
+	return testQueryConn{}, nil
+}
+
+func (testQueryConnector) Driver() driver.Driver {
+	return testQueryDriver{}
+}
+
+func (testQueryConn) Prepare(string) (driver.Stmt, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (testQueryConn) Close() error {
+	return nil
+}
+
+func (testQueryConn) Begin() (driver.Tx, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (testQueryConn) QueryContext(context.Context, string, []driver.NamedValue) (driver.Rows, error) {
+	return &testQueryRows{}, nil
+}
+
+func (r *testQueryRows) Columns() []string {
+	return []string{"value"}
+}
+
+func (r *testQueryRows) Close() error {
+	return nil
+}
+
+func (r *testQueryRows) Next(dest []driver.Value) error {
+	if r.read {
+		return io.EOF
+	}
+	r.read = true
+	dest[0] = "1"
+	return nil
+}
+
+func openTestQueryDB(t *testing.T) *sql.DB {
+	t.Helper()
+
+	name := "collector-test-query-" + strconv.FormatUint(testQueryDriverID.Add(1), 10)
+	sql.Register(name, testQueryDriver{})
+
+	db := sql.OpenDB(testQueryConnector{})
+	t.Cleanup(func() {
+		_ = db.Close()
+	})
+	return db
+}
 
 func TestIsValid(t *testing.T) {
 	tests := []struct {
@@ -121,11 +196,72 @@ func TestWarmupConnectionPoolWithNilSessionSetsStartupReadyAndBackoff(t *testing
 	if !db.StartupReady() {
 		t.Fatal("expected startupReady to be true after warmup attempt")
 	}
-	if db.invalidUntil == nil {
+	if db.IsValid() == nil {
 		t.Fatal("expected invalidUntil to be set after warmup failure")
 	}
-	if db.Up != 0 {
-		t.Fatalf("expected database up metric to remain 0, got %v", db.Up)
+	if got := db.getUp(); got != 0 {
+		t.Fatalf("expected database up metric to remain 0, got %v", got)
+	}
+}
+
+func TestDatabaseStateAccessIsRaceSafe(t *testing.T) {
+	db := &Database{
+		DatabaseLabel: "database",
+	}
+	var wg sync.WaitGroup
+
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			for j := 0; j < 200; j++ {
+				if (i+j)%2 == 0 {
+					db.invalidate(time.Millisecond)
+				} else {
+					db.clearInvalid()
+				}
+				db.setUp(float64((i + j) % 2))
+				_ = db.IsValid()
+				_, _ = db.UpMetric(map[string]string{}).Desc(), db.getUp()
+			}
+		}(i)
+	}
+
+	wg.Wait()
+}
+
+func TestQueryContextHoldsReadLockUntilUnlock(t *testing.T) {
+	db := &Database{
+		Session: openTestQueryDB(t),
+	}
+
+	rows, unlock, err := db.QueryContext(context.Background(), "select 1 from dual")
+	if err != nil {
+		t.Fatalf("expected query to succeed, got %v", err)
+	}
+
+	locked := make(chan struct{})
+	go func() {
+		db.reconnectMU.Lock()
+		close(locked)
+		db.reconnectMU.Unlock()
+	}()
+
+	select {
+	case <-locked:
+		t.Fatal("expected reconnect write lock to wait for active query reader")
+	case <-time.After(100 * time.Millisecond):
+	}
+
+	if err := rows.Close(); err != nil {
+		t.Fatalf("expected rows close to succeed, got %v", err)
+	}
+	unlock()
+
+	select {
+	case <-locked:
+	case <-time.After(time.Second):
+		t.Fatal("expected reconnect write lock to proceed after query reader released lock")
 	}
 }
 

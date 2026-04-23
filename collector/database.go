@@ -8,11 +8,12 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus"
 	"log/slog"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
@@ -24,6 +25,8 @@ const (
 	ora12537code = 12537
 )
 
+var errDatabaseSessionNotInitialized = errors.New("database session is not initialized")
+
 func (d *Database) UpMetric(exporterLabels map[string]string) prometheus.Metric {
 	desc := prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "up"),
@@ -33,7 +36,7 @@ func (d *Database) UpMetric(exporterLabels map[string]string) prometheus.Metric 
 	)
 	return prometheus.MustNewConstMetric(desc,
 		prometheus.GaugeValue,
-		d.Up,
+		d.getUp(),
 	)
 }
 
@@ -59,7 +62,7 @@ func NewDatabase(logger *slog.Logger, dblabel, dbname string, dbconfig DatabaseC
 		Config:        dbconfig,
 		connectErr:    err,
 		DatabaseLabel: dblabel,
-		reconnectMU:   sync.Mutex{},
+		reconnectMU:   sync.RWMutex{},
 	}
 }
 
@@ -77,17 +80,35 @@ func (d *Database) initCache(metrics map[string]*Metric) {
 // results in a SIGABRT.
 func (d *Database) WarmupConnectionPool(logger *slog.Logger, backoff time.Duration) error {
 	defer d.startupReady.Store(true)
-	return d.warmupSession(logger, backoff, d.Session)
+
+	d.reconnectMU.RLock()
+	session := d.Session
+	connectErr := d.connectErr
+	d.reconnectMU.RUnlock()
+
+	if session == nil {
+		d.setUp(0)
+		d.invalidate(backoff)
+		if connectErr != nil {
+			return connectErr
+		}
+		return errDatabaseSessionNotInitialized
+	}
+
+	if err := d.warmupSession(logger, session); err != nil {
+		d.setUp(0)
+		d.invalidate(backoff)
+		return err
+	}
+
+	d.setUp(1)
+	d.clearInvalid()
+	return nil
 }
 
-func (d *Database) warmupSession(logger *slog.Logger, backoff time.Duration, session *sql.DB) error {
+func (d *Database) warmupSession(logger *slog.Logger, session *sql.DB) error {
 	if session == nil {
-		d.Up = 0
-		d.invalidate(backoff)
-		if d.connectErr != nil {
-			return d.connectErr
-		}
-		return errors.New("database session is not initialized")
+		return errDatabaseSessionNotInitialized
 	}
 
 	var connections []*sql.Conn
@@ -116,8 +137,6 @@ func (d *Database) warmupSession(logger *slog.Logger, backoff time.Duration, ses
 	for i := 0; i < poolSize; i++ {
 		// short circuit warmup for inaccessible databases
 		if err := warmup(i + 1); err != nil {
-			d.Up = 0
-			d.invalidate(backoff)
 			logger.Debug("Failed warmup database connection pool", "conn", i, "error", err, "database", d.Name)
 			return err
 		}
@@ -129,51 +148,61 @@ func (d *Database) warmupSession(logger *slog.Logger, backoff time.Duration, ses
 			logger.Debug("Failed to return database connection to pool on warmup", "conn", i+1, "error", err, "database", d.Name)
 		}
 	}
-	d.Up = 1
-	d.clearInvalid()
 	return nil
 }
 
 func (d *Database) reconnect(logger *slog.Logger, backoff time.Duration) error {
-	d.reconnectMU.Lock()
-	defer d.reconnectMU.Unlock()
+	d.reconnectAttemptMU.Lock()
+	defer d.reconnectAttemptMU.Unlock()
 
 	logger.Info("Reconnecting database session", "database", d.Name)
 
 	session, err := connect(logger, d.Name, d.Config)
-	d.connectErr = err
 	if err != nil {
+		d.reconnectMU.Lock()
+		d.connectErr = err
 		d.Up = 0
-		d.invalidate(backoff)
+		d.invalidateLocked(backoff)
+		d.reconnectMU.Unlock()
 		return err
 	}
-	if err := d.warmupSession(logger, backoff, session); err != nil {
+	if err := d.warmupSession(logger, session); err != nil {
 		if session != nil {
 			_ = session.Close()
 		}
+		d.reconnectMU.Lock()
+		d.connectErr = err
+		d.Up = 0
+		d.invalidateLocked(backoff)
+		d.reconnectMU.Unlock()
 		return err
 	}
 
+	d.reconnectMU.Lock()
 	oldSession := d.Session
 	d.Session = session
 	d.connectErr = nil
+	d.Up = 1
+	d.clearInvalidLocked()
 	if oldSession != nil && oldSession != session {
 		_ = oldSession.Close()
 	}
+	d.reconnectMU.Unlock()
 	return nil
 }
 
 // ping the database. If the database is disconnected, try to reconnect.
 // If the database type is unknown, try to reload it.
 func (d *Database) ping(logger *slog.Logger, backoff time.Duration) error {
-	if d.Session == nil {
-		return d.reconnect(logger, backoff)
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	err := d.Session.PingContext(ctx)
+
+	err := d.PingContext(ctx)
+	if errors.Is(err, errDatabaseSessionNotInitialized) {
+		return d.reconnect(logger, backoff)
+	}
 	if err != nil {
-		d.Up = 0
+		d.setUp(0)
 		if isInvalidCredentialsError(err) || isTemporaryConnectionError(err) {
 			d.invalidate(backoff)
 			return err
@@ -184,12 +213,15 @@ func (d *Database) ping(logger *slog.Logger, backoff time.Duration) error {
 		}
 		return err
 	}
-	d.Up = 1
+	d.setUp(1)
 	d.clearInvalid()
 	return nil
 }
 
 func (d *Database) IsValid() *time.Duration {
+	d.reconnectMU.RLock()
+	defer d.reconnectMU.RUnlock()
+
 	if d.invalidUntil == nil {
 		return nil
 	}
@@ -201,12 +233,83 @@ func (d *Database) IsValid() *time.Duration {
 }
 
 func (d *Database) invalidate(backoff time.Duration) {
+	d.reconnectMU.Lock()
+	defer d.reconnectMU.Unlock()
+	d.invalidateLocked(backoff)
+}
+
+func (d *Database) invalidateLocked(backoff time.Duration) {
 	until := time.Now().Add(backoff)
 	d.invalidUntil = &until
 }
 
 func (d *Database) clearInvalid() {
+	d.reconnectMU.Lock()
+	defer d.reconnectMU.Unlock()
+	d.clearInvalidLocked()
+}
+
+func (d *Database) clearInvalidLocked() {
 	d.invalidUntil = nil
+}
+
+func (d *Database) getUp() float64 {
+	d.reconnectMU.RLock()
+	defer d.reconnectMU.RUnlock()
+	return d.Up
+}
+
+func (d *Database) setUp(up float64) {
+	d.reconnectMU.Lock()
+	defer d.reconnectMU.Unlock()
+	d.Up = up
+}
+
+func (d *Database) Query(query string, args ...interface{}) (*sql.Rows, func(), error) {
+	d.reconnectMU.RLock()
+	if d.Session == nil {
+		err := d.connectErr
+		d.reconnectMU.RUnlock()
+		if err != nil {
+			return nil, nil, err
+		}
+		return nil, nil, errDatabaseSessionNotInitialized
+	}
+
+	rows, err := d.Session.Query(query, args...)
+	if err != nil {
+		d.reconnectMU.RUnlock()
+		return nil, nil, err
+	}
+	return rows, d.reconnectMU.RUnlock, nil
+}
+
+func (d *Database) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, func(), error) {
+	d.reconnectMU.RLock()
+	if d.Session == nil {
+		err := d.connectErr
+		d.reconnectMU.RUnlock()
+		if err != nil {
+			return nil, nil, err
+		}
+		return nil, nil, errDatabaseSessionNotInitialized
+	}
+
+	rows, err := d.Session.QueryContext(ctx, query, args...)
+	if err != nil {
+		d.reconnectMU.RUnlock()
+		return nil, nil, err
+	}
+	return rows, d.reconnectMU.RUnlock, nil
+}
+
+func (d *Database) PingContext(ctx context.Context) error {
+	d.reconnectMU.RLock()
+	defer d.reconnectMU.RUnlock()
+	if d.Session == nil {
+		return errDatabaseSessionNotInitialized
+	}
+	return d.Session.PingContext(ctx)
 }
 
 func isClosedDatabaseError(err error) bool {
