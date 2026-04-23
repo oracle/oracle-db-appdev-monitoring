@@ -78,7 +78,7 @@ If you are running the exporter as a container, you can mount the wallet as a vo
 ```bash
 docker run -it --rm \
     -e DB_USERNAME=pdbadmin \
-    -e DB_PASSWORD=Welcome12345 \
+    -e DB_PASSWORD='<your-password>' \
     -e DB_CONNECT_STRING=devdb_tp \
     -v ./wallet:/wallet \
     -p 9161:9161 \

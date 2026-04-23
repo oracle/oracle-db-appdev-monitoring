@@ -11,12 +11,12 @@ To run the exporter in Kubernetes, you must complete the following steps.  All s
 
 ### Create a secret with credentials for connecting to the Oracle AI Database
 
-Create a secret with the Oracle AI Database user and password that the exporter should use to connect to the database using this command.  You must specify the correct user and password for your environment.  This example uses `pdbadmin` as the user and `Welcome12345` as the password:
+Create a secret with the Oracle AI Database user and password that the exporter should use to connect to the database using this command.  You must specify the correct user and password for your environment.  This example uses `pdbadmin` as the user and `<your-password>` as the password:
 
 ```bash
 kubectl create secret generic db-secret \
     --from-literal=username=pdbadmin \
-    --from-literal=password=Welcome12345 \
+    --from-literal=password='<your-password>' \
     -n exporter
 ```
 
