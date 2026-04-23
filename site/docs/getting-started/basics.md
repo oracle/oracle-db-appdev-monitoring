@@ -156,6 +156,8 @@ The following example puts the logfile in the current location with the filename
 
 If you prefer to provide configuration via a [config file](../configuration/config-file.md), you may do so with the `--config.file` argument. The use of a config file over command line arguments is preferred. If a config file is not provided, the "default" database connection is managed by command line arguments.
 
+HTTP server request timeouts are configured in the exporter config file under `web.readHeaderTimeout`, `web.readTimeout`, and `web.idleTimeout`.
+
 ```yaml
 # Example Oracle AI Database Metrics Exporter Configuration file.
 # Environment variables of the form ${VAR_NAME} will be expanded.

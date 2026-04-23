@@ -97,6 +97,9 @@ log:
 #  listenAddresses: [':9161']
 #  systemdSocket: true|false
 #  configFile: /path/to/webconfigfile
+#  readHeaderTimeout: 10s
+#  readTimeout: 30s
+#  idleTimeout: 120s
 ```
 
 From the exporter configuration file, you may optionally load database credentials from [OCI Vault](./oci-vault.md), [Azure Vault](./azure-vault.md), or [HashiCorp Vault](./hashicorp-vault.md).
@@ -110,6 +113,9 @@ web:
   listenAddresses: [':9161']
   systemdSocket: false
   configFile: /etc/metrics-exporter/web-config.yml
+  readHeaderTimeout: 10s
+  readTimeout: 30s
+  idleTimeout: 120s
 ```
 
 The `web` properties are:
@@ -117,6 +123,9 @@ The `web` properties are:
 - `listenAddresses`: One or more addresses for the exporter HTTP server to bind to. For example, `[':9161']` listens on port `9161` on all interfaces.
 - `systemdSocket`: Enables systemd socket activation. When set to `true`, systemd provides the listening socket.
 - `configFile`: Path to a Prometheus Exporter Toolkit web configuration file. Configure TLS, basic authentication, and other supported web server features in this file.
+- `readHeaderTimeout`: Maximum time to read request headers. Defaults to `10s`.
+- `readTimeout`: Maximum time to read the full HTTP request. Defaults to `30s`.
+- `idleTimeout`: Maximum time to wait for the next request on a keep-alive connection. Defaults to `120s`.
 
 Configure web server security settings such as TLS and basic authentication through `web.configFile`. Those settings should be defined in the Prometheus Exporter Toolkit configuration file, not as exporter-specific properties in the main exporter config file.
 

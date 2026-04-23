@@ -38,9 +38,12 @@ type MetricsConfiguration struct {
 }
 
 type WebConfig struct {
-	ListenAddresses *[]string `yaml:"listenAddresses"`
-	SystemdSocket   *bool     `yaml:"systemdSocket"`
-	ConfigFile      *string   `yaml:"configFile"`
+	ListenAddresses   *[]string      `yaml:"listenAddresses"`
+	SystemdSocket     *bool          `yaml:"systemdSocket"`
+	ConfigFile        *string        `yaml:"configFile"`
+	ReadHeaderTimeout *time.Duration `yaml:"readHeaderTimeout"`
+	ReadTimeout       *time.Duration `yaml:"readTimeout"`
+	IdleTimeout       *time.Duration `yaml:"idleTimeout"`
 }
 
 type DatabaseConfig struct {
@@ -142,6 +145,27 @@ func (m *MetricsConfiguration) LogPerDatabaseFiles() bool {
 
 func (m *MetricsConfiguration) ScrapeInterval() time.Duration {
 	return *m.Metrics.ScrapeInterval
+}
+
+func (wc WebConfig) GetReadHeaderTimeout() time.Duration {
+	if wc.ReadHeaderTimeout == nil {
+		return 10 * time.Second
+	}
+	return *wc.ReadHeaderTimeout
+}
+
+func (wc WebConfig) GetReadTimeout() time.Duration {
+	if wc.ReadTimeout == nil {
+		return 30 * time.Second
+	}
+	return *wc.ReadTimeout
+}
+
+func (wc WebConfig) GetIdleTimeout() time.Duration {
+	if wc.IdleTimeout == nil {
+		return 120 * time.Second
+	}
+	return *wc.IdleTimeout
 }
 
 func (m *MetricsConfiguration) CustomMetricsFiles() []string {

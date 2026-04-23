@@ -221,7 +221,11 @@ func main() {
 		}()
 	}
 
-	server := &http.Server{}
+	server := &http.Server{
+		ReadHeaderTimeout: m.Web.GetReadHeaderTimeout(),
+		ReadTimeout:       m.Web.GetReadTimeout(),
+		IdleTimeout:       m.Web.GetIdleTimeout(),
+	}
 	serverErr := make(chan error, 1)
 	go func() {
 		serverErr <- web.ListenAndServe(server, m.Web.Flags(), logger)
