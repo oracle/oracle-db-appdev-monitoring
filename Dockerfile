@@ -16,11 +16,15 @@ ENV CGO_ENABLED=${CGO_ENABLED:-1}
 ARG GO_VERSION=1.26.2
 ENV GO_VERSION=${GO_VERSION}
 
-RUN microdnf install wget gzip gcc && \
-    wget -q https://go.dev/dl/go${GO_VERSION}.${GOOS}-${GOARCH}.tar.gz && \
+RUN microdnf install wget gzip gcc jq && \
+    go_tarball="go${GO_VERSION}.${GOOS}-${GOARCH}.tar.gz" && \
+    wget -q "https://go.dev/dl/${go_tarball}" && \
+    go_checksum="$(wget -qO- 'https://go.dev/dl/?mode=json' | jq -r --arg version "go${GO_VERSION}" --arg os "${GOOS}" --arg arch "${GOARCH}" '.[] | select(.version == $version) | .files[] | select(.os == $os and .arch == $arch) | .sha256' | head -n 1)" && \
+    test -n "${go_checksum}" && test "${go_checksum}" != "null" && \
+    printf '%s  %s\n' "${go_checksum}" "${go_tarball}" | sha256sum -c - && \
     rm -rf /usr/local/go && \
-    tar -C /usr/local -xzf go${GO_VERSION}.${GOOS}-${GOARCH}.tar.gz && \
-    rm go${GO_VERSION}.${GOOS}-${GOARCH}.tar.gz
+    tar -C /usr/local -xzf "${go_tarball}" && \
+    rm "${go_tarball}"
 
 ENV PATH=$PATH:/usr/local/go/bin
 
