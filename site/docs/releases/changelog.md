@@ -9,6 +9,8 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
+- Harden the sample Kubernetes deployment with restrictive pod and container security contexts, switch it to `IfNotPresent`, and add a sample NetworkPolicy for ingress to port `9161`.
+- Set HTTP server read-header, read, and idle timeouts before handing the listener to the Prometheus exporter toolkit, and expose those timeout defaults through the exporter config file.
 - Pin the demo Docker Compose `prom/prometheus` and `grafana/grafana` images to immutable digests instead of floating tags.
 - Fall back to the default HashiCorp Vault client configuration when `vault.hashicorp.proxySocket` is not configured, preventing a nil-pointer panic while still allowing environment-based Vault configuration.
 - Remove production use of the OCI SDK `example/helpers` package in Vault integrations so OCI Vault and HashiCorp Vault lookup failures return errors instead of terminating the exporter process.
@@ -22,6 +24,9 @@ List of upcoming and historic changes to the exporter.
 - Add the exporter release `version` label to `oracledb_exporter_build_info`, matching the standard Prometheus build info metric shape.
 - Add an initial GitHub Actions workflow to run `make go-test` and `make go-build` on approved pull requests targeting `main` and on pushes to `main`.
 - Add `CODEOWNERS` protection for GitHub workflow files.
+- Ignore non-string values returned from HashiCorp Vault secret payloads instead of panicking, so malformed or structured KV data cannot crash the exporter.
+- Verify downloaded Go toolchain tarballs against the published SHA256 in the Docker build and macOS release script before extracting them.
+- Use a bind variable for the alert-log timestamp query instead of interpolating the last on-disk timestamp into SQL text.
 
 Thank you to the following users for their suggestions and contributions:
 - [jens-ho](https://github.com/jens-ho)

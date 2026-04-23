@@ -21,6 +21,13 @@ The exporter supports the following main features
 - Customize the database connection pool using go-sql, Oracle AI Database connection pools, and works with Database Resident Connection Pools
 - Includes a sample [Grafana dashboards](https://github.com/oracle/oracle-db-appdev-monitoring/tree/main/docker-compose/grafana) for inspiration or customization
 
+## Docker Compose Demo
+
+The `docker-compose/` stack is intended for local testing only.
+
+- Set `DB_PASSWORD` before starting it so the demo database, exporter sample configs, and TxEventQ load generator all use the same credential.
+- The sample database listeners are bound to `127.0.0.1` and should not be exposed on a shared or public host.
+
 ## Contributing
 
 This project welcomes contributions from the community. Before submitting a pull request, please [review our contribution guide](./CONTRIBUTING.md)
