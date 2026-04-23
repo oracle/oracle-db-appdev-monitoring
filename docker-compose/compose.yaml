@@ -18,41 +18,46 @@ services:
     ports:
       - 3000:3000
     restart: unless-stopped
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=grafana
     volumes:
       - ./grafana/datasources:/etc/grafana/provisioning/datasources
       - ./grafana/dashboard.yaml:/etc/grafana/provisioning/dashboards/main.yaml
       - ./grafana/dashboards:/var/lib/grafana/dashboards
 
-  free23ai:
+  free26ai:
     image: gvenzl/oracle-free:23.26.1-slim-faststart
-    container_name: free23ai
+    container_name: free26ai
     ports:
-      - 1521:1521
+      - 127.0.0.1:1521:1521
     environment:
-      - ORACLE_PASSWORD=Welcome12345
+      - ORACLE_PASSWORD=${DB_PASSWORD}
     volumes:
       - ./oracle:/container-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "lsnrctl status | grep READY"]
+      test:
+        [
+          "CMD-SHELL",
+          "printf \"whenever sqlerror exit failure\\nset heading off feedback off pagesize 0 verify off\\nselect 'READY' from dual;\\nexit;\\n\" | sqlplus -s \"pdbadmin/$${ORACLE_PASSWORD}@//localhost:1521/FREEPDB1\" | grep -q READY",
+        ]
       interval: 15s
       timeout: 10s
       retries: 5
       start_period: 30s
 
-  second23ai:
+  second26ai:
     image: gvenzl/oracle-free:23.26.1-slim-faststart
-    container_name: second23ai
+    container_name: second26ai
     ports:
-      - 1522:1521
+      - 127.0.0.1:1522:1521
     environment:
-      - ORACLE_PASSWORD=Welcome12345
+      - ORACLE_PASSWORD=${DB_PASSWORD}
     volumes:
       - ./oracle:/container-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "lsnrctl status | grep READY"]
+      test:
+        [
+          "CMD-SHELL",
+          "printf \"whenever sqlerror exit failure\\nset heading off feedback off pagesize 0 verify off\\nselect 'READY' from dual;\\nexit;\\n\" | sqlplus -s \"pdbadmin/$${ORACLE_PASSWORD}@//localhost:1521/FREEPDB1\" | grep -q READY",
+        ]
       interval: 15s
       timeout: 10s
       retries: 5
@@ -62,7 +67,7 @@ services:
     image: container-registry.oracle.com/database/observability-exporter:2.3.0
     container_name: exporter
     command:
-      - --config.file=/exporter/${COMPOSE_CONFIG_FILE}
+      - --config.file=/exporter/${COMPOSE_CONFIG_FILE:-config.yaml}
       # - '--log.level=debug'
       # - '--database.maxIdleConns=10'
       # - '--database.maxOpenConns=10'
@@ -74,18 +79,19 @@ services:
     - ADB_USERNAME=${ADB_USERNAME}
     - ADB_PASSWORD=${ADB_PASSWORD}
     - ADB_TNS_ALIAS=${ADB_TNS_ALIAS}
+    - DB_PASSWORD=${DB_PASSWORD}
     #   - DB_USERNAME=pdbadmin
-    #   - DB_PASSWORD=Welcome12345
-    #   - DB_CONNECT_STRING=free23ai:1521/freepdb1
+    #   - DB_PASSWORD=${DB_PASSWORD}
+    #   - DB_CONNECT_STRING=free26ai:1521/freepdb1
     #   - CUSTOM_METRICS=/exporter/txeventq-metrics.toml,/exporter/more-txeventq-metrics.toml
     volumes:
       - ./exporter:/exporter
       - ./wallet:/exporter/wallet
 
     depends_on: 
-      free23ai:
+      free26ai:
         condition: service_healthy
-      second23ai:
+      second26ai:
         condition: service_healthy
 
 volumes:
