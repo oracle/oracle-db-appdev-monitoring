@@ -60,6 +60,7 @@ copy_workspace_to_container() {
 
   docker exec "${container}" rm -rf /oracle-db-appdev-monitoring
   docker cp "${SCRIPT_DIR}/." "${container}:/oracle-db-appdev-monitoring"
+  docker exec "${container}" rm -rf /oracle-db-appdev-monitoring/.git
 }
 
 linux_make_target() {
@@ -88,15 +89,20 @@ build_ol() {
   local container="build-${platform}"
   local filename="oracledb_exporter-${VERSION}.linux-${platform}.tar.gz"
   local make_target
+  local go_tarball="go${GO_VERSION}.linux-${platform}.tar.gz"
 
   make_target="$(linux_make_target "${platform}")"
 
   docker run -d --platform "linux/${platform}" --name "${container}" "${OL_IMAGE}" tail -f /dev/null
   copy_workspace_to_container "${container}"
-  docker exec "${container}" bash -c "dnf install -y wget git make gcc && \
-                                    wget -q https://go.dev/dl/go${GO_VERSION}.linux-${platform}.tar.gz && \
+  docker exec "${container}" bash -c "dnf install -y wget git make gcc jq && \
+                                    wget -q https://go.dev/dl/${go_tarball} && \
+                                    go_checksum=\"\$(wget -qO- 'https://go.dev/dl/?mode=json' | jq -r --arg version 'go${GO_VERSION}' --arg os 'linux' --arg arch '${platform}' '.[] | select(.version == \$version) | .files[] | select(.os == \$os and .arch == \$arch) | .sha256' | head -n 1)\" && \
+                                    test -n \"\${go_checksum}\" && test \"\${go_checksum}\" != \"null\" && \
+                                    printf '%s  %s\n' \"\${go_checksum}\" '${go_tarball}' | sha256sum -c - && \
                                     rm -rf /usr/local/go && \
-                                    tar -C /usr/local -xzf go${GO_VERSION}.linux-${platform}.tar.gz && \
+                                    tar -C /usr/local -xzf ${go_tarball} && \
+                                    rm ${go_tarball} && \
                                     export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin && \
                                     cd oracle-db-appdev-monitoring && \
                                     make ${make_target} VERSION=\"${VERSION}\" TAGS=\"${TAGS}\" CGO_ENABLED=\"${CGO_ENABLED}\""
