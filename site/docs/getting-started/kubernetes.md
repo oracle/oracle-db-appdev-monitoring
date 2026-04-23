@@ -61,13 +61,15 @@ kubectl create cm db-metrics-txeventq-exporter-config \
 
 ### Deploy the Oracle AI Database Observability exporter
 
-A sample Kubernetes manifest is provided [here](https://github.com/oracle/oracle-db-appdev-monitoring/blob/main/kubernetes/metrics-exporter-deployment.yaml).  You must edit this file to set the namespace you wish to use, the database connect string to use, and if you have any custom metrics, you will need to uncomment and customize some sections in this file.
+A sample Kubernetes manifest is provided [here](https://github.com/oracle/oracle-db-appdev-monitoring/blob/main/kubernetes/metrics-exporter-deployment.yaml).  You must edit this file to set the namespace you wish to use, the database connect string to use, and if you have any custom metrics, you will need to uncomment and customize some sections in this file.  Before applying the manifest, replace the sample image reference with the published digest for the exporter release you intend to run.
 
 Once you have made the necessary updates, apply the file to your cluster using this command:
 
 ```bash
 kubectl apply -f metrics-exporter-deployment.yaml
 ```
+
+The sample deployment runs with a non-root pod and container security context, a read-only root filesystem, and a writable `/tmp` volume for temporary files.
 
 You can check the deployment was successful and monitor the exporter startup with this command:
 
@@ -99,6 +101,14 @@ Once you have made any necessary udpates, apply the file to your cluster using t
 
 ```bash
 kubectl apply -f metrics-service-monitor.yaml
+```
+
+### Create a NetworkPolicy for metrics ingress
+
+Create a Kubernetes NetworkPolicy to limit ingress to the exporter metrics port.  A sample Kubernetes manifest is provided [here](https://github.com/oracle/oracle-db-appdev-monitoring/blob/main/kubernetes/metrics-exporter-network-policy.yaml).  The sample allows TCP ingress on port `9161` from pods in the same namespace; update the selectors if your Prometheus deployment scrapes from a different namespace.
+
+```bash
+kubectl apply -f metrics-exporter-network-policy.yaml
 ```
 
 ### Configure a Prometheus target (optional)
