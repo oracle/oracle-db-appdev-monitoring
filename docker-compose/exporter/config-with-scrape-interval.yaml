@@ -11,9 +11,9 @@ databases:
     ## Database username
     username: pdbadmin
     ## Database password
-    password: Welcome12345
+    password: ${DB_PASSWORD}
     ## Database connection url
-    url: free23ai:1521/freepdb1
+    url: free26ai:1521/freepdb1
 
     ## Metrics query timeout for this database, in seconds
     queryTimeout: 5
@@ -46,8 +46,8 @@ databases:
 
   second:
     username: pdbadmin
-    password: Welcome12345
-    url: second23ai:1521/freepdb1
+    password: ${DB_PASSWORD}
+    url: second26ai:1521/freepdb1
     queryTimeout: 5
     maxOpenConns: 10
     maxIdleConns: 10
