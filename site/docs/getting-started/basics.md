@@ -50,7 +50,7 @@ If you need an Oracle AI Database to test the exporter, you can use this command
 docker run --name free23ai \
     -d \
     -p 1521:1521 \
-    -e ORACLE_PASSWORD=Welcome12345 \
+    -e ORACLE_PASSWORD='<your-password>' \
     gvenzl/oracle-free:23.9-slim-faststart
 ```
 
@@ -86,7 +86,7 @@ You need to give the exporter the connection details for the Oracle AI Database 
 For a simple connection, you will provide the details using these variables:
 
 - `DB_USERNAME` is the database username, e.g., `pdbadmin`
-- `DB_PASSWORD` is the password for that user, e.g., `Welcome12345`
+- `DB_PASSWORD` is the password for that user, e.g., `<your-password>`
 - `DB_CONNECT_STRING` is the connection string, e.g., `free23ai:1521/freepdb`
 - `DB_ROLE` (Optional) can be set to `SYSDBA`, `SYSOPER`, `SYSBACKUP`, `SYSDG`, `SYSKM`, `SYSRAC` or `SYSASM` if you want to connect with one of those roles, however Oracle recommends that you connect with the lowest possible privileges and roles necessary for the exporter to run.
 
@@ -95,7 +95,7 @@ To run the exporter in a container and expose the port, use a command like this,
 ```bash
 docker run -it --rm \
     -e DB_USERNAME=pdbadmin \
-    -e DB_PASSWORD=Welcome12345 \
+    -e DB_PASSWORD='<your-password>' \
     -e DB_CONNECT_STRING=free23ai:1521/freepdb \
     -p 9161:9161 \
     container-registry.oracle.com/database/observability-exporter:2.3.0
@@ -146,7 +146,7 @@ Usage of oracledb_exporter:
 You may provide the connection details using these variables:
 
 - `DB_USERNAME` is the database username, e.g., `pdbadmin`
-- `DB_PASSWORD` is the password for that user, e.g., `Welcome12345`
+- `DB_PASSWORD` is the password for that user, e.g., `<your-password>`
 - `DB_CONNECT_STRING` is the connection string, e.g., `localhost:1521/freepdb1`
 - `DB_ROLE` (Optional) can be set to `SYSDBA` or `SYSOPER` if you want to connect with one of those roles, however Oracle recommends that you connect with the lowest possible privileges and roles necessary for the exporter to run.
 - `ORACLE_HOME` is the location of the Oracle Instant Client, e.g., `/lib/oracle/21/client64/lib`.
@@ -250,13 +250,15 @@ log:
 If you would like to set up a test environment with the exporter, you can use the provided "Docker Compose" file in this repository which will start an Oracle AI Database instance, the exporter, Prometheus and Grafana.
 
 ```bash
-make docker-compose-up
+DB_PASSWORD='<choose-a-local-demo-password>' make docker-compose-up
 ```
 
 The containers will take a short time to start.  The first time, the Oracle container might take a few minutes to start while it creates the database instance, but this is a one-time operation, and subequent restarts will be much faster (a few seconds).
+
+> Warning: This stack is intended for local testing only.  Set `DB_PASSWORD` explicitly before startup, and keep the sample database ports bound to `127.0.0.1` rather than exposing them on a shared or public host.
 
 Once the containers are all running, you can access the services using these URLs:
 
 - [Exporter](http://localhost:9161/metrics)
 - [Prometheus](http://localhost:9090) - try a query for "oracle".
-- [Grafana](http://localhost:3000) - username is "admin" and password is "grafana".  An Oracle AI Database dashboard is provisioned and configured to use data from the exporter.
+- [Grafana](http://localhost:3000) - Grafana uses its first-login initialization flow, and an Oracle AI Database dashboard is provisioned and configured to use data from the exporter.
