@@ -7,7 +7,7 @@ TAGS           ?= godror
 PLATFORM       ?= amd64
 DOCKER_TARGET  ?= exporter-godror
 CGO_ENABLED    ?= 1
-VERSION        ?= 2.3.0
+VERSION        ?= 2.3.1
 LDFLAGS        := -X main.Version=$(VERSION)
 GOFLAGS        := -ldflags "$(LDFLAGS) -s -w" --tags $(TAGS)
 BUILD_ARGS      = --build-arg VERSION=$(VERSION)
@@ -74,6 +74,11 @@ go-lint:
 	@echo "Linting codebase"
 	docker run --rm -v $(shell pwd):/app -v ~/.cache/golangci-lint/v1.50.1:/root/.cache -w /app golangci/golangci-lint:v1.50.1 golangci-lint run -v
 
+.PHONY: govulncheck
+govulncheck:
+	@echo "Run govulncheck"
+	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
 local-build: go-build
 	@true
 
@@ -134,4 +139,4 @@ podman-push:
 podman-release: podman-build podman-push
 
 .PHONY: version build deps go-test clean docker-compose-up docker-compose-down docker docker-arm docker-platform docker-amd \
-        podman-build podman-push podman-release
+        podman-build podman-push podman-release govulncheck

@@ -23,8 +23,8 @@ spec:
       containers:
       - name: metrics-exporter
         # Replace with the published digest for the release you intend to run, for example:
-        # image: container-registry.oracle.com/database/observability-exporter:2.3.0@sha256:<published-digest>
-        image: container-registry.oracle.com/database/observability-exporter:2.3.0
+        # image: container-registry.oracle.com/database/observability-exporter:2.3.1@sha256:<published-digest>
+        image: container-registry.oracle.com/database/observability-exporter:2.3.1
         imagePullPolicy: IfNotPresent
         command: ["/oracledb_exporter"]
         args: ["--config.file=/config/metrics-exporter-config.yaml"]
