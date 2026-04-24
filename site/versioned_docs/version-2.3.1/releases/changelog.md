@@ -7,10 +7,6 @@ sidebar_position: 2
 
 List of upcoming and historic changes to the exporter.
 
-### Next, TBD
-
-- Changes TBD. Stay tuned!
-
 ### 2.3.1, TBD
 
 - Harden the sample Kubernetes deployment with restrictive pod and container security contexts, switch it to `IfNotPresent`, and add a sample NetworkPolicy for ingress to port `9161`.
