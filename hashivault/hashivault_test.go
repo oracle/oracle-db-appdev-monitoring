@@ -4,11 +4,22 @@
 package hashivault
 
 import (
+	"errors"
 	"io"
 	"log/slog"
+	"net/http"
 	"reflect"
+	"strings"
 	"testing"
+
+	vault "github.com/hashicorp/vault/api"
 )
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return f(r)
+}
 
 func TestCreateVaultClientFallsBackToDefaultConfigWithoutProxySocket(t *testing.T) {
 	t.Setenv("VAULT_ADDR", "http://127.0.0.1:8200")
@@ -70,5 +81,38 @@ func TestCopyStringSecretDataLeavesRequiredKeyValidationToCaller(t *testing.T) {
 		if !ok || val == "" {
 			t.Fatalf("expected required key %q to remain present, got ok=%v val=%q", key, ok, val)
 		}
+	}
+}
+
+func TestLogicalVaultSecretNotFoundReturnsError(t *testing.T) {
+	httpClient := &http.Client{
+		Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			if r.URL.Path != "/v1/secret/missing" {
+				t.Errorf("unexpected Vault path %q", r.URL.Path)
+			}
+			return &http.Response{
+				StatusCode: http.StatusNotFound,
+				Header:     make(http.Header),
+				Body:       io.NopCloser(strings.NewReader(`{"errors":[]}`)),
+				Request:    r,
+			}, nil
+		}),
+	}
+
+	vaultClient, err := vault.NewClient(&vault.Config{Address: "http://vault.test", HttpClient: httpClient})
+	if err != nil {
+		t.Fatalf("expected Vault test client, got %v", err)
+	}
+	client := HashicorpVaultClient{
+		client: vaultClient,
+		logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	}
+
+	_, err = client.GetVaultSecret(MountTypeLogical, "secret", "missing", []string{"username"})
+	if err == nil {
+		t.Fatal("expected missing logical secret to return an error")
+	}
+	if !errors.Is(err, SecretNotFound) {
+		t.Fatalf("expected SecretNotFound error, got %v", err)
 	}
 }

@@ -21,22 +21,30 @@ import (
 
 type testQueryDriver struct{}
 
-type testQueryConn struct{}
+type testQueryConn struct {
+	rows driver.Rows
+}
 
 type testQueryRows struct {
 	read bool
 }
 
-type testQueryConnector struct{}
+type testQueryConnector struct {
+	rows driver.Rows
+}
 
 var testQueryDriverID atomic.Uint64
 
 func (testQueryDriver) Open(name string) (driver.Conn, error) {
-	return testQueryConn{}, nil
+	return testQueryConn{rows: &testQueryRows{}}, nil
 }
 
-func (testQueryConnector) Connect(context.Context) (driver.Conn, error) {
-	return testQueryConn{}, nil
+func (c testQueryConnector) Connect(context.Context) (driver.Conn, error) {
+	rows := c.rows
+	if rows == nil {
+		rows = &testQueryRows{}
+	}
+	return testQueryConn{rows: rows}, nil
 }
 
 func (testQueryConnector) Driver() driver.Driver {
@@ -55,8 +63,8 @@ func (testQueryConn) Begin() (driver.Tx, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (testQueryConn) QueryContext(context.Context, string, []driver.NamedValue) (driver.Rows, error) {
-	return &testQueryRows{}, nil
+func (c testQueryConn) QueryContext(context.Context, string, []driver.NamedValue) (driver.Rows, error) {
+	return c.rows, nil
 }
 
 func (r *testQueryRows) Columns() []string {
@@ -77,12 +85,16 @@ func (r *testQueryRows) Next(dest []driver.Value) error {
 }
 
 func openTestQueryDB(t *testing.T) *sql.DB {
+	return openTestQueryDBWithRows(t, nil)
+}
+
+func openTestQueryDBWithRows(t *testing.T, rows driver.Rows) *sql.DB {
 	t.Helper()
 
 	name := "collector-test-query-" + strconv.FormatUint(testQueryDriverID.Add(1), 10)
 	sql.Register(name, testQueryDriver{})
 
-	db := sql.OpenDB(testQueryConnector{})
+	db := sql.OpenDB(testQueryConnector{rows: rows})
 	t.Cleanup(func() {
 		_ = db.Close()
 	})

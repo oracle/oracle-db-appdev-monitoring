@@ -4,12 +4,38 @@
 package collector
 
 import (
+	"database/sql/driver"
+	"errors"
 	"io"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
+
+var errTestRowsIteration = errors.New("row iteration failed")
+
+type testRowsWithIterationError struct {
+	read bool
+}
+
+func (r *testRowsWithIterationError) Columns() []string {
+	return []string{"value"}
+}
+
+func (r *testRowsWithIterationError) Close() error {
+	return nil
+}
+
+func (r *testRowsWithIterationError) Next(dest []driver.Value) error {
+	if r.read {
+		return errTestRowsIteration
+	}
+	r.read = true
+	dest[0] = "1"
+	return nil
+}
 
 func TestDuplicatedLabels(t *testing.T) {
 	tests := []struct {
@@ -162,5 +188,30 @@ func TestGetMetricTypeDefaultsToGaugeForUnknownType(t *testing.T) {
 
 	if got != prometheus.GaugeValue {
 		t.Fatalf("expected unknown metric type to default to gauge, got %v", got)
+	}
+}
+
+func TestGeneratePrometheusMetricsReturnsRowsErr(t *testing.T) {
+	exporter := &Exporter{
+		logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	}
+	db := &Database{
+		Session: openTestQueryDBWithRows(t, &testRowsWithIterationError{}),
+	}
+	parseCalls := 0
+
+	err := exporter.generatePrometheusMetrics(db, func(row map[string]string) error {
+		parseCalls++
+		if row["value"] != "1" {
+			t.Fatalf("expected row value to be scanned before iteration error, got %q", row["value"])
+		}
+		return nil
+	}, "select 1 from dual", time.Second)
+
+	if !errors.Is(err, errTestRowsIteration) {
+		t.Fatalf("expected rows iteration error, got %v", err)
+	}
+	if parseCalls != 1 {
+		t.Fatalf("expected parse to be called once before iteration error, got %d", parseCalls)
 	}
 }

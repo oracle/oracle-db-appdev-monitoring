@@ -26,17 +26,25 @@ func GetVaultSecret(vaultId string, secretName string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("fetch OCI Vault secret %q from vault %q: %w", secretName, vaultId, err)
 	}
-	rawSecret := getSecretFromBase64(resp)
+	rawSecret, err := getSecretFromBase64(resp)
+	if err != nil {
+		return "", err
+	}
 	return strings.TrimRight(rawSecret, "\r\n"), nil // make sure a \r and/or \n didn't make it into the secret
 }
 
-func getSecretFromBase64(resp secrets.GetSecretBundleByNameResponse) string {
+func getSecretFromBase64(resp secrets.GetSecretBundleByNameResponse) (string, error) {
 	base64Details, ok := resp.SecretBundleContent.(secrets.Base64SecretBundleContentDetails)
-	secret := ""
-	if ok {
-		secretBytes, _ := b64.StdEncoding.DecodeString(*base64Details.Content)
-		secret = string(secretBytes)
+	if !ok {
+		return "", fmt.Errorf("unsupported OCI Vault secret bundle content type %T", resp.SecretBundleContent)
+	}
+	if base64Details.Content == nil {
+		return "", fmt.Errorf("OCI Vault secret bundle content is empty")
+	}
+	secretBytes, err := b64.StdEncoding.DecodeString(*base64Details.Content)
+	if err != nil {
+		return "", fmt.Errorf("decode OCI Vault secret content: %w", err)
 	}
 
-	return secret
+	return string(secretBytes), nil
 }
