@@ -175,11 +175,11 @@ func TestMetricIsEnabledForDatabase(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := tt.metric.IsEnabledForDatabase(&tt.database)
-			if got != tt.expected {
-				t.Fatalf("expected %v, got %v", tt.expected, got)
+	for i := range tests {
+		t.Run(tests[i].name, func(t *testing.T) {
+			got := tests[i].metric.IsEnabledForDatabase(&tests[i].database)
+			if got != tests[i].expected {
+				t.Fatalf("expected %v, got %v", tests[i].expected, got)
 			}
 		})
 	}

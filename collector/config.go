@@ -255,7 +255,7 @@ func (d DatabaseConfig) GetUsername() (string, error) {
 		return getOCIVaultSecret(d.Vault.OCI.ID, d.Vault.OCI.UsernameSecret)
 	}
 	if d.isAzureVault() && d.Vault.Azure.UsernameSecret != "" {
-		return getAZVaultSecret(d.Vault.Azure.ID, d.Vault.Azure.UsernameSecret), nil
+		return getAZVaultSecret(d.Vault.Azure.ID, d.Vault.Azure.UsernameSecret)
 	}
 	if d.isHashiCorpVault() && d.Vault.HashiCorp.MountType != "" && d.Vault.HashiCorp.MountName != "" && d.Vault.HashiCorp.SecretPath != "" {
 		if err := d.fetchHashiCorpVaultSecret(); err != nil {
@@ -275,8 +275,7 @@ func (d DatabaseConfig) GetPassword() (string, error) {
 	if d.PasswordFile != "" {
 		bytes, err := os.ReadFile(d.PasswordFile)
 		if err != nil {
-			// If there is an invalid file, exporter cannot continue processing.
-			panic(fmt.Errorf("failed to read password file: %v", err))
+			return "", fmt.Errorf("failed to read password file %q: %w", d.PasswordFile, err)
 		}
 		return string(bytes), nil
 	}
@@ -284,7 +283,7 @@ func (d DatabaseConfig) GetPassword() (string, error) {
 		return getOCIVaultSecret(d.Vault.OCI.ID, d.Vault.OCI.PasswordSecret)
 	}
 	if d.isAzureVault() && d.Vault.Azure.PasswordSecret != "" {
-		return getAZVaultSecret(d.Vault.Azure.ID, d.Vault.Azure.PasswordSecret), nil
+		return getAZVaultSecret(d.Vault.Azure.ID, d.Vault.Azure.PasswordSecret)
 	}
 	if d.isHashiCorpVault() && d.Vault.HashiCorp.MountType != "" && d.Vault.HashiCorp.MountName != "" && d.Vault.HashiCorp.SecretPath != "" {
 		if err := d.fetchHashiCorpVaultSecret(); err != nil {

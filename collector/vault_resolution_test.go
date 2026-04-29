@@ -75,6 +75,33 @@ func TestHashiCorpVaultLookupErrorIsReturned(t *testing.T) {
 	}
 }
 
+func TestAzureVaultLookupErrorIsReturned(t *testing.T) {
+	original := getAZVaultSecret
+	getAZVaultSecret = func(vaultID, secretName string) (string, error) {
+		return "", errors.New("azure vault unavailable")
+	}
+	t.Cleanup(func() {
+		getAZVaultSecret = original
+	})
+
+	cfg := DatabaseConfig{
+		Vault: &VaultConfig{
+			Azure: &AZVault{
+				ID:             "vault-1",
+				PasswordSecret: "db-password",
+			},
+		},
+	}
+
+	_, err := cfg.GetPassword()
+	if err == nil {
+		t.Fatal("expected Azure Vault lookup error")
+	}
+	if err.Error() != "azure vault unavailable" {
+		t.Fatalf("expected Azure Vault error to be preserved, got %v", err)
+	}
+}
+
 func hashiCorpMountTypeKVv2ForTest() string {
 	return "kvv2"
 }

@@ -24,6 +24,7 @@ const (
 
 var UnsupportedMountType = errors.New("Unsupported HashiCorp Vault mount type")
 var RequiredKeyMissing = errors.New("Required key missing from HashiCorp Vault secret")
+var SecretNotFound = errors.New("HashiCorp Vault secret not found")
 
 type HashicorpVaultClient struct {
 	client *vault.Client
@@ -100,6 +101,10 @@ func (c HashicorpVaultClient) getVaultSecret(mountType string, mount string, pat
 			c.logger.Error("Failed to fetch secret from HashiCorp Vault", "err", err)
 			return result, err
 		}
+		if secret == nil {
+			c.logger.Error(SecretNotFound.Error(), "mountType", mountType, "mountName", mount, "secretPath", path)
+			return result, fmt.Errorf("%w: %s/%s", SecretNotFound, mount, path)
+		}
 		secretData = secret.Data
 	} else if mountType == MountTypeDatabase || mountType == MountTypeLogical {
 		// Handle other types of secrets, for example database roles, just using the Logical() backend
@@ -115,6 +120,10 @@ func (c HashicorpVaultClient) getVaultSecret(mountType string, mount string, pat
 		if err != nil {
 			c.logger.Error("Failed to fetch secret from HashiCorp Vault", "err", err)
 			return result, err
+		}
+		if secret == nil {
+			c.logger.Error(SecretNotFound.Error(), "secretPath", secretPath)
+			return result, fmt.Errorf("%w: %s", SecretNotFound, secretPath)
 		}
 		secretData = secret.Data
 	} else {

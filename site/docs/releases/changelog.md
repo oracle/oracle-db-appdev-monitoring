@@ -9,10 +9,9 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
-- Changes TBD. Stay tuned!
-
 ### 2.3.1, TBD
 
+- Harden vault secret resolution, password-file handling, and metrics row iteration so errors are returned or logged instead of causing panics, exits, or silent scrape success.
 - Harden the sample Kubernetes deployment with restrictive pod and container security contexts, switch it to `IfNotPresent`, and add a sample NetworkPolicy for ingress to port `9161`.
 - Set HTTP server read-header, read, and idle timeouts before handing the listener to the Prometheus exporter toolkit, and expose those timeout defaults through the exporter config file.
 - Pin the demo Docker Compose `prom/prometheus` and `grafana/grafana` images to immutable digests instead of floating tags.

@@ -555,9 +555,13 @@ func (e *Exporter) generatePrometheusMetrics(d *Database, parse func(row map[str
 	if err != nil {
 		return err
 	}
-	cols, err := rows.Columns()
 	defer unlock()
 	defer rows.Close()
+
+	cols, err := rows.Columns()
+	if err != nil {
+		return err
+	}
 
 	for rows.Next() {
 		// Create a slice of interface{}'s to represent each column,
@@ -585,7 +589,7 @@ func (e *Exporter) generatePrometheusMetrics(d *Database, parse func(row map[str
 			return err
 		}
 	}
-	return nil
+	return rows.Err()
 }
 
 func (e *Exporter) initCache() {
