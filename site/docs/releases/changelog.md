@@ -30,6 +30,7 @@ List of upcoming and historic changes to the exporter.
 - Ignore non-string values returned from HashiCorp Vault secret payloads instead of panicking, so malformed or structured KV data cannot crash the exporter.
 - Verify downloaded Go toolchain tarballs against the published SHA256 in the Docker build and macOS release script before extracting them.
 - Use a bind variable for the alert-log timestamp query instead of interpolating the last on-disk timestamp into SQL text.
+- Fix the default `cache_hit_ratio` metric to query `gv$con_sysmetric`, include the `inst_id` label, and report the supported buffer and cursor cache hit ratio metrics.
 - Update the Go module dependency set, including newer OCI SDK, Prometheus exporter toolkit, YAML, Azure SDK, and `golang.org/x/*` versions.
 
 Thank you to the following users for their suggestions and contributions:
