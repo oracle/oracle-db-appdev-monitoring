@@ -28,11 +28,11 @@ grant select on sys.gv_$sysstat to exporteruser;
 grant select on sys.gv_$process to exporteruser;
 grant select on sys.gv_$waitclassmetric to exporteruser;
 grant select on sys.gv_$session to exporteruser;
-grant select on sys. gv_$resource_limit to exporteruser;
+grant select on sys.gv_$resource_limit to exporteruser;
 grant select on sys.gv_$parameter to exporteruser;
 grant select on sys.gv_$database to exporteruser;
 grant select on sys.gv_$sqlstats to exporteruser;
-grant select on sys.gv_$sysmetric to exporteruser;
+grant select on sys.gv_$con_sysmetric to exporteruser;
 grant select on sys.v_$diag_alert_ext to exporteruser; -- for alert logs only
 ```
 
