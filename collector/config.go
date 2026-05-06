@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	getOCIVaultSecret       = ocivault.GetVaultSecretWithAuth
+	getOCIVaultSecret       = ocivault.GetVaultSecret
 	getAZVaultSecret        = azvault.GetVaultSecret
 	getHashiCorpVaultSecret = func(logger *slog.Logger, cfg *HashiCorpVault, requiredKeys []string) (map[string]string, error) {
 		client, err := hashivault.CreateVaultClient(logger, cfg.Socket)

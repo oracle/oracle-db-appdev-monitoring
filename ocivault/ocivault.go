@@ -56,7 +56,7 @@ func ValidateAuthMode(authMode AuthMode) error {
 	}
 }
 
-func GetVaultSecretWithAuth(vaultId string, secretName string, authMode AuthMode) (string, error) {
+func GetVaultSecret(vaultId string, secretName string, authMode AuthMode) (string, error) {
 	configProvider, err := configurationProviderForAuthMode(authMode)
 	if err != nil {
 		return "", err
