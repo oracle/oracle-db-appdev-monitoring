@@ -1,4 +1,4 @@
-// Copyright (c) 2023, 2025, Oracle and/or its affiliates.
+// Copyright (c) 2023, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 package ocivault
@@ -10,11 +10,58 @@ import (
 	"strings"
 
 	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/common/auth"
 	"github.com/oracle/oci-go-sdk/v65/secrets"
 )
 
-func GetVaultSecret(vaultId string, secretName string) (string, error) {
-	client, err := secrets.NewSecretsClientWithConfigurationProvider(common.DefaultConfigProvider())
+type AuthMode string
+
+const (
+	AuthModeConfigFile        AuthMode = "config_file"
+	AuthModeInstancePrincipal AuthMode = "instance_principal"
+	AuthModeResourcePrincipal AuthMode = "resource_principal"
+	AuthModeWorkloadIdentity  AuthMode = "workload_identity"
+)
+
+var (
+	defaultConfigProvider = func() (common.ConfigurationProvider, error) {
+		return common.DefaultConfigProvider(), nil
+	}
+	instancePrincipalConfigurationProvider = func() (common.ConfigurationProvider, error) {
+		return auth.InstancePrincipalConfigurationProvider()
+	}
+	resourcePrincipalConfigurationProvider = func() (common.ConfigurationProvider, error) {
+		return auth.ResourcePrincipalConfigurationProvider()
+	}
+	workloadIdentityConfigurationProvider = func() (common.ConfigurationProvider, error) {
+		return auth.OkeWorkloadIdentityConfigurationProvider()
+	}
+)
+
+func AcceptedAuthModes() []string {
+	return []string{
+		string(AuthModeConfigFile),
+		string(AuthModeInstancePrincipal),
+		string(AuthModeResourcePrincipal),
+		string(AuthModeWorkloadIdentity),
+	}
+}
+
+func ValidateAuthMode(authMode AuthMode) error {
+	switch normalizeAuthMode(authMode) {
+	case AuthModeConfigFile, AuthModeInstancePrincipal, AuthModeResourcePrincipal, AuthModeWorkloadIdentity:
+		return nil
+	default:
+		return fmt.Errorf("unsupported OCI Vault auth mode %q; accepted values are: %s", authMode, strings.Join(AcceptedAuthModes(), ", "))
+	}
+}
+
+func GetVaultSecretWithAuth(vaultId string, secretName string, authMode AuthMode) (string, error) {
+	configProvider, err := configurationProviderForAuthMode(authMode)
+	if err != nil {
+		return "", err
+	}
+	client, err := secrets.NewSecretsClientWithConfigurationProvider(configProvider)
 	if err != nil {
 		return "", fmt.Errorf("create OCI Vault client: %w", err)
 	}
@@ -31,6 +78,30 @@ func GetVaultSecret(vaultId string, secretName string) (string, error) {
 		return "", err
 	}
 	return strings.TrimRight(rawSecret, "\r\n"), nil // make sure a \r and/or \n didn't make it into the secret
+}
+
+func configurationProviderForAuthMode(authMode AuthMode) (common.ConfigurationProvider, error) {
+	mode := normalizeAuthMode(authMode)
+	switch mode {
+	case AuthModeConfigFile:
+		return defaultConfigProvider()
+	case AuthModeInstancePrincipal:
+		return instancePrincipalConfigurationProvider()
+	case AuthModeResourcePrincipal:
+		return resourcePrincipalConfigurationProvider()
+	case AuthModeWorkloadIdentity:
+		return workloadIdentityConfigurationProvider()
+	default:
+		return defaultConfigProvider()
+	}
+}
+
+func normalizeAuthMode(authMode AuthMode) AuthMode {
+	mode := strings.ToLower(strings.TrimSpace(string(authMode)))
+	if mode == "" {
+		return AuthModeConfigFile
+	}
+	return AuthMode(mode)
 }
 
 func getSecretFromBase64(resp secrets.GetSecretBundleByNameResponse) (string, error) {

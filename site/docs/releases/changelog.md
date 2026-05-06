@@ -9,6 +9,11 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
+- Allow config-file OCI Vault credentials to authenticate with instance principal, resource principal, or OKE workload identity in addition to the existing OCI config-file provider.
+
+Thank you to the following users for their suggestions and contributions:
+- [a2k4sharma](https://github.com/a2k4sharma)
+
 ### 2.3.1, May 6th, 2026
 
 - Harden vault secret resolution, password-file handling, and metrics row iteration so errors are returned or logged instead of causing panics, exits, or silent scrape success.

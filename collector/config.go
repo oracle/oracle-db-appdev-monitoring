@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	getOCIVaultSecret       = ocivault.GetVaultSecret
+	getOCIVaultSecret       = ocivault.GetVaultSecretWithAuth
 	getAZVaultSecret        = azvault.GetVaultSecret
 	getHashiCorpVaultSecret = func(logger *slog.Logger, cfg *HashiCorpVault, requiredKeys []string) (map[string]string, error) {
 		client, err := hashivault.CreateVaultClient(logger, cfg.Socket)
@@ -79,9 +79,10 @@ type VaultConfig struct {
 }
 
 type OCIVault struct {
-	ID             string `yaml:"id"`
-	UsernameSecret string `yaml:"usernameSecret"`
-	PasswordSecret string `yaml:"passwordSecret"`
+	ID             string            `yaml:"id"`
+	Auth           ocivault.AuthMode `yaml:"auth,omitempty"`
+	UsernameSecret string            `yaml:"usernameSecret"`
+	PasswordSecret string            `yaml:"passwordSecret"`
 }
 
 type AZVault struct {
@@ -252,7 +253,7 @@ func (d DatabaseConfig) fetchHashiCorpVaultSecret() error {
 
 func (d DatabaseConfig) GetUsername() (string, error) {
 	if d.isOCIVault() && d.Vault.OCI.UsernameSecret != "" {
-		return getOCIVaultSecret(d.Vault.OCI.ID, d.Vault.OCI.UsernameSecret)
+		return getOCIVaultSecret(d.Vault.OCI.ID, d.Vault.OCI.UsernameSecret, d.Vault.OCI.Auth)
 	}
 	if d.isAzureVault() && d.Vault.Azure.UsernameSecret != "" {
 		return getAZVaultSecret(d.Vault.Azure.ID, d.Vault.Azure.UsernameSecret)
@@ -280,7 +281,7 @@ func (d DatabaseConfig) GetPassword() (string, error) {
 		return string(bytes), nil
 	}
 	if d.isOCIVault() && d.Vault.OCI.PasswordSecret != "" {
-		return getOCIVaultSecret(d.Vault.OCI.ID, d.Vault.OCI.PasswordSecret)
+		return getOCIVaultSecret(d.Vault.OCI.ID, d.Vault.OCI.PasswordSecret, d.Vault.OCI.Auth)
 	}
 	if d.isAzureVault() && d.Vault.Azure.PasswordSecret != "" {
 		return getAZVaultSecret(d.Vault.Azure.ID, d.Vault.Azure.PasswordSecret)
@@ -432,6 +433,21 @@ func (m *MetricsConfiguration) defaultDatabase(cfg *Config) DatabaseConfig {
 
 func (m *MetricsConfiguration) validate(logger *slog.Logger) error {
 	m.checkDuplicatedDatabases(logger)
+	if err := m.validateOCIVaultAuth(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *MetricsConfiguration) validateOCIVaultAuth() error {
+	for name, cfg := range m.Databases {
+		if cfg.Vault == nil || cfg.Vault.OCI == nil {
+			continue
+		}
+		if err := ocivault.ValidateAuthMode(cfg.Vault.OCI.Auth); err != nil {
+			return fmt.Errorf("database %q: %w", name, err)
+		}
+	}
 	return nil
 }
 
