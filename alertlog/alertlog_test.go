@@ -14,7 +14,7 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/collector"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/collector"
 )
 
 func TestNullStringValue(t *testing.T) {
