@@ -89,7 +89,7 @@ The application will create ten queues names TOPIC_0 through TOPIC_9 and randoml
 
 ### Metrics definitions
 
-The metrics definitions are provided in [this file](https://github.com/oracle/oracle-db-appdev-monitoring/blob/main/custom-metrics-example/txeventq-metrics.toml).  You need to provide this file to the exporter, e.g., by adding it to your container image, or creating a Kubernetes config map containing the file and mounting that config map as a volume in your deployment.  You also need to set the `CUSTOM_METRICS` environment variable to the location of this file.
+The metrics definitions are provided in [this file](https://github.com/oracle/oracle-db-appdev-monitoring/blob/main/custom-metrics-example/txeventq-metrics.toml).  You need to provide this file to the exporter, e.g., by adding it to your container image, or creating a Kubernetes config map containing the file and mounting that config map as a volume in your deployment.  Reference the mounted file from the exporter configuration under `metrics.custom`.
 
 ### Additional database permissions
 

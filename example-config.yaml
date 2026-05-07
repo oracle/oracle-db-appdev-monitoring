@@ -54,6 +54,10 @@ metrics:
     - custom-metrics-example/custom-metrics.toml
 
 log:
+  # Log level: debug, info, warn, or error
+  level: info
+  # Log output format: logfmt or json
+  format: logfmt
   # Path of log file
   destination: /opt/alert.log
   # Interval of log updates

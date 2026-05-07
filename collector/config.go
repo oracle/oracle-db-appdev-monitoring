@@ -115,6 +115,8 @@ type LoggingConfig struct {
 	LogInterval         *time.Duration `yaml:"interval"`
 	LogDestination      string         `yaml:"destination"`
 	LogPerDatabaseFiles *bool          `yaml:"perDatabaseFiles"`
+	Level               string         `yaml:"level"`
+	Format              string         `yaml:"format"`
 }
 
 func (m *MetricsConfiguration) DatabaseLabel() string {
@@ -306,30 +308,31 @@ func (d DatabaseConfig) isHashiCorpVault() bool {
 	return d.Vault != nil && d.Vault.HashiCorp != nil
 }
 
-func LoadMetricsConfiguration(logger *slog.Logger, cfg *Config, path string, flags *web.FlagConfig) (*MetricsConfiguration, error) {
+func LoadMetricsConfiguration(logger *slog.Logger, cfg *Config) (*MetricsConfiguration, error) {
 	m := &MetricsConfiguration{}
-	if len(cfg.ConfigFile) > 0 {
-		content, err := os.ReadFile(cfg.ConfigFile)
-		if err != nil {
-			return m, err
-		}
-		expanded := os.Expand(string(content), func(s string) string {
-			// allows escaping literal $ characters
-			if s == "$" {
-				return "$"
-			}
-			return os.Getenv(s)
-		})
-		if yerr := yaml.UnmarshalStrict([]byte(expanded), m); yerr != nil {
-			return m, yerr
-		}
-	} else {
-		logger.Warn("Configuring default database from CLI parameters is deprecated. Use of the '--config.file' argument is preferred. See https://oracle.github.io/oracle-db-appdev-monitoring/docs/getting-started/basics#standalone-binary")
-		m.Databases = make(map[string]DatabaseConfig)
-		m.Databases["default"] = m.defaultDatabase(cfg)
+	if cfg == nil {
+		return m, fmt.Errorf("config file is required")
+	}
+	if len(strings.TrimSpace(cfg.ConfigFile)) == 0 {
+		return m, fmt.Errorf("config file is required")
 	}
 
-	m.merge(cfg, path, flags)
+	content, err := os.ReadFile(cfg.ConfigFile)
+	if err != nil {
+		return m, err
+	}
+	expanded := os.Expand(string(content), func(s string) string {
+		// allows escaping literal $ characters
+		if s == "$" {
+			return "$"
+		}
+		return os.Getenv(s)
+	})
+	if yerr := yaml.UnmarshalStrict([]byte(expanded), m); yerr != nil {
+		return m, yerr
+	}
+
+	m.merge()
 	return m, m.validate(logger)
 }
 
@@ -341,97 +344,101 @@ func (wc WebConfig) Flags() *web.FlagConfig {
 	}
 }
 
-func (m *MetricsConfiguration) merge(cfg *Config, path string, flags *web.FlagConfig) {
+func (m *MetricsConfiguration) merge() {
 	if len(m.MetricsPath) == 0 {
-		m.MetricsPath = path
+		m.MetricsPath = "/metrics"
 	}
-	m.mergeWebConfig(flags)
-	m.mergeLoggingConfig(cfg)
-	m.mergeMetricsConfig(cfg)
+	m.mergeWebConfig()
+	m.mergeLoggingConfig()
+	m.mergeMetricsConfig()
 	if m.Metrics.ScrapeInterval == nil {
-		m.Metrics.ScrapeInterval = &cfg.ScrapeInterval
+		scrapeInterval := time.Duration(0)
+		m.Metrics.ScrapeInterval = &scrapeInterval
 	}
 }
 
-func (m *MetricsConfiguration) mergeWebConfig(flags *web.FlagConfig) {
+func (m *MetricsConfiguration) mergeWebConfig() {
 	if m.Web.ListenAddresses == nil {
-		m.Web.ListenAddresses = flags.WebListenAddresses
+		listenAddresses := []string{":9161"}
+		m.Web.ListenAddresses = &listenAddresses
 	}
 	if m.Web.SystemdSocket == nil {
-		m.Web.SystemdSocket = flags.WebSystemdSocket
+		systemdSocket := false
+		m.Web.SystemdSocket = &systemdSocket
 	}
 	if m.Web.ConfigFile == nil {
-		m.Web.ConfigFile = flags.WebConfigFile
+		configFile := ""
+		m.Web.ConfigFile = &configFile
 	}
 }
 
-func (m *MetricsConfiguration) mergeLoggingConfig(cfg *Config) {
+func (m *MetricsConfiguration) mergeLoggingConfig() {
 	if m.Logging.LogDisable == nil {
-		m.Logging.LogDisable = cfg.LoggingConfig.LogDisable
+		disable := 0
+		m.Logging.LogDisable = &disable
 	}
 	if m.Logging.LogInterval == nil {
-		m.Logging.LogInterval = cfg.LoggingConfig.LogInterval
+		interval := 15 * time.Second
+		m.Logging.LogInterval = &interval
 	}
 	if m.Logging.LogPerDatabaseFiles == nil {
-		m.Logging.LogPerDatabaseFiles = cfg.LoggingConfig.LogPerDatabaseFiles
+		perDatabaseFiles := false
+		m.Logging.LogPerDatabaseFiles = &perDatabaseFiles
 	}
 	if len(m.Logging.LogDestination) == 0 {
-		m.Logging.LogDestination = cfg.LoggingConfig.LogDestination
+		m.Logging.LogDestination = "/log/alert.log"
+	}
+	if len(m.Logging.Level) == 0 {
+		m.Logging.Level = "info"
+	}
+	if len(m.Logging.Format) == 0 {
+		m.Logging.Format = "logfmt"
 	}
 }
 
-func (m *MetricsConfiguration) mergeMetricsConfig(cfg *Config) {
+func (m *MetricsConfiguration) mergeMetricsConfig() {
 	if len(m.Metrics.Default) == 0 {
-		m.Metrics.Default = cfg.DefaultMetricsFile
+		m.Metrics.Default = "default-metrics.toml"
 	}
-	if len(m.Metrics.Custom) == 0 {
-		m.Metrics.Custom = strings.Split(cfg.CustomMetrics, ",")
-	}
-}
-
-// defaultDatabase creates a database named "default" if CLI arguments are used. It is for backwards compatibility when the exporter
-// was only configurable through CLI arguments for a single database instance.
-func (m *MetricsConfiguration) defaultDatabase(cfg *Config) DatabaseConfig {
-	dbconfig := DatabaseConfig{
-		Username: cfg.User,
-		Password: cfg.Password,
-		URL:      cfg.ConnectString,
-		ConnectConfig: ConnectConfig{
-			Role:               cfg.DbRole,
-			TNSAdmin:           cfg.ConfigDir,
-			ExternalAuth:       cfg.ExternalAuth,
-			MaxOpenConns:       &cfg.MaxOpenConns,
-			MaxIdleConns:       &cfg.MaxIdleConns,
-			PoolIncrement:      &cfg.PoolIncrement,
-			PoolMaxConnections: &cfg.PoolMaxConnections,
-			PoolMinConnections: &cfg.PoolMinConnections,
-			QueryTimeout:       &cfg.QueryTimeout,
-		},
-	}
-	// Vault ID lookup through environment variables is the historic method of loading vault metadata.
-	// These semantics are preserved if the "default" database from CLI config is requested.
-	if ociVaultID, useOciVault := os.LookupEnv("OCI_VAULT_ID"); useOciVault {
-		dbconfig.Vault = &VaultConfig{
-			OCI: &OCIVault{
-				ID:             ociVaultID,
-				UsernameSecret: os.Getenv("OCI_VAULT_USERNAME_SECRET"),
-				PasswordSecret: os.Getenv("OCI_VAULT_PASSWORD_SECRET"),
-			},
-		}
-	} else if azVaultID, useAzVault := os.LookupEnv("AZ_VAULT_ID"); useAzVault {
-		dbconfig.Vault = &VaultConfig{
-			Azure: &AZVault{
-				ID:             azVaultID,
-				UsernameSecret: os.Getenv("AZ_VAULT_USERNAME_SECRET"),
-				PasswordSecret: os.Getenv("AZ_VAULT_PASSWORD_SECRET"),
-			},
-		}
-	}
-	return dbconfig
 }
 
 func (m *MetricsConfiguration) validate(logger *slog.Logger) error {
 	m.checkDuplicatedDatabases(logger)
+<<<<<<< Updated upstream
+=======
+	if err := m.validateOCIVaultAuth(); err != nil {
+		return err
+	}
+	if err := m.validateLoggingConfig(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *MetricsConfiguration) validateLoggingConfig() error {
+	switch m.Logging.Level {
+	case "", "debug", "info", "warn", "error":
+	default:
+		return fmt.Errorf("invalid log.level %q; accepted values are debug, info, warn, error", m.Logging.Level)
+	}
+	switch m.Logging.Format {
+	case "", "logfmt", "json":
+	default:
+		return fmt.Errorf("invalid log.format %q; accepted values are logfmt, json", m.Logging.Format)
+	}
+	return nil
+}
+
+func (m *MetricsConfiguration) validateOCIVaultAuth() error {
+	for name, cfg := range m.Databases {
+		if cfg.Vault == nil || cfg.Vault.OCI == nil {
+			continue
+		}
+		if err := ocivault.ValidateAuthMode(cfg.Vault.OCI.Auth); err != nil {
+			return fmt.Errorf("database %q: %w", name, err)
+		}
+	}
+>>>>>>> Stashed changes
 	return nil
 }
 

@@ -5,27 +5,28 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"errors"
+	"flag"
 	"fmt"
 	"html"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/prometheus/common/promslog"
-	"github.com/prometheus/common/promslog/flag"
 
 	"github.com/prometheus/client_golang/prometheus"
 	cversion "github.com/prometheus/client_golang/prometheus/collectors/version"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/exporter-toolkit/web"
-	webflag "github.com/prometheus/exporter-toolkit/web/kingpinflag"
-
-	"github.com/alecthomas/kingpin/v2"
 
 	// Required for debugging
 	// _ "net/http/pprof"
@@ -36,28 +37,54 @@ import (
 
 var (
 	// Version will be set at build time.
-	Version            = "0.0.0.dev"
-	configFile         = kingpin.Flag("config.file", "File with metrics exporter configuration. (env: CONFIG_FILE)").Default(getEnv("CONFIG_FILE", "")).String()
-	metricPath         = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics. (env: TELEMETRY_PATH)").Default(getEnv("TELEMETRY_PATH", "/metrics")).String()
-	defaultFileMetrics = kingpin.Flag("default.metrics", "File with default metrics in a TOML file. (env: DEFAULT_METRICS)").Default(getEnv("DEFAULT_METRICS", "default-metrics.toml")).String()
-	customMetrics      = kingpin.Flag("custom.metrics", "Comma separated list of file(s) that contain various custom metrics in a TOML format. (env: CUSTOM_METRICS)").Default(getEnv("CUSTOM_METRICS", "")).String()
-	queryTimeout       = kingpin.Flag("query.timeout", "Query timeout (in seconds). (env: QUERY_TIMEOUT)").Default(getEnv("QUERY_TIMEOUT", "5")).Int()
-	maxIdleConns       = kingpin.Flag("database.maxIdleConns", "Number of maximum idle connections in the connection pool. (env: DATABASE_MAXIDLECONNS)").Default(getEnv("DATABASE_MAXIDLECONNS", "10")).Int()
-	maxOpenConns       = kingpin.Flag("database.maxOpenConns", "Number of maximum open connections in the connection pool. (env: DATABASE_MAXOPENCONNS)").Default(getEnv("DATABASE_MAXOPENCONNS", "10")).Int()
-	poolIncrement      = kingpin.Flag("database.poolIncrement", "Connection increment when the connection pool reaches max capacity. (env: DATABASE_POOLINCREMENT)").Default(getEnv("DATABASE_POOLINCREMENT", "-1")).Int()
-	poolMaxConnections = kingpin.Flag("database.poolMaxConnections", "Maximum number of connections in the connection pool. (env: DATABASE_POOLMAXCONNECTIONS)").Default(getEnv("DATABASE_POOLMAXCONNECTIONS", "-1")).Int()
-	poolMinConnections = kingpin.Flag("database.poolMinConnections", "Minimum number of connections in the connection pool. (env: DATABASE_POOLMINCONNECTIONS)").Default(getEnv("DATABASE_POOLMINCONNECTIONS", "-1")).Int()
-	scrapeInterval     = kingpin.Flag("scrape.interval", "Interval between each scrape. Default is to scrape on collect requests.").Default("0s").Duration()
-	logDisable         = kingpin.Flag("log.disable", "Set to 1 to disable alert logs").Default("0").Int()
-	logInterval        = kingpin.Flag("log.interval", "Interval between log updates (e.g. 5s).").Default("15s").Duration()
-	logDestination     = kingpin.Flag("log.destination", "File to output the alert log to. (env: LOG_DESTINATION)").Default(getEnv("LOG_DESTINATION", "/log/alert.log")).String()
-	toolkitFlags       = webflag.AddFlags(kingpin.CommandLine, ":9161")
+	Version = "0.0.0.dev"
 )
 
 func syncBuildVersion() {
 	if version.Version == "" {
 		version.Version = Version
 	}
+}
+
+func parseConfigFile(args []string, getenv func(string) string, output io.Writer) (string, error) {
+	flags := flag.NewFlagSet("oracledb_exporter", flag.ContinueOnError)
+	var flagOutput bytes.Buffer
+	flags.SetOutput(&flagOutput)
+	flags.Usage = func() {
+		fmt.Fprintf(flags.Output(), "Usage of oracledb_exporter:\n")
+		fmt.Fprintf(flags.Output(), "  --config.file string\n")
+		fmt.Fprintf(flags.Output(), "        File with metrics exporter configuration. (env: CONFIG_FILE)\n")
+	}
+
+	configFile := flags.String("config.file", getenv("CONFIG_FILE"), "File with metrics exporter configuration. (env: CONFIG_FILE)")
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) && output != nil {
+			_, _ = output.Write(flagOutput.Bytes())
+		}
+		return "", err
+	}
+	if flags.NArg() > 0 {
+		return "", fmt.Errorf("unexpected positional arguments: %s", strings.Join(flags.Args(), " "))
+	}
+	if strings.TrimSpace(*configFile) == "" {
+		return "", errors.New("config file is required; set --config.file or CONFIG_FILE")
+	}
+	return *configFile, nil
+}
+
+func promslogConfig(levelValue, formatValue string) (*promslog.Config, error) {
+	level := promslog.NewLevel()
+	if err := level.Set(levelValue); err != nil {
+		return nil, err
+	}
+	format := promslog.NewFormat()
+	if err := format.Set(formatValue); err != nil {
+		return nil, err
+	}
+	return &promslog.Config{
+		Level:  level,
+		Format: format,
+	}, nil
 }
 
 func landingPageHTML(metricsPath string) string {
@@ -75,19 +102,30 @@ func landingPageHandler(metricsPath string) http.HandlerFunc {
 func main() {
 	syncBuildVersion()
 
-	promLogConfig := &promslog.Config{}
-	flag.AddFlags(kingpin.CommandLine, promLogConfig)
-	kingpin.HelpFlag.Short('\n')
-	kingpin.Version(version.Print("oracledb_exporter"))
-	kingpin.Parse()
+	configFile, err := parseConfigFile(os.Args[1:], os.Getenv, os.Stderr)
+	if err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return
+		}
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(2)
+	}
+
+	bootstrapLogConfig, _ := promslogConfig("info", "logfmt")
+	bootstrapLogger := promslog.New(bootstrapLogConfig)
+	config := &collector.Config{ConfigFile: configFile}
+	m, err := collector.LoadMetricsConfiguration(bootstrapLogger, config)
+	if err != nil {
+		bootstrapLogger.Error("unable to load metrics configuration file", "error", err)
+		os.Exit(1)
+	}
+
+	promLogConfig, err := promslogConfig(m.Logging.Level, m.Logging.Format)
+	if err != nil {
+		bootstrapLogger.Error("invalid logging configuration", "error", err)
+		os.Exit(1)
+	}
 	logger := promslog.New(promLogConfig)
-	user := os.Getenv("DB_USERNAME")
-	password := os.Getenv("DB_PASSWORD")
-	connectString := os.Getenv("DB_CONNECT_STRING")
-	dbrole := os.Getenv("DB_ROLE")
-	tnsadmin := os.Getenv("TNS_ADMIN")
-	// externalAuth - Default to user/password but if no password is supplied then will automagically set to true
-	externalAuth := false
 
 	freeOSMemInterval, enableFree := os.LookupEnv("FREE_INTERVAL")
 	if enableFree {
@@ -101,35 +139,6 @@ func main() {
 		logger.Info("RESTART_INTERVAL env var is present, so will restart my own process periodically", "restart_interval", restartInterval)
 	} else {
 		logger.Info("RESTART_INTERVAL env var is not present, so will not restart myself periodically")
-	}
-
-	config := &collector.Config{
-		ConfigFile:         *configFile,
-		User:               user,
-		Password:           password,
-		ConnectString:      connectString,
-		DbRole:             dbrole,
-		ConfigDir:          tnsadmin,
-		ExternalAuth:       externalAuth,
-		MaxOpenConns:       *maxOpenConns,
-		MaxIdleConns:       *maxIdleConns,
-		PoolIncrement:      *poolIncrement,
-		PoolMaxConnections: *poolMaxConnections,
-		PoolMinConnections: *poolMinConnections,
-		CustomMetrics:      *customMetrics,
-		QueryTimeout:       *queryTimeout,
-		DefaultMetricsFile: *defaultFileMetrics,
-		ScrapeInterval:     *scrapeInterval,
-		LoggingConfig: collector.LoggingConfig{
-			LogDisable:     logDisable,
-			LogInterval:    logInterval,
-			LogDestination: *logDestination,
-		},
-	}
-	m, err := collector.LoadMetricsConfiguration(logger, config, *metricPath, toolkitFlags)
-	if err != nil {
-		logger.Error("unable to load metrics configuration file", "error", err)
-		return
 	}
 
 	exporter := collector.NewExporter(logger, m)
@@ -239,12 +248,4 @@ func main() {
 		os.Exit(1)
 	}
 
-}
-
-// getEnv returns the value of an environment variable, or returns the provided fallback value
-func getEnv(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
-	}
-	return fallback
 }
