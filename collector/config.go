@@ -5,15 +5,16 @@ package collector
 
 import (
 	"fmt"
+	"log/slog"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/oracle/oracle-db-appdev-monitoring/azvault"
 	"github.com/oracle/oracle-db-appdev-monitoring/hashivault"
 	"github.com/oracle/oracle-db-appdev-monitoring/ocivault"
 	"github.com/prometheus/exporter-toolkit/web"
 	"go.yaml.in/yaml/v2"
-	"log/slog"
-	"os"
-	"strings"
-	"time"
 )
 
 var (
@@ -404,11 +405,6 @@ func (m *MetricsConfiguration) mergeMetricsConfig() {
 
 func (m *MetricsConfiguration) validate(logger *slog.Logger) error {
 	m.checkDuplicatedDatabases(logger)
-<<<<<<< Updated upstream
-=======
-	if err := m.validateOCIVaultAuth(); err != nil {
-		return err
-	}
 	if err := m.validateLoggingConfig(); err != nil {
 		return err
 	}
@@ -426,19 +422,6 @@ func (m *MetricsConfiguration) validateLoggingConfig() error {
 	default:
 		return fmt.Errorf("invalid log.format %q; accepted values are logfmt, json", m.Logging.Format)
 	}
-	return nil
-}
-
-func (m *MetricsConfiguration) validateOCIVaultAuth() error {
-	for name, cfg := range m.Databases {
-		if cfg.Vault == nil || cfg.Vault.OCI == nil {
-			continue
-		}
-		if err := ocivault.ValidateAuthMode(cfg.Vault.OCI.Auth); err != nil {
-			return fmt.Errorf("database %q: %w", name, err)
-		}
-	}
->>>>>>> Stashed changes
 	return nil
 }
 

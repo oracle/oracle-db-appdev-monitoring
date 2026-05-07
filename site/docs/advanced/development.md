@@ -11,7 +11,7 @@ External contributions are welcome, see [CONTRIBUTING](https://github.com/oracle
 
 The exporter initialization is as follows:
 
-- Parse flags options and configuration properties
+- Parse the `--config.file` option and configuration properties
 - Load the default toml file (`default-metrics.toml`) and store each metric in a `Metric` struct
 - Load the custom toml file (if a custom toml file is given)
 - Create an `Exporter` object
