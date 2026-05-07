@@ -102,6 +102,7 @@ docker run -it --rm \
 ```
 
 ## Standalone Binary
+### From releases
 
 Pre-compiled versions for Linux, ARM and Darwin 64-bit can be found under [releases](https://github.com/oracle/oracle-db-appdev-monitoring/releases).
 
@@ -244,6 +245,17 @@ log:
 #  systemdSocket: true|false
 #  configFile: /path/to/webconfigfile
 ```
+
+### Go install
+If one already has golang installed with paths configured one can also use the install command within to install this application. For this one can use the following command for the latest version or with a scantily tagged git release starting with `v`.
+
+```sh
+go install --tags godror github.com/oracle/oracle-db-appdev-monitoring/v2@latest
+
+# Example with a non-existent semantically tagged release
+go install --tags godror github.com/oracle/oracle-db-appdev-monitoring/v2@v2.2.3
+```
+
 
 ### Docker Compose
 

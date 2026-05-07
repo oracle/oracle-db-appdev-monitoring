@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/collector"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/collector"
 )
 
 const (

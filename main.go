@@ -30,13 +30,15 @@ import (
 	// Required for debugging
 	// _ "net/http/pprof"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/alertlog"
-	"github.com/oracle/oracle-db-appdev-monitoring/collector"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/alertlog"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/collector"
 )
+
+const fallbackVersion = "0.0.0.dev"
 
 var (
 	// Version will be set at build time.
-	Version            = "0.0.0.dev"
+	Version            = fallbackVersion
 	configFile         = kingpin.Flag("config.file", "File with metrics exporter configuration. (env: CONFIG_FILE)").Default(getEnv("CONFIG_FILE", "")).String()
 	metricPath         = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics. (env: TELEMETRY_PATH)").Default(getEnv("TELEMETRY_PATH", "/metrics")).String()
 	defaultFileMetrics = kingpin.Flag("default.metrics", "File with default metrics in a TOML file. (env: DEFAULT_METRICS)").Default(getEnv("DEFAULT_METRICS", "default-metrics.toml")).String()
@@ -101,6 +103,10 @@ func main() {
 		logger.Info("RESTART_INTERVAL env var is present, so will restart my own process periodically", "restart_interval", restartInterval)
 	} else {
 		logger.Info("RESTART_INTERVAL env var is not present, so will not restart myself periodically")
+	}
+
+	if buildInfo, ok := debug.ReadBuildInfo(); ok && Version == fallbackVersion {
+		Version = buildInfo.Main.Version
 	}
 
 	config := &collector.Config{
