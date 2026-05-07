@@ -7,8 +7,7 @@ sidebar_position: 2
 
 The exporter allows definition of arbitrary custom metrics in one or more TOML or YAML files.
 
-To specify custom metrics files
-exporter, use the `metrics` configuration in the [config file](./config-file.md):
+To specify custom metrics files, use the `metrics` configuration in the [config file](./config-file.md):
 
 ```yaml
 metrics:
@@ -22,8 +21,6 @@ metrics:
   custom:
     - custom-metrics-example/custom-metrics.toml
 ```
-
-You may also use `--custom.metrics` flag followed by a comma separated list of TOML or YAML files, or export `CUSTOM_METRICS` variable environment (`export CUSTOM_METRICS=my-custom-metrics.toml,my-other-custom-metrics.toml`)
 
 ### Metric Hot Reload
 
@@ -186,10 +183,11 @@ The default metrics are provided in YAML format as an example. See [default-metr
 
 ### Customize metrics in a container image
 
-If you run the exporter as a container image and want to include your custom metrics in the image itself, you can use the following example `Dockerfile` to create a new image:
+If you run the exporter as a container image and want to include your custom metrics in the image itself, add both the custom metrics file and a configuration file that references it under `metrics.custom`:
 
 ```Dockerfile
 FROM container-registry.oracle.com/database/observability-exporter:2.3.1
 COPY custom-metrics.toml /
-ENTRYPOINT ["/oracledb_exporter", "--custom.metrics", "/custom-metrics.toml"]
+COPY my-exporter-config.yaml /
+ENTRYPOINT ["/oracledb_exporter", "--config.file", "/my-exporter-config.yaml"]
 ```

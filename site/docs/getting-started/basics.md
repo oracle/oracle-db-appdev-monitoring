@@ -109,41 +109,15 @@ In order to run, you'll need the [Oracle Instant Client Basic](http://www.oracle
 
 > NOTE: If you are running the Standalone binary on a Mac ARM platform you must set the variable `DYLD_LIBRARY_PATH` to the location of where the instant client installed. For example `export DYLD_LIBRARY_PATH=/lib/oracle/instantclient_23_3`.
 
-The following command line arguments (flags) can be passed to the exporter (the --help flag will show the table below).
+The exporter requires a YAML configuration file. Pass it with `--config.file`, or set the `CONFIG_FILE` environment variable.
 
 ```bash
 Usage of oracledb_exporter:
-      --config.file="example-config.yaml"
-                                 File with metrics exporter configuration.  (env: CONFIG_FILE)
-      --web.telemetry-path="/metrics"
-                                 Path under which to expose metrics. (env: TELEMETRY_PATH)
-      --default.metrics="default-metrics.toml"
-                                 File with default metrics in a TOML file. (env: DEFAULT_METRICS)
-      --custom.metrics=""        Comma separated list of file(s) that contain various custom metrics in a TOML format. (env: CUSTOM_METRICS)
-      --query.timeout=5          Query timeout (in seconds). (env: QUERY_TIMEOUT)
-      --database.maxIdleConns=0  Number of maximum idle connections in the connection pool. (env: DATABASE_MAXIDLECONNS)
-      --database.maxOpenConns=10
-                                 Number of maximum open connections in the connection pool. (env: DATABASE_MAXOPENCONNS)
-      --database.poolIncrement=-1
-                                 Connection increment when the connection pool reaches max capacity. (env: DATABASE_POOLINCREMENT)
-      --database.poolMaxConnections=-1
-                                 Maximum number of connections in the connection pool. (env: DATABASE_POOLMAXCONNECTIONS)
-      --database.poolMinConnections=-1
-                                 Minimum number of connections in the connection pool. (env: DATABASE_POOLMINCONNECTIONS)
-      --scrape.interval=0s       Interval between each scrape. Default is to scrape on collect requests.
-      --log.disable=0            Set to 1 to disable alert logs
-      --log.interval=15s         Interval between log updates (e.g. 5s).
-      --log.destination="/log/alert.log"
-                                 File to output the alert log to. (env: LOG_DESTINATION)
-      --web.listen-address=:9161 ...
-                                 Addresses on which to expose metrics and web interface. Repeatable for multiple addresses. Examples: `:9100` or `[::1]:9100` for http, `vsock://:9100` for vsock
-      --web.config.file=""       Path to configuration file that can enable TLS or authentication. See: https://github.com/prometheus/exporter-toolkit/blob/master/docs/web-configuration.md
-      --log.level=info           Only log messages with the given severity or above. One of: [debug, info, warn, error]
-      --log.format=logfmt        Output format of log messages. One of: [logfmt, json]
-      --[no-]version             Show application version.
+  --config.file string
+        File with metrics exporter configuration. (env: CONFIG_FILE)
 ```
 
-You may provide the connection details using these variables:
+You may reference environment variables from the configuration file. For a simple connection, commonly used variables include:
 
 - `DB_USERNAME` is the database username, e.g., `pdbadmin`
 - `DB_PASSWORD` is the password for that user, e.g., `<your-password>`
@@ -152,9 +126,7 @@ You may provide the connection details using these variables:
 - `ORACLE_HOME` is the location of the Oracle Instant Client, e.g., `/lib/oracle/21/client64/lib`.
 - `TNS_ADMIN` is the location of your (unzipped) wallet.  The `DIRECTORY` set in the `sqlnet.ora` file must match the path that it will be mounted on inside the container.
 
-The following example puts the logfile in the current location with the filename `alert.log` and loads the default matrics file (`default-metrics,toml`) from the current location.
-
-If you prefer to provide configuration via a [config file](../configuration/config-file.md), you may do so with the `--config.file` argument. The use of a config file over command line arguments is preferred. If a config file is not provided, the "default" database connection is managed by command line arguments.
+All exporter settings other than selecting the configuration file are configured in YAML. The following example puts the logfile in the current location with the filename `alert.log` and loads the default metrics file (`default-metrics.toml`) from the current location.
 
 HTTP server request timeouts are configured in the exporter config file under `web.readHeaderTimeout`, `web.readTimeout`, and `web.idleTimeout`.
 
@@ -231,6 +203,10 @@ metrics:
     - custom-metrics-example/custom-metrics.toml
 
 log:
+  # Log level: debug, info, warn, or error
+  level: info
+  # Log output format: logfmt or json
+  format: logfmt
   # Path of log file
   destination: /opt/alert.log
   # Interval of log updates

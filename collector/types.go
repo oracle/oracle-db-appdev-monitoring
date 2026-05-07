@@ -64,23 +64,7 @@ type MetricCacheRecord struct {
 }
 
 type Config struct {
-	ConfigFile         string
-	User               string
-	Password           string
-	ConnectString      string
-	DbRole             string
-	ConfigDir          string
-	ExternalAuth       bool
-	MaxIdleConns       int
-	MaxOpenConns       int
-	PoolIncrement      int
-	PoolMaxConnections int
-	PoolMinConnections int
-	CustomMetrics      string
-	QueryTimeout       int
-	DefaultMetricsFile string
-	ScrapeInterval     time.Duration
-	LoggingConfig      LoggingConfig
+	ConfigFile string
 }
 
 // Metric is an object description
