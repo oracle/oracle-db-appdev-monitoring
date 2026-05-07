@@ -22,7 +22,6 @@ databases:
   # metricsPath: /metrics
 
   ## As many named database configurations may be defined as needed.
-  ## It is recommended to define your database config in the config file, rather than using CLI arguments.
 
   ## Database connection information for the "db1" database.
   db1:
