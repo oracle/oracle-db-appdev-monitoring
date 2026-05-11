@@ -11,6 +11,7 @@ import (
 	"io"
 	"log/slog"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -315,4 +316,162 @@ func TestScrapeDatabaseSkipsWhileStartupInProgress(t *testing.T) {
 		t.Fatal("did not expect metrics while startup is in progress")
 	default:
 	}
+}
+
+func TestRunScheduledScrapesRunsWhenDatabaseBecomesReady(t *testing.T) {
+	exporter, database := newTestScheduledExporter(t, time.Hour)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go exporter.RunScheduledScrapes(ctx)
+	waitForScheduledScrape(t, exporter)
+
+	if hasScheduledMetric(exporter, "oracledb_test_value") {
+		t.Fatal("did not expect test metric before database startup is ready")
+	}
+
+	database.startupReady.Store(true)
+	database.setUp(1)
+	exporter.requestScheduledScrape()
+
+	waitForScheduledMetric(t, exporter, "oracledb_test_value")
+}
+
+func TestInitializeDatabasesRequestsScheduledScrapeAfterWarmup(t *testing.T) {
+	exporter, database := newTestScheduledExporter(t, time.Hour)
+
+	exporter.InitializeDatabases()
+
+	if !database.StartupReady() {
+		t.Fatal("expected database startup to be marked ready after warmup")
+	}
+	if got := len(exporter.scrapeRequests); got != 1 {
+		t.Fatalf("expected one scheduled scrape request after warmup, got %d", got)
+	}
+}
+
+func newTestScheduledExporter(t *testing.T, scrapeInterval time.Duration) (*Exporter, *Database) {
+	t.Helper()
+
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	metric := &Metric{
+		ID:          "test_value",
+		Context:     "test",
+		MetricsDesc: map[string]string{"value": "Test metric."},
+		MetricsType: map[string]string{"value": "gauge"},
+		Request:     "select 1 as value from dual",
+	}
+	metricsToScrape := map[string]*Metric{
+		metric.ID: metric,
+	}
+	maxOpenConns := 1
+	database := &Database{
+		Name:          "db1",
+		Session:       openTestQueryDB(t),
+		Config:        DatabaseConfig{ConnectConfig: ConnectConfig{MaxOpenConns: &maxOpenConns}},
+		DatabaseLabel: "database",
+	}
+	database.initCache(metricsToScrape)
+
+	return &Exporter{
+		mu:              &sync.Mutex{},
+		metricsToScrape: metricsToScrape,
+		duration: prometheus.NewGauge(prometheus.GaugeOpts{
+			Namespace: namespace,
+			Subsystem: exporterName,
+			Name:      "last_scrape_duration_seconds",
+			Help:      "test",
+		}),
+		databaseDuration: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace: namespace,
+			Subsystem: exporterName,
+			Name:      "last_database_scrape_duration_seconds",
+			Help:      "test",
+		}, []string{"database"}),
+		totalScrapes: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: namespace,
+			Subsystem: exporterName,
+			Name:      "scrapes_total",
+			Help:      "test",
+		}),
+		error: prometheus.NewGauge(prometheus.GaugeOpts{
+			Namespace: namespace,
+			Subsystem: exporterName,
+			Name:      "last_scrape_error",
+			Help:      "test",
+		}),
+		scrapeErrors: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: namespace,
+			Subsystem: exporterName,
+			Name:      "scrape_errors_total",
+			Help:      "test",
+		}, []string{"collector", "database"}),
+		scrapeRequests: make(chan struct{}, 2),
+		databases:      []*Database{database},
+		logger:         logger,
+		MetricsConfiguration: &MetricsConfiguration{
+			Metrics: MetricsFilesConfig{
+				DatabaseLabel:  "database",
+				ScrapeInterval: &scrapeInterval,
+			},
+		},
+	}, database
+}
+
+func waitForScheduledScrape(t *testing.T, exporter *Exporter) {
+	t.Helper()
+
+	deadline := time.After(time.Second)
+	for {
+		if len(collectScheduledMetrics(exporter)) > 0 {
+			return
+		}
+		select {
+		case <-deadline:
+			t.Fatal("timed out waiting for scheduled scrape")
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+}
+
+func waitForScheduledMetric(t *testing.T, exporter *Exporter, fqName string) {
+	t.Helper()
+
+	deadline := time.After(time.Second)
+	for {
+		if hasScheduledMetric(exporter, fqName) {
+			return
+		}
+		select {
+		case <-deadline:
+			t.Fatalf("timed out waiting for scheduled metric %q", fqName)
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+}
+
+func hasScheduledMetric(exporter *Exporter, fqName string) bool {
+	for _, desc := range collectScheduledMetrics(exporter) {
+		if strings.Contains(desc, `fqName: "`+fqName+`"`) {
+			return true
+		}
+	}
+	return false
+}
+
+func collectScheduledMetrics(exporter *Exporter) []string {
+	ch := make(chan prometheus.Metric)
+	done := make(chan []string, 1)
+
+	go func() {
+		var descs []string
+		for metric := range ch {
+			descs = append(descs, metric.Desc().String())
+		}
+		done <- descs
+	}()
+
+	exporter.Collect(ch)
+	close(ch)
+	return <-done
 }
