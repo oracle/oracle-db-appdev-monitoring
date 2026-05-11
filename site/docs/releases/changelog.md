@@ -10,6 +10,7 @@ List of upcoming and historic changes to the exporter.
 ### Next, TBD
 
 - Remove deprecated runtime configuration flags other than `--config.file`; exporter startup now requires a YAML config file, and process log `level` and `format` are configured under the `log` section.
+- Fix scheduled scraping so a database is scraped immediately after startup warmup completes when `metrics.scrapeInterval` is configured, restoring first-scrape behavior from #166. Thanks @gjrlopes for reporting #532.
 
 ### 2.3.1, May 6th, 2026
 

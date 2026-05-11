@@ -23,6 +23,7 @@ type Exporter struct {
 	totalScrapes        prometheus.Counter
 	scrapeErrors        *prometheus.CounterVec
 	scrapeResults       []prometheus.Metric
+	scrapeRequests      chan struct{}
 	databases           []*Database
 	logger              *slog.Logger
 	allConstLabels      []string
