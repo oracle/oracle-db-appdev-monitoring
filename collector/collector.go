@@ -70,7 +70,7 @@ func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
 	e := &Exporter{
 		mu:                  &sync.Mutex{},
 		customMetricsHashes: map[string][]byte{},
-		scrapeRequests:      make(chan struct{}, len(databases)+1),
+		scrapeRequests:      make(chan struct{}, 1),
 		duration: prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: exporterName,

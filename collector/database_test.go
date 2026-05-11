@@ -406,7 +406,7 @@ func newTestScheduledExporter(t *testing.T, scrapeInterval time.Duration) (*Expo
 			Name:      "scrape_errors_total",
 			Help:      "test",
 		}, []string{"collector", "database"}),
-		scrapeRequests: make(chan struct{}, 2),
+		scrapeRequests: make(chan struct{}, 1),
 		databases:      []*Database{database},
 		logger:         logger,
 		MetricsConfiguration: &MetricsConfiguration{
