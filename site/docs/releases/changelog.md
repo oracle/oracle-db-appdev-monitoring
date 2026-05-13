@@ -11,6 +11,8 @@ List of upcoming and historic changes to the exporter.
 
 - Remove deprecated runtime configuration flags other than `--config.file`; exporter startup now requires a YAML config file, and process log `level` and `format` are configured under the `log` section.
 - Fix scheduled scraping so a database is scraped immediately after startup warmup completes when `metrics.scrapeInterval` is configured.
+- Patched third-party dependencies.
+- Updated to Go 1.26.3
 
 Thank you to the following users for their suggestions and contributions:
 - [gjrlopes](https://github.com/gjrlopes)

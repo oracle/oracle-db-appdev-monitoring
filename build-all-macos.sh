@@ -45,7 +45,7 @@ OL_IMAGE="oraclelinux:8"
 BASE_IMAGE="ghcr.io/oracle/oraclelinux:8-slim"
 UBUNTU_IMAGE="ubuntu:24.04"
 OL8_GLIBC_VERSION="2.28"
-GO_VERSION="1.26.2"
+GO_VERSION="1.26.3"
 
 if [[ "${TARGET}" == "goora" ]]; then
   TAGS="goora"
