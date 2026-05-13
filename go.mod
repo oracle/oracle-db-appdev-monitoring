@@ -1,6 +1,6 @@
 module github.com/oracle/oracle-db-appdev-monitoring
 
-go 1.26.2
+go 1.26.3
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.13.1
