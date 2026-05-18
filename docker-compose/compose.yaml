@@ -68,9 +68,6 @@ services:
     container_name: exporter
     command:
       - --config.file=/exporter/${COMPOSE_CONFIG_FILE:-config.yaml}
-      # - '--log.level=debug'
-      # - '--database.maxIdleConns=10'
-      # - '--database.maxOpenConns=10'
     ports:
       - 9161:9161
     environment:
@@ -83,7 +80,6 @@ services:
     #   - DB_USERNAME=pdbadmin
     #   - DB_PASSWORD=${DB_PASSWORD}
     #   - DB_CONNECT_STRING=free26ai:1521/freepdb1
-    #   - CUSTOM_METRICS=/exporter/txeventq-metrics.toml,/exporter/more-txeventq-metrics.toml
     volumes:
       - ./exporter:/exporter
       - ./wallet:/exporter/wallet

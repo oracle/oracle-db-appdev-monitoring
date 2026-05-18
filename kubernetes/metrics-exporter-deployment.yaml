@@ -35,9 +35,6 @@ spec:
               - ALL
           readOnlyRootFilesystem: true
         env:
-          # uncomment and customize the next item if you want to provide custom metrics definitions
-          #- name: CUSTOM_METRICS
-          #  value: /oracle/observability/txeventq-metrics.toml
           - name: TNS_ADMIN
             value: "/oracle/tns_admin"
           - name: DB_USERNAME

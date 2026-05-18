@@ -70,6 +70,7 @@ func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
 	e := &Exporter{
 		mu:                  &sync.Mutex{},
 		customMetricsHashes: map[string][]byte{},
+		scrapeRequests:      make(chan struct{}, 1),
 		duration: prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: exporterName,
@@ -121,6 +122,7 @@ func (e *Exporter) InitializeDatabases() {
 		if err := database.WarmupConnectionPool(e.logger, e.MetricsConfiguration.ConnectionBackoff()); err != nil {
 			e.logger.Error("Database startup warmup failed", "error", err, "database", database.Name)
 		}
+		e.requestScheduledScrape()
 	}
 }
 
@@ -168,7 +170,7 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	// they are running scheduled scrapes we should only scrape new data
 	// on the interval
-	if e.ScrapeInterval() != 0 {
+	if e.scrapeInterval() != 0 {
 		// read access must be checked
 		e.mu.Lock()
 		for _, r := range e.scrapeResults {
@@ -196,9 +198,14 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 // RunScheduledScrapes is only relevant for users of this package that want to set the scrape on a timer
 // rather than letting it be per Collect call
 func (e *Exporter) RunScheduledScrapes(ctx context.Context) {
+	interval := e.scrapeInterval()
+	if interval == 0 {
+		return
+	}
+
 	e.doScrape(time.Now())
 
-	ticker := time.NewTicker(e.ScrapeInterval())
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	for {
@@ -206,10 +213,32 @@ func (e *Exporter) RunScheduledScrapes(ctx context.Context) {
 		case tick := <-ticker.C:
 
 			e.doScrape(tick)
+		case <-e.scrapeRequests:
+			e.doScrape(time.Now())
 		case <-ctx.Done():
 			return
 		}
 	}
+}
+
+func (e *Exporter) requestScheduledScrape() {
+	if e.scrapeInterval() == 0 || e.scrapeRequests == nil {
+		return
+	}
+
+	// Do not let database warmup block on the scheduler. If a scrape is already queued,
+	// the next scheduled scrape will pick up all databases that are ready by then.
+	select {
+	case e.scrapeRequests <- struct{}{}:
+	default:
+	}
+}
+
+func (e *Exporter) scrapeInterval() time.Duration {
+	if e.MetricsConfiguration == nil || e.MetricsConfiguration.Metrics.ScrapeInterval == nil {
+		return 0
+	}
+	return e.ScrapeInterval()
 }
 
 func (e *Exporter) doScrape(tick time.Time) {

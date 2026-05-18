@@ -115,6 +115,112 @@ func TestMetricsConfigurationValidateOCIVaultAuth(t *testing.T) {
 	}
 }
 
+func TestLoadMetricsConfigurationAppliesConfigFileDefaults(t *testing.T) {
+	configPath := writeExporterConfig(t, `
+databases:
+  default:
+    username: scott
+    password: tiger
+    url: localhost:1521/freepdb1
+`)
+
+	cfg, err := LoadMetricsConfiguration(testLogger(), &Config{ConfigFile: configPath})
+	if err != nil {
+		t.Fatalf("expected config to load, got %v", err)
+	}
+
+	if cfg.MetricsPath != "/metrics" {
+		t.Fatalf("expected default metrics path, got %q", cfg.MetricsPath)
+	}
+	if cfg.Metrics.Default != "default-metrics.toml" {
+		t.Fatalf("expected default metrics file, got %q", cfg.Metrics.Default)
+	}
+	if cfg.Logging.Level != "info" {
+		t.Fatalf("expected default log level, got %q", cfg.Logging.Level)
+	}
+	if cfg.Logging.Format != "logfmt" {
+		t.Fatalf("expected default log format, got %q", cfg.Logging.Format)
+	}
+	if cfg.LogDestination() != "/log/alert.log" {
+		t.Fatalf("expected default log destination, got %q", cfg.LogDestination())
+	}
+	if cfg.LogInterval() != 15*time.Second {
+		t.Fatalf("expected default log interval, got %s", cfg.LogInterval())
+	}
+	if got := *cfg.Web.ListenAddresses; len(got) != 1 || got[0] != ":9161" {
+		t.Fatalf("expected default web listen address, got %#v", got)
+	}
+}
+
+func TestLoadMetricsConfigurationAcceptsLogLevelAndFormat(t *testing.T) {
+	configPath := writeExporterConfig(t, `
+databases:
+  default:
+    username: scott
+    password: tiger
+    url: localhost:1521/freepdb1
+log:
+  level: debug
+  format: json
+`)
+
+	cfg, err := LoadMetricsConfiguration(testLogger(), &Config{ConfigFile: configPath})
+	if err != nil {
+		t.Fatalf("expected config to load, got %v", err)
+	}
+	if cfg.Logging.Level != "debug" {
+		t.Fatalf("expected configured log level, got %q", cfg.Logging.Level)
+	}
+	if cfg.Logging.Format != "json" {
+		t.Fatalf("expected configured log format, got %q", cfg.Logging.Format)
+	}
+}
+
+func TestLoadMetricsConfigurationRejectsInvalidLogLevelAndFormat(t *testing.T) {
+	tests := []struct {
+		name    string
+		logYAML string
+		wantErr string
+	}{
+		{
+			name: "invalid level",
+			logYAML: `
+log:
+  level: trace
+`,
+			wantErr: "invalid log.level",
+		},
+		{
+			name: "invalid format",
+			logYAML: `
+log:
+  format: text
+`,
+			wantErr: "invalid log.format",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configPath := writeExporterConfig(t, `
+databases:
+  default:
+    username: scott
+    password: tiger
+    url: localhost:1521/freepdb1
+`+tt.logYAML)
+
+			_, err := LoadMetricsConfiguration(testLogger(), &Config{ConfigFile: configPath})
+			if err == nil {
+				t.Fatal("expected invalid logging config to fail")
+			}
+			if !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("expected error containing %q, got %v", tt.wantErr, err)
+			}
+		})
+	}
+}
+
 func TestMetricsConfigurationValidateRejectsInvalidOCIVaultAuth(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	cfg := &MetricsConfiguration{
@@ -138,4 +244,27 @@ func TestMetricsConfigurationValidateRejectsInvalidOCIVaultAuth(t *testing.T) {
 	if !strings.Contains(err.Error(), "database \"db1\"") || !strings.Contains(err.Error(), "accepted values") {
 		t.Fatalf("expected validation error to include database and accepted values, got %v", err)
 	}
+}
+
+func TestLoadMetricsConfigurationRequiresConfigFile(t *testing.T) {
+	_, err := LoadMetricsConfiguration(testLogger(), &Config{})
+	if err == nil {
+		t.Fatal("expected missing config file to fail")
+	}
+	if !strings.Contains(err.Error(), "config file is required") {
+		t.Fatalf("expected required config file error, got %v", err)
+	}
+}
+
+func writeExporterConfig(t *testing.T, contents string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	if err := os.WriteFile(path, []byte(strings.TrimSpace(contents)+"\n"), 0o600); err != nil {
+		t.Fatalf("failed to write config fixture: %v", err)
+	}
+	return path
+}
+
+func testLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }

@@ -5,7 +5,7 @@ sidebar_position: 1
 
 # Exporter Configuration
 
-The recommended way to configure the exporter is with the `--config.file` argument, specifying a YAML configuration file.
+Configure the exporter with a YAML configuration file, specified with the `--config.file` argument or the `CONFIG_FILE` environment variable.
 
 The configuration file contains the following options:
 
@@ -85,6 +85,10 @@ metrics:
     - custom-metrics-example/custom-metrics.toml
 
 log:
+  # Log level: debug, info, warn, or error
+  level: info
+  # Log output format: logfmt or json
+  format: logfmt
   # Path of log file
   destination: /opt/alert.log
   # Interval of log updates
@@ -103,6 +107,17 @@ log:
 ```
 
 From the exporter configuration file, you may optionally load database credentials from [OCI Vault](./oci-vault.md), [Azure Vault](./azure-vault.md), or [HashiCorp Vault](./hashicorp-vault.md).
+
+### Logging configuration
+
+The optional `log` section configures alert log export and exporter process logging.
+
+- `level`: Process log level. Accepted values are `debug`, `info`, `warn`, and `error`. Defaults to `info`.
+- `format`: Process log output format. Accepted values are `logfmt` and `json`. Defaults to `logfmt`.
+- `destination`: Base alert log file path. Defaults to `/log/alert.log`.
+- `interval`: Interval between alert log updates. Defaults to `15s`.
+- `disable`: Disable alert log export when set to `1`. Defaults to `0`.
+- `perDatabaseFiles`: Write alert logs to per-database files. Defaults to `false`.
 
 ### Web server configuration
 

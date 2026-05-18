@@ -99,13 +99,3 @@ If the service account CA certificate is mounted at a custom path, set `OCI_KUBE
 The accepted `auth` values are `config_file`, `instance_principal`, `resource_principal`, and `workload_identity`. If `auth` is omitted, `config_file` is used for backward compatibility.
 
 Whichever OCI authentication mode you choose, the principal must have IAM policy permission to read the target Vault secret bundle.
-
-### Deprecated OCI Vault CLI Configuration
-
-If using the default database with CLI parameters, the exporter will read the username and password from a secret stored in OCI Vault if you set these environment variables:
-
-- `OCI_VAULT_ID` should be set to the OCID of the OCI vault that you wish to use
-- `OCI_VAULT_USERNAME_SECRET` should be set to the name of the secret in the OCI vault which contains the database username
-- `OCI_VAULT_PASSWORD_SECRET` should be set to the name of the secret in the OCI vault which contains the database password
-
-This CLI environment-variable configuration path is deprecated and kept only for backward compatibility. It always uses the OCI SDK default config-file authentication behavior and does not support the `auth` selector. Use the exporter config file to select instance principal, resource principal, or workload identity authentication.
