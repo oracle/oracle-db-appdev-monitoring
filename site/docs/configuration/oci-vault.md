@@ -19,9 +19,11 @@ databases:
         passwordSecret: <Secret containing DB password>
 ```
 
-### Authentication
+## Config file
 
-By default, OCI Vault authentication uses the OCI Go SDK default configuration provider. This reads the local OCI config file, such as `$HOME/.oci/config`, unless the SDK is configured otherwise:
+Use `config_file` when the exporter should authenticate with the OCI Go SDK default configuration provider. This reads the local OCI config file, such as `$HOME/.oci/config`, unless the SDK is configured otherwise. If `auth` is omitted, `config_file` is used for backward compatibility.
+
+### Configuration in exporter
 
 ```yaml
 databases:
@@ -34,7 +36,17 @@ databases:
         passwordSecret: <Secret containing DB password>
 ```
 
-If the exporter runs on an OCI Compute instance, you may use instance principal authentication instead:
+### Sample policy
+
+```text
+Allow group metrics-exporter-users to read secret-bundles in compartment observability
+```
+
+## Instance principal
+
+Use `instance_principal` when the exporter runs on an OCI Compute instance and should authenticate as the instance.
+
+### Configuration in exporter
 
 ```yaml
 databases:
@@ -47,7 +59,17 @@ databases:
         passwordSecret: <Secret containing DB password>
 ```
 
-If the exporter runs in an OCI service that exposes resource principal credentials, use resource principal authentication:
+### Sample policy
+
+```text
+Allow dynamic-group metrics-exporter-instances to read secret-bundles in compartment observability
+```
+
+## Resource principal
+
+Use `resource_principal` when the exporter runs in an OCI service that exposes resource principal credentials.
+
+### Configuration in exporter
 
 ```yaml
 databases:
@@ -60,7 +82,17 @@ databases:
         passwordSecret: <Secret containing DB password>
 ```
 
-If the exporter runs in OKE with workload identity configured, use workload identity authentication:
+### Sample policy
+
+```text
+Allow dynamic-group metrics-exporter-resources to read secret-bundles in compartment observability
+```
+
+## Workload identity
+
+Use `workload_identity` when the exporter runs in OKE with workload identity configured.
+
+### Configuration in exporter
 
 ```yaml
 databases:
@@ -96,6 +128,29 @@ In OKE, the OCI SDK also uses the pod service account token, service account CA 
 
 If the service account CA certificate is mounted at a custom path, set `OCI_KUBERNETES_SERVICE_ACCOUNT_CERT_PATH` to that path.
 
-The accepted `auth` values are `config_file`, `instance_principal`, `resource_principal`, and `workload_identity`. If `auth` is omitted, `config_file` is used for backward compatibility.
+### Sample policy
 
-Whichever OCI authentication mode you choose, the principal must have IAM policy permission to read the target Vault secret bundle.
+```text
+Allow any-user to read secret-bundles in compartment observability where all {
+  request.principal.type = 'workload',
+  request.principal.namespace = 'monitoring',
+  request.principal.service_account = 'metrics-exporter',
+  request.principal.cluster_id = 'ocid1.cluster.oc1.iad.example'
+}
+```
+
+## Policy conditions
+
+The exporter reads secret bundle values from OCI Vault, so the principal used by the selected authentication mode needs permission to read `secret-bundles` in the compartment that contains the secrets.
+
+To limit access to a specific vault or secret name, add a policy condition:
+
+```text
+Allow dynamic-group metrics-exporter-instances to read secret-bundles in compartment observability
+  where target.vault.id = 'ocid1.vault.oc1..example'
+
+Allow dynamic-group metrics-exporter-instances to read secret-bundles in compartment observability
+  where target.secret.name = 'metrics-exporter-db-password'
+```
+
+Replace the compartment, group, dynamic group, namespace, service account, cluster OCID, vault OCID, and secret name with values from your environment.
