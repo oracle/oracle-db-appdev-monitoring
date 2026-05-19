@@ -9,7 +9,7 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
-- Allow CCI Vault authentication using instance principal, resource principal, or OKE workload identity in addition to the existing OCI config file provider. OCI config file remains the default OCI Vault authentication mechanism.
+- Allow OCI Vault authentication using instance principal, resource principal, or OKE workload identity in addition to the existing OCI config file provider. OCI config file remains the default OCI Vault authentication mechanism.
 - Remove deprecated runtime configuration flags other than `--config.file`; exporter startup now requires a YAML config file, and process log `level` and `format` are configured under the `log` section.
 - Fix scheduled scraping so a database is scraped immediately after startup warmup completes when `metrics.scrapeInterval` is configured.
 - Patched third-party dependencies.
