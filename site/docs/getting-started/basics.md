@@ -237,4 +237,10 @@ Once the containers are all running, you can access the services using these URL
 
 - [Exporter](http://localhost:9161/metrics)
 - [Prometheus](http://localhost:9090) - try a query for "oracle".
-- [Grafana](http://localhost:3000) - Grafana uses its first-login initialization flow, and an Oracle AI Database dashboard is provisioned and configured to use data from the exporter.
+- [Grafana](http://localhost:3000) - Log in with `admin:admin` and then reset the Grafana Admin password.
+
+When you're done, shut down the docker compose environment. This deletes all containers:
+
+```bash
+make docker-compose-down
+```
