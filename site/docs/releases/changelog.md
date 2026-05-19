@@ -13,7 +13,7 @@ List of upcoming and historic changes to the exporter.
 - Fix scheduled scraping so a database is scraped immediately after startup warmup completes when `metrics.scrapeInterval` is configured.
 - Patched third-party dependencies.
 - Updated to Go 1.26.3
-- Update Docker builds to use the latest Oracle Linux C runtime packages instead of pinned RPM versions.
+- Update Docker builds to use the latest Oracle Linux packages.
 
 Thank you to the following users for their suggestions and contributions:
 - [gjrlopes](https://github.com/gjrlopes)
