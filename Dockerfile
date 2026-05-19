@@ -16,7 +16,9 @@ ENV CGO_ENABLED=${CGO_ENABLED:-1}
 ARG GO_VERSION=1.26.3
 ENV GO_VERSION=${GO_VERSION}
 
-RUN microdnf install wget gzip gcc jq && \
+RUN microdnf update -y && \
+    microdnf install -y wget gzip gcc jq && \
+    microdnf clean all && \
     go_tarball="go${GO_VERSION}.${GOOS}-${GOARCH}.tar.gz" && \
     wget -q "https://go.dev/dl/${go_tarball}" && \
     go_checksum="$(wget -qO- 'https://go.dev/dl/?mode=json' | jq -r --arg version "go${GO_VERSION}" --arg os "${GOOS}" --arg arch "${GOARCH}" '.[] | select(.version == $version) | .files[] | select(.os == $os and .arch == $arch) | .sha256' | head -n 1)" && \
@@ -48,10 +50,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 ARG GOARCH
 ENV GOARCH=${GOARCH:-amd64}
 
-RUN microdnf update && \
-    microdnf install -y oracle-instantclient-release-23ai-el8-1.0-4.el8 && \
-    microdnf install -y oracle-instantclient-basic-23.9.0.25.07-1.el8 && \
-    microdnf install -y glibc-2.28-251.0.3.el8_10.27 && \
+RUN microdnf update -y && \
+    microdnf install -y oracle-instantclient-release-23ai-el8 && \
+    microdnf install -y oracle-instantclient-basic glibc && \
     microdnf clean all
 
 ENV LD_LIBRARY_PATH=/usr/lib/oracle/23/client64/lib
