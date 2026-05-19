@@ -239,7 +239,7 @@ Once the containers are all running, you can access the services using these URL
 - [Prometheus](http://localhost:9090) - try a query for "oracle".
 - [Grafana](http://localhost:3000) - Log in with `admin:admin` and then reset the Grafana Admin password.
 
-When you're done, shut down the docker compose environment:
+When you're done, shut down the docker compose environment. This deletes all containers:
 
 ```bash
 make docker-compose-down
