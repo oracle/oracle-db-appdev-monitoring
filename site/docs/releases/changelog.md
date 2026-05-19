@@ -9,6 +9,7 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
+- Allow OCI Vault authentication using instance principal, resource principal, or OKE workload identity in addition to the existing OCI config file provider. OCI config file remains the default OCI Vault authentication mechanism.
 - Remove deprecated runtime configuration flags other than `--config.file`; exporter startup now requires a YAML config file, and process log `level` and `format` are configured under the `log` section.
 - Fix scheduled scraping so a database is scraped immediately after startup warmup completes when `metrics.scrapeInterval` is configured.
 - Patched third-party dependencies.
@@ -16,6 +17,7 @@ List of upcoming and historic changes to the exporter.
 - Update Docker builds to use the latest Oracle Linux packages.
 
 Thank you to the following users for their suggestions and contributions:
+- [a2k4sharma](https://github.com/a2k4sharma)
 - [gjrlopes](https://github.com/gjrlopes)
 
 ### 2.3.1, May 6th, 2026
