@@ -7,10 +7,6 @@ sidebar_position: 2
 
 List of upcoming and historic changes to the exporter.
 
-### Next, TBD
-
-TBD
-
 ### 2.4.0, TBD
 
 - Allow OCI Vault authentication using instance principal, resource principal, or OKE workload identity in addition to the existing OCI config file provider. OCI config file remains the default OCI Vault authentication mechanism.
