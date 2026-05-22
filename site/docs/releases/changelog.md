@@ -11,7 +11,7 @@ List of upcoming and historic changes to the exporter.
 
 TBD
 
-### 2.4.0, TBD
+### 2.4.0, May 22nd, 2026
 
 - Allow OCI Vault authentication using instance principal, resource principal, or OKE workload identity in addition to the existing OCI config file provider. OCI config file remains the default OCI Vault authentication mechanism.
 - Remove deprecated runtime configuration flags other than `--config.file`; exporter startup now requires a YAML config file, and process log `level` and `format` are configured under the `log` section.

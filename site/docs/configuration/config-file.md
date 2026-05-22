@@ -165,7 +165,7 @@ An individual metric may have its own scrape interval separate from the exporter
 To add your custom config file to a container image, you can layer the base exporter image and include that config:
 
 ```Dockerfile
-FROM container-registry.oracle.com/database/observability-exporter:2.3.1
+FROM container-registry.oracle.com/database/observability-exporter:2.40
 COPY my-exporter-config.yaml /
 ENTRYPOINT ["/oracledb_exporter", "--config.file", "/my-exporter-config.yaml"]
 ```
