@@ -186,7 +186,7 @@ The default metrics are provided in YAML format as an example. See [default-metr
 If you run the exporter as a container image and want to include your custom metrics in the image itself, add both the custom metrics file and a configuration file that references it under `metrics.custom`:
 
 ```Dockerfile
-FROM container-registry.oracle.com/database/observability-exporter:2.3.1
+FROM container-registry.oracle.com/database/observability-exporter:2.40
 COPY custom-metrics.toml /
 COPY my-exporter-config.yaml /
 ENTRYPOINT ["/oracledb_exporter", "--config.file", "/my-exporter-config.yaml"]
