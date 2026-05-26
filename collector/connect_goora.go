@@ -59,24 +59,25 @@ func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.
 		return nil, err
 	}
 
-	// Configure connection pool (sql.DB handles pooling)
-	setConnectionPool(logger, dbname, dbconfig, db)
 	return db, nil
 }
 
-func setConnectionPool(logger *slog.Logger, dbname string, dbconfig DatabaseConfig, db *sql.DB) {
+func effectiveSQLPoolLimits(dbconfig DatabaseConfig) (int, int) {
+	maxOpenConns := dbconfig.GetMaxOpenConns()
 	if dbconfig.GetPoolMaxConnections() > 0 {
-		logger.Debug(fmt.Sprintf("set pool max connections to %d", dbconfig.PoolMaxConnections), "database", dbname)
-		db.SetMaxOpenConns(dbconfig.GetPoolMaxConnections())
-	} else {
-		db.SetMaxOpenConns(dbconfig.GetMaxOpenConns())
+		maxOpenConns = dbconfig.GetPoolMaxConnections()
 	}
+
+	maxIdleConns := dbconfig.GetMaxIdleConns()
 	if dbconfig.GetPoolMinConnections() > 0 {
-		logger.Debug(fmt.Sprintf("set pool min connections to %d", dbconfig.PoolMinConnections), "database", dbname)
-		db.SetMaxIdleConns(dbconfig.GetPoolMinConnections())
-	} else {
-		db.SetMaxIdleConns(dbconfig.GetMaxIdleConns())
+		maxIdleConns = dbconfig.GetPoolMinConnections()
 	}
+	return maxOpenConns, maxIdleConns
+}
+
+func warmupConnectionPoolSize(dbconfig DatabaseConfig) int {
+	maxOpenConns, _ := effectiveSQLPoolLimits(dbconfig)
+	return maxOpenConns
 }
 
 func isInvalidCredentialsError(err error) bool {

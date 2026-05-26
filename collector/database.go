@@ -112,10 +112,15 @@ func (d *Database) warmupSession(logger *slog.Logger, session *sql.DB) error {
 	}
 
 	var connections []*sql.Conn
-	poolSize := d.Config.GetMaxOpenConns()
-	if poolSize < 1 {
-		poolSize = d.Config.GetPoolMaxConnections()
-	}
+	defer func() {
+		for i, conn := range connections {
+			if err := conn.Close(); err != nil {
+				logger.Debug("Failed to return database connection to pool on warmup", "conn", i+1, "error", err, "database", d.Name)
+			}
+		}
+	}()
+
+	poolSize := warmupConnectionPoolSize(d.Config)
 	if poolSize > 100 { // defensively cap poolsize
 		poolSize = 100
 	}
@@ -143,11 +148,6 @@ func (d *Database) warmupSession(logger *slog.Logger, session *sql.DB) error {
 	}
 
 	logger.Debug("Warmed connection pool", "total", len(connections), "database", d.Name)
-	for i, conn := range connections {
-		if err := conn.Close(); err != nil {
-			logger.Debug("Failed to return database connection to pool on warmup", "conn", i+1, "error", err, "database", d.Name)
-		}
-	}
 	return nil
 }
 
@@ -317,10 +317,7 @@ func isClosedDatabaseError(err error) bool {
 }
 
 func initdb(logger *slog.Logger, dbname string, dbconfig DatabaseConfig, db *sql.DB) {
-	logger.Debug(fmt.Sprintf("set max idle connections to %d", dbconfig.MaxIdleConns), "database", dbname)
-	db.SetMaxIdleConns(dbconfig.GetMaxIdleConns())
-	logger.Debug(fmt.Sprintf("set max open connections to %d", dbconfig.MaxOpenConns), "database", dbname)
-	db.SetMaxOpenConns(dbconfig.GetMaxOpenConns())
+	configureSQLConnectionPool(logger, dbname, dbconfig, db)
 	logger.Debug(fmt.Sprintf("set connection max lifetime to %s", dbconfig.GetConnMaxLifetime()), "database", dbname)
 	db.SetConnMaxLifetime(dbconfig.GetConnMaxLifetime())
 	logger.Debug(fmt.Sprintf("Successfully configured connection to %s", maskDsn(dbconfig.URL)), "database", dbname)
@@ -339,4 +336,12 @@ func initdb(logger *slog.Logger, dbname string, dbconfig DatabaseConfig, db *sql
 		logger.Error("error checking my database role", "error", err, "database", dbname)
 	}
 	logger.Info("Connected as SYSDBA? "+sysdba, "database", dbname)
+}
+
+func configureSQLConnectionPool(logger *slog.Logger, dbname string, dbconfig DatabaseConfig, db *sql.DB) {
+	maxOpenConns, maxIdleConns := effectiveSQLPoolLimits(dbconfig)
+	logger.Debug(fmt.Sprintf("set max idle connections to %d", maxIdleConns), "database", dbname)
+	db.SetMaxIdleConns(maxIdleConns)
+	logger.Debug(fmt.Sprintf("set max open connections to %d", maxOpenConns), "database", dbname)
+	db.SetMaxOpenConns(maxOpenConns)
 }

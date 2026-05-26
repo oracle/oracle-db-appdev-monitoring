@@ -361,7 +361,11 @@ func (m *MetricsConfiguration) merge() {
 
 func (m *MetricsConfiguration) mergeWebConfig() {
 	if m.Web.ListenAddresses == nil {
-		listenAddresses := []string{":9161"}
+		listenAddress := strings.TrimSpace(m.ListenAddress)
+		if listenAddress == "" {
+			listenAddress = ":9161"
+		}
+		listenAddresses := []string{listenAddress}
 		m.Web.ListenAddresses = &listenAddresses
 	}
 	if m.Web.SystemdSocket == nil {

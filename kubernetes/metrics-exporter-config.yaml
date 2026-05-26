@@ -55,7 +55,7 @@ metrics:
 
 log:
   # Path of log file
-  destination: /opt/alert.log
+  destination: /log/alert.log
   # Interval of log updates
   interval: 15s
   ## Set disable to 1 to disable logging

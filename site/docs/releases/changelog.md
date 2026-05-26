@@ -9,7 +9,10 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
-TBD
+- Fix top-level `listenAddress` config so it is honored as the exporter web listen address when `web.listenAddresses` is not configured.
+- Fix go-ora connection warmup so `poolMaxConnections` and `poolMinConnections` are preserved as the SQL connection-pool limits.
+- Fix the Kubernetes sample alert-log path so it writes to a writable `emptyDir` while keeping `readOnlyRootFilesystem` enabled.
+- Return partially acquired warmup connections to the pool when connection pool warmup fails.
 
 ### 2.4.0, May 22nd, 2026
 
