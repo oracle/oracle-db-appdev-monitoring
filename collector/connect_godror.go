@@ -86,6 +86,18 @@ func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.
 	return db, nil
 }
 
+func effectiveSQLPoolLimits(dbconfig DatabaseConfig) (int, int) {
+	return dbconfig.GetMaxOpenConns(), dbconfig.GetMaxIdleConns()
+}
+
+func warmupConnectionPoolSize(dbconfig DatabaseConfig) int {
+	poolSize := dbconfig.GetMaxOpenConns()
+	if poolSize < 1 {
+		poolSize = dbconfig.GetPoolMaxConnections()
+	}
+	return poolSize
+}
+
 func isInvalidCredentialsError(err error) bool {
 	err = errors.Unwrap(err)
 	if err == nil {

@@ -35,6 +35,7 @@ type testQueryConnector struct {
 }
 
 var testQueryDriverID atomic.Uint64
+var errWarmupConnectionFailed = errors.New("warmup connection failed")
 
 func (testQueryDriver) Open(name string) (driver.Conn, error) {
 	return testQueryConn{rows: &testQueryRows{}}, nil
@@ -100,6 +101,44 @@ func openTestQueryDBWithRows(t *testing.T, rows driver.Rows) *sql.DB {
 		_ = db.Close()
 	})
 	return db
+}
+
+type partialWarmupFailureConnector struct {
+	successfulConnects int64
+	connectAttempts    atomic.Int64
+}
+
+type partialWarmupFailureConn struct{}
+
+func (c *partialWarmupFailureConnector) Connect(context.Context) (driver.Conn, error) {
+	if c.connectAttempts.Add(1) > c.successfulConnects {
+		return nil, errWarmupConnectionFailed
+	}
+	return partialWarmupFailureConn{}, nil
+}
+
+func (c *partialWarmupFailureConnector) Driver() driver.Driver {
+	return testQueryDriver{}
+}
+
+func (partialWarmupFailureConn) Prepare(string) (driver.Stmt, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (partialWarmupFailureConn) Close() error {
+	return nil
+}
+
+func (partialWarmupFailureConn) Begin() (driver.Tx, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (partialWarmupFailureConn) ExecContext(context.Context, string, []driver.NamedValue) (driver.Result, error) {
+	return driver.RowsAffected(0), nil
+}
+
+func (partialWarmupFailureConn) QueryContext(context.Context, string, []driver.NamedValue) (driver.Rows, error) {
+	return &testQueryRows{}, nil
 }
 
 func TestIsValid(t *testing.T) {
@@ -214,6 +253,33 @@ func TestWarmupConnectionPoolWithNilSessionSetsStartupReadyAndBackoff(t *testing
 	}
 	if got := db.getUp(); got != 0 {
 		t.Fatalf("expected database up metric to remain 0, got %v", got)
+	}
+}
+
+func TestWarmupSessionClosesAcquiredConnectionsAfterPartialFailure(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	connector := &partialWarmupFailureConnector{successfulConnects: 2}
+	session := sql.OpenDB(connector)
+	t.Cleanup(func() {
+		_ = session.Close()
+	})
+	maxOpenConns := 3
+	db := &Database{
+		Name:          "db1",
+		Config:        DatabaseConfig{ConnectConfig: ConnectConfig{MaxOpenConns: &maxOpenConns}},
+		DatabaseLabel: "database",
+	}
+
+	err := db.warmupSession(logger, session)
+
+	if !errors.Is(err, errWarmupConnectionFailed) {
+		t.Fatalf("expected warmup connection failure, got %v", err)
+	}
+	if got := connector.connectAttempts.Load(); got != 3 {
+		t.Fatalf("expected initdb plus partial warmup to make 3 connection attempts, got %d", got)
+	}
+	if got := session.Stats().InUse; got != 0 {
+		t.Fatalf("expected acquired warmup connections to be returned to the pool, got %d in use", got)
 	}
 }
 

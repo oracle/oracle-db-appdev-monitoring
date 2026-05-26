@@ -18,6 +18,7 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
+        fsGroup: 1000
         seccompProfile:
           type: RuntimeDefault
       containers:
@@ -61,6 +62,8 @@ spec:
             readOnly: true
           - name: tmp
             mountPath: /tmp
+          - name: alert-log
+            mountPath: /log
           # uncomment and customize the next item if you want to provide custom metrics definitions
           #- name: config-volume
           #  mountPath: /oracle/observability/txeventq-metrics.toml
@@ -83,6 +86,8 @@ spec:
           configMap:
             name: metrics-exporter-config
         - name: tmp
+          emptyDir: {}
+        - name: alert-log
           emptyDir: {}
         # uncomment and customize the next item if you want to provide custom metrics definitions
         #- name: config-volume

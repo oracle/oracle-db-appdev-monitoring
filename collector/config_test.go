@@ -152,6 +152,49 @@ databases:
 	}
 }
 
+func TestLoadMetricsConfigurationMapsLegacyListenAddressToWebConfig(t *testing.T) {
+	configPath := writeExporterConfig(t, `
+listenAddress: 127.0.0.1:9161
+databases:
+  default:
+    username: scott
+    password: tiger
+    url: localhost:1521/freepdb1
+`)
+
+	cfg, err := LoadMetricsConfiguration(testLogger(), &Config{ConfigFile: configPath})
+	if err != nil {
+		t.Fatalf("expected config to load, got %v", err)
+	}
+
+	if got := *cfg.Web.ListenAddresses; len(got) != 1 || got[0] != "127.0.0.1:9161" {
+		t.Fatalf("expected legacy listenAddress to configure web listen address, got %#v", got)
+	}
+}
+
+func TestLoadMetricsConfigurationPrefersWebListenAddresses(t *testing.T) {
+	configPath := writeExporterConfig(t, `
+listenAddress: 127.0.0.1:9161
+web:
+  listenAddresses:
+    - 127.0.0.1:9162
+databases:
+  default:
+    username: scott
+    password: tiger
+    url: localhost:1521/freepdb1
+`)
+
+	cfg, err := LoadMetricsConfiguration(testLogger(), &Config{ConfigFile: configPath})
+	if err != nil {
+		t.Fatalf("expected config to load, got %v", err)
+	}
+
+	if got := *cfg.Web.ListenAddresses; len(got) != 1 || got[0] != "127.0.0.1:9162" {
+		t.Fatalf("expected web.listenAddresses to take precedence, got %#v", got)
+	}
+}
+
 func TestLoadMetricsConfigurationAcceptsLogLevelAndFormat(t *testing.T) {
 	configPath := writeExporterConfig(t, `
 databases:
