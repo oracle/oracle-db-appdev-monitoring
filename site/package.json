@@ -33,7 +33,8 @@
   "overrides": {
     "follow-redirects": "1.16.0",
     "serialize-javascript": "7.0.5",
-    "terser-webpack-plugin": "5.3.17"
+    "terser-webpack-plugin": "5.3.17",
+    "uuid": "11.1.1"
   },
   "browserslist": {
     "production": [
