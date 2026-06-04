@@ -7,7 +7,7 @@ TAGS           ?= godror
 PLATFORM       ?= amd64
 DOCKER_TARGET  ?= exporter-godror
 CGO_ENABLED    ?= 1
-VERSION        ?= 2.4.0
+VERSION        ?= 2.4.1
 LDFLAGS        := -X main.Version=$(VERSION)
 GOFLAGS        := -ldflags "$(LDFLAGS) -s -w" --tags $(TAGS)
 BUILD_ARGS      = --build-arg VERSION=$(VERSION)

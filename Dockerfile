@@ -13,7 +13,7 @@ ENV TAGS=${TAGS:-godror}
 ARG CGO_ENABLED
 ENV CGO_ENABLED=${CGO_ENABLED:-1}
 
-ARG GO_VERSION=1.26.3
+ARG GO_VERSION=1.26.4
 ENV GO_VERSION=${GO_VERSION}
 
 RUN microdnf update -y && \
@@ -53,6 +53,7 @@ ENV GOARCH=${GOARCH:-amd64}
 RUN microdnf update -y && \
     microdnf install -y oracle-instantclient-release-23ai-el8 && \
     microdnf install -y oracle-instantclient-basic glibc && \
+    microdnf update -y expat gnutls glibc && \
     microdnf clean all
 
 ENV LD_LIBRARY_PATH=/usr/lib/oracle/23/client64/lib
