@@ -9,6 +9,8 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
+- Update installed Oracle Linux packages after adding Instant Client runtime dependencies in the Docker image.
+- Update the Docker build Go toolchain to 1.26.4.
 - Fix top-level `listenAddress` config so it is honored as the exporter web listen address when `web.listenAddresses` is not configured.
 - Fix go-ora connection warmup so `poolMaxConnections` and `poolMinConnections` are preserved as the SQL connection-pool limits.
 - Fix the Kubernetes sample alert-log path so it writes to a writable `emptyDir` while keeping `readOnlyRootFilesystem` enabled.
