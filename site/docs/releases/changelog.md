@@ -9,6 +9,7 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
+- Avoid installing the weak `platform-python-pip` package in the Docker runtime image when enabling the Oracle Instant Client repository.
 - Update installed Oracle Linux packages after adding Instant Client runtime dependencies in the Docker image.
 - Update the Docker build Go toolchain to 1.26.4.
 - Fix top-level `listenAddress` config so it is honored as the exporter web listen address when `web.listenAddresses` is not configured.

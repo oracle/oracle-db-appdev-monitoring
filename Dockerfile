@@ -51,7 +51,7 @@ ARG GOARCH
 ENV GOARCH=${GOARCH:-amd64}
 
 RUN microdnf update -y && \
-    microdnf install -y oracle-instantclient-release-23ai-el8 && \
+    microdnf install --setopt=install_weak_deps=0 -y oracle-instantclient-release-23ai-el8 && \
     microdnf install -y oracle-instantclient-basic glibc && \
     microdnf update -y expat gnutls glibc && \
     microdnf clean all
