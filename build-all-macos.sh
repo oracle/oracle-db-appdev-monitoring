@@ -8,30 +8,29 @@ set -euo pipefail
 
 # The following artifacts are created on a successful build in the 'dist' directory for the selected database driver target (godror or goora):
 # - linux/arm64 and linux/amd64 container images
-# - linux/arm64 and linux/amd64 binary tarballs for glibc 2.28 built on OL8
+# - linux/arm64 and linux/amd64 binary tarballs for glibc 2.28 extracted from the container images
 # - linux/arm64 and linux/amd64 binary tarballs built on the latest Ubuntu distribution
 # - darwin-arm64 binary tarball
 
 # Example usage:
-# ./build-all-macos.sh -v 2.4.1 -t godror -cmuo
+# ./build-all-macos.sh -v 2.4.1 -t godror -cmu
 
-USAGE="Usage: $0 [-v VERSION] [-t TARGET] [-cmuo]"
+USAGE="Usage: $0 [-v VERSION] [-t TARGET] [-cmu]"
 VERSION=""
 TARGET=""
 BUILD_CONTAINERS=""
 BUILD_DARWIN=""
 BUILD_UBUNTU=""
-BUILD_OL8=""
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+IMAGE_NAME="${IMAGE_NAME:-container-registry.oracle.com/database/observability-exporter}"
 
-while getopts "v:t:cmuo" opt; do
+while getopts "v:t:cmu" opt; do
   case ${opt} in
     v ) VERSION=$OPTARG;; # Exporter version
     t ) TARGET=$OPTARG;;  # Target database driver, may be "godror" or "goora"
-    c ) BUILD_CONTAINERS=true;; # Build exporter containers
+    c ) BUILD_CONTAINERS=true;; # Build exporter containers and extract OL8/glibc binary tarballs
     m ) BUILD_DARWIN=true;; # Build darwin/macos binary
     u ) BUILD_UBUNTU=true;; # Build binaries on latest Ubuntu
-    o ) BUILD_OL8=true;;    # Build binaries on OL8
     \? ) echo "$USAGE"; exit 1;;
   esac
 done
@@ -41,19 +40,27 @@ if [[ -z "$VERSION" ]] || [[ -z "$TARGET" ]]; then
   exit 1
 fi
 
-OL_IMAGE="oraclelinux:8"
-BASE_IMAGE="ghcr.io/oracle/oraclelinux:8-slim"
 UBUNTU_IMAGE="ubuntu:24.04"
 OL8_GLIBC_VERSION="2.28"
-GO_VERSION="1.26.3"
+IMAGE_ID="${IMAGE_ID:-${IMAGE_NAME}:${VERSION}}"
 
-if [[ "${TARGET}" == "goora" ]]; then
-  TAGS="goora"
-  CGO_ENABLED=0
-else
-  TAGS="godror"
-  CGO_ENABLED=1
-fi
+case "${TARGET}" in
+  goora)
+    TAGS="goora"
+    CGO_ENABLED=0
+    DOCKER_TARGET="exporter-goora"
+    ;;
+  godror)
+    TAGS="godror"
+    CGO_ENABLED=1
+    DOCKER_TARGET="exporter-godror"
+    ;;
+  *)
+    echo "Unsupported target: ${TARGET}"
+    echo "$USAGE"
+    exit 1
+    ;;
+esac
 
 copy_workspace_to_container() {
   local container="$1"
@@ -63,55 +70,36 @@ copy_workspace_to_container() {
   docker exec "${container}" rm -rf /oracle-db-appdev-monitoring/.git
 }
 
-linux_make_target() {
-  local platform="$1"
-
-  case "${platform}" in
-    amd64) echo "go-build-linux-amd64" ;;
-    arm64) echo "go-build-linux-arm64" ;;
-    *) echo "unsupported platform: ${platform}" >&2; exit 1 ;;
-  esac
-}
-
 build_darwin_local() {
   echo "Build darwin-arm64"
   make go-build-darwin-arm64 VERSION="$VERSION" TAGS="$TAGS" CGO_ENABLED="$CGO_ENABLED"
   echo "Built for darwin-arm64"
 }
 
-build_ol_platform() {
-  build_ol "$1"
-  rename_glibc "$1"
+docker_image_for_platform() {
+  local platform="$1"
+
+  echo "${IMAGE_ID}-${platform}"
 }
 
-build_ol() {
+extract_container_binary() {
   local platform="$1"
-  local container="build-${platform}"
-  local filename="oracledb_exporter-${VERSION}.linux-${platform}.tar.gz"
-  local make_target
-  local go_tarball="go${GO_VERSION}.linux-${platform}.tar.gz"
+  local image="$2"
+  local container
+  local artifact_dir="oracledb_exporter-${VERSION}.linux-${platform}"
+  local output_dir="dist/${artifact_dir}"
 
-  make_target="$(linux_make_target "${platform}")"
-
-  docker run -d --platform "linux/${platform}" --name "${container}" "${OL_IMAGE}" tail -f /dev/null
-  copy_workspace_to_container "${container}"
-  docker exec "${container}" bash -c "dnf install -y wget git make gcc jq && \
-                                    wget -q https://go.dev/dl/${go_tarball} && \
-                                    go_checksum=\"\$(wget -qO- 'https://go.dev/dl/?mode=json' | jq -r --arg version 'go${GO_VERSION}' --arg os 'linux' --arg arch '${platform}' '.[] | select(.version == \$version) | .files[] | select(.os == \$os and .arch == \$arch) | .sha256' | head -n 1)\" && \
-                                    test -n \"\${go_checksum}\" && test \"\${go_checksum}\" != \"null\" && \
-                                    printf '%s  %s\n' \"\${go_checksum}\" '${go_tarball}' | sha256sum -c - && \
-                                    rm -rf /usr/local/go && \
-                                    tar -C /usr/local -xzf ${go_tarball} && \
-                                    rm ${go_tarball} && \
-                                    export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin && \
-                                    cd oracle-db-appdev-monitoring && \
-                                    make ${make_target} VERSION=\"${VERSION}\" TAGS=\"${TAGS}\" CGO_ENABLED=\"${CGO_ENABLED}\""
-
-  docker cp "${container}:/oracle-db-appdev-monitoring/dist/${filename}" "dist/"
-
-  echo "Build complete for ${OL_IMAGE}-${platform}"
-  docker stop "$container"
-  docker rm "$container"
+  echo "Extract linux-${platform} binary from ${image}"
+  mkdir -p "${output_dir}"
+  container="$(docker create "${image}")"
+  if ! docker cp "${container}:/oracledb_exporter" "${output_dir}/oracledb_exporter"; then
+    docker rm "${container}" >/dev/null
+    return 1
+  fi
+  docker rm "${container}" >/dev/null
+  chmod +x "${output_dir}/oracledb_exporter"
+  (cd dist ; tar cfz "${artifact_dir}.tar.gz" "${artifact_dir}")
+  rename_glibc "${platform}"
 }
 
 build_ubuntu() {
@@ -132,6 +120,17 @@ build_ubuntu() {
   docker rm "$container"
 }
 
+build_container_artifacts() {
+  echo "Building container images"
+  make docker-arm VERSION="$VERSION" IMAGE_ID="$IMAGE_ID" TAGS="$TAGS" CGO_ENABLED="$CGO_ENABLED" DOCKER_TARGET="$DOCKER_TARGET"
+  make docker-amd VERSION="$VERSION" IMAGE_ID="$IMAGE_ID" TAGS="$TAGS" CGO_ENABLED="$CGO_ENABLED" DOCKER_TARGET="$DOCKER_TARGET"
+  echo "Build complete for container images"
+
+  extract_container_binary "arm64" "$(docker_image_for_platform "arm64")"
+  extract_container_binary "amd64" "$(docker_image_for_platform "amd64")"
+  echo "Build complete for container binary tarballs"
+}
+
 rename_glibc() {
   local platform="$1"
 
@@ -149,23 +148,10 @@ if [[ -n "$BUILD_DARWIN" ]]; then
   build_darwin_local
 fi
 
-if [[ -n "$BUILD_OL8" ]]; then
-  echo "Building OL8 binaries"
-  # Create OL8 linux artifacts for glibc 2.28
-  build_ol_platform "arm64"
-  build_ol_platform "amd64"
-  echo "Build complete for OL8 binaries"
-fi
-
 # build containers
 if [[ -n "$BUILD_CONTAINERS" ]]; then
-  echo "Building container images"
-  make docker-arm VERSION="$VERSION"
-  make docker-amd VERSION="$VERSION"
-  echo "Build complete for container images"
+  build_container_artifacts
 fi
-
-
 
 if [[ -n "$BUILD_UBUNTU" ]]; then
   # Create Linux artifacts and containers
