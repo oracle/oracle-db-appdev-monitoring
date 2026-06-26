@@ -15,26 +15,26 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "@docusaurus/core": "3.10.0",
-    "@docusaurus/preset-classic": "3.10.0",
-    "@mdx-js/react": "^3.0.0",
+    "@docusaurus/core": "3.10.1",
+    "@docusaurus/preset-classic": "3.10.1",
+    "@mdx-js/react": "^3.1.1",
     "clsx": "^2.0.0",
-    "prism-react-renderer": "^2.3.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "prism-react-renderer": "^2.4.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
-    "@docusaurus/faster": "3.10.0",
-    "@docusaurus/module-type-aliases": "3.10.0",
-    "@docusaurus/tsconfig": "3.10.0",
-    "@docusaurus/types": "3.10.0",
-    "typescript": "~5.6.2"
+    "@docusaurus/faster": "3.10.1",
+    "@docusaurus/module-type-aliases": "3.10.1",
+    "@docusaurus/tsconfig": "3.10.1",
+    "@docusaurus/types": "3.10.1",
+    "typescript": "~6.0.3"
   },
   "overrides": {
     "follow-redirects": "1.16.0",
-    "serialize-javascript": "7.0.5",
-    "terser-webpack-plugin": "5.3.17",
-    "uuid": "11.1.1"
+    "serialize-javascript": "7.0.6",
+    "terser-webpack-plugin": "5.6.1",
+    "uuid": "14.0.1"
   },
   "browserslist": {
     "production": [
