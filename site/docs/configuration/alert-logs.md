@@ -21,7 +21,7 @@ Each exported log record includes the source database name:
 }
 ```
 
-If `log.messageLevelEnabled=true`, the alert log `message_level` is included as a `level` string:
+If `log.messageLevelEnabled=true`, the alert log `message_type` is included as a `level` string:
 
 ```json
 {

@@ -22,6 +22,9 @@ import (
 const (
 	alertLogReadChunkSize = 4096
 	maxAlertLogLineBytes  = 1 << 20
+	unknownLevel = "UNKNOWN"
+	warningLevel = "WARNING"
+	traceLevel   = "TRACE"
 	infoLevel = "INFO"
 	errorLevel = "ERROR"
 )
@@ -39,14 +42,18 @@ var defaultLastLogRecord = LogRecord{
 	Timestamp: "1900-01-01T01:01:01.001Z",
 }
 
+
+
 var levelMap = map[int64]string{
-	1: errorLevel,
+	1: unknownLevel,
 	2: errorLevel,
-	8: infoLevel,
-	16: infoLevel,
+	3: errorLevel,
+	4: warningLevel,
+	5: infoLevel,
+	6: traceLevel,
 }
 
-const alertLogQuery = `select originating_timestamp, module_id, execution_context_id, message_text, message_level
+const alertLogQuery = `select originating_timestamp, module_id, execution_context_id, message_text, message_type
 		from v$diag_alert_ext
 		where originating_timestamp > to_utc_timestamp_tz(:1)`
 
