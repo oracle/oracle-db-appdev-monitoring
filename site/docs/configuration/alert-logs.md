@@ -17,18 +17,32 @@ Each exported log record includes the source database name:
   "database": "db2",
   "moduleId": "",
   "ecid": "",
-  "message": "Example alert log message"
+  "message": "Example alert log message",
+}
+```
+
+If `log.messageLevelEnabled=true`, the alert log `message_type` is included as a `level` string:
+
+```json
+{
+  "timestamp": "2026-03-13T18:37:46.302Z",
+  "database": "db2",
+  "moduleId": "",
+  "ecid": "",
+  "message": "Example alert log message",
+  "level": "INFO"
 }
 ```
 
 Alert logging is configured with the following parameters in the exporter config file:
 
-| Parameter            | Description                                                                 | Default          |
-|----------------------|-----------------------------------------------------------------------------|------------------|
-| log.destination      | Base alert log file path                                                    | `/log/alert.log` |
-| log.interval         | Interval to log records                                                     | `15s`            |
-| log.disable          | Disable logging if set to `1`                                               | `0`              |
-| log.perDatabaseFiles | When `true`, write one file per database using the pattern `alert-<db>.log` | `false`          |
+| Parameter               | Description                                                                 | Default          |
+|-------------------------|-----------------------------------------------------------------------------|------------------|
+| log.destination         | Base alert log file path                                                    | `/log/alert.log` |
+| log.interval            | Interval to log records                                                     | `15s`            |
+| log.disable             | Disable logging if set to `1`                                               | `0`              |
+| log.perDatabaseFiles    | When `true`, write one file per database using the pattern `alert-<db>.log` | `false`          |
+| log.messageLevelEnabled | When `true`, write `"level": "INFO\|ERROR"` to the alert log.               | `false`          |
 
 Example alert log YAML configuration:
 
@@ -42,6 +56,8 @@ log:
   perDatabaseFiles: true
   ## Set disable to 1 to disable logging
   # disable: 0
+  ## Set to true to add log levels to the alert log. 
+  # messageLevelEnabled: false
 ```
 
 ### Multiple Databases and Alert Log export

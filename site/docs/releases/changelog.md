@@ -7,9 +7,9 @@ sidebar_position: 2
 
 List of upcoming and historic changes to the exporter.
 
-### Next, TBD
+### 2.5.0, TBD
 
-TBD
+- Alert logging now supports optional INFO and ERROR log categorization using the underlying row `message_type`. To enable this feature, set `log.messageLevelEnabled=true` (Disabled by default). 
 
 ### 2.4.1, June 11th, 2026
 

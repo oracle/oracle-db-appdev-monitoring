@@ -223,7 +223,7 @@ func TestUpdateLogSkipsWhenStartupNotReady(t *testing.T) {
 	logPath := filepath.Join(t.TempDir(), "alert.log")
 	db := &collector.Database{Name: "db1"}
 
-	UpdateLog(logPath, false, logger, db)
+	UpdateLog(logPath, false, false, logger, db)
 
 	if _, err := os.Stat(logPath); !os.IsNotExist(err) {
 		t.Fatalf("expected log file to not be created while startup is in progress, got err=%v", err)
