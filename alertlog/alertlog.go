@@ -22,6 +22,8 @@ import (
 const (
 	alertLogReadChunkSize = 4096
 	maxAlertLogLineBytes  = 1 << 20
+	infoLevel = "INFO"
+	errorLevel = "ERROR"
 )
 
 type LogRecord struct {
@@ -30,15 +32,31 @@ type LogRecord struct {
 	ModuleId  string `json:"moduleId"`
 	ECID      string `json:"ecid"`
 	Message   string `json:"message"`
+	Level     string `json:"level,omitempty"`
 }
 
 var defaultLastLogRecord = LogRecord{
 	Timestamp: "1900-01-01T01:01:01.001Z",
 }
 
-const alertLogQuery = `select originating_timestamp, module_id, execution_context_id, message_text
+var levelMap = map[int64]string{
+	1: errorLevel,
+	2: errorLevel,
+	8: infoLevel,
+	16: infoLevel,
+}
+
+const alertLogQuery = `select originating_timestamp, module_id, execution_context_id, message_text, message_level
 		from v$diag_alert_ext
 		where originating_timestamp > to_utc_timestamp_tz(:1)`
+
+
+func toLogLevel(messageLevel int64) string {
+	if v, ok := levelMap[messageLevel]; ok {
+		return v
+	}
+	return infoLevel
+}
 
 // nullStringValue unwraps a nullable database string, returning an empty string for NULL.
 func nullStringValue(s sql.NullString) string {
@@ -46,6 +64,16 @@ func nullStringValue(s sql.NullString) string {
 		return s.String
 	}
 	return ""
+}
+
+func toStringLevel(messageLevel sql.NullInt64, logLevelEnabled bool) string {
+	if !logLevelEnabled {
+		return ""
+	}
+	if !messageLevel.Valid {
+		return infoLevel
+	}
+	return levelMap[messageLevel.Int64]
 }
 
 // logDestinationForDatabase resolves the output path for a database, either shared or per-database.
@@ -153,7 +181,7 @@ func buildAlertLogQuery(lastTimestamp string) (string, []interface{}) {
 }
 
 // UpdateLog appends newly queried alert log records for a database to the configured log destination.
-func UpdateLog(logDestination string, perDatabaseFiles bool, logger *slog.Logger, d *collector.Database) {
+func UpdateLog(logDestination string, perDatabaseFiles bool, logLevelEnabled bool, logger *slog.Logger, d *collector.Database) {
 	if !d.StartupReady() {
 		return
 	}
@@ -211,8 +239,9 @@ func UpdateLog(logDestination string, perDatabaseFiles bool, logger *slog.Logger
 			moduleID  sql.NullString
 			ecid      sql.NullString
 			message   sql.NullString
+			messageLevel sql.NullInt64
 		)
-		if err := rows.Scan(&timestamp, &moduleID, &ecid, &message); err != nil {
+		if err := rows.Scan(&timestamp, &moduleID, &ecid, &message, &messageLevel); err != nil {
 			retryAfter := databaseRetries.recordFailure(d.Name, time.Now())
 			logger.Error("Error reading a row from the alert logs", "error", err, "database", d.Name, "retry_after", retryAfter)
 			return
@@ -223,6 +252,7 @@ func UpdateLog(logDestination string, perDatabaseFiles bool, logger *slog.Logger
 			ModuleId:  nullStringValue(moduleID),
 			ECID:      nullStringValue(ecid),
 			Message:   nullStringValue(message),
+			Level:     toStringLevel(messageLevel, logLevelEnabled),
 		}
 
 		// strip the newline from end of message

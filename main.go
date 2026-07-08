@@ -223,7 +223,7 @@ func main() {
 				<-logTicker.C
 				logger.Debug("updating alert log")
 				for _, db := range exporter.GetDBs() {
-					alertlog.UpdateLog(m.LogDestination(), m.LogPerDatabaseFiles(), logger, db)
+					alertlog.UpdateLog(m.LogDestination(), m.LogPerDatabaseFiles(), m.LogMessageLevelEnabled(), logger, db)
 				}
 
 			}

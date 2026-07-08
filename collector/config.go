@@ -113,6 +113,7 @@ type MetricsFilesConfig struct {
 }
 
 type LoggingConfig struct {
+	LogLevelEnabled     *bool          `yaml:"messageLevelEnabled"`
 	LogDisable          *int           `yaml:"disable"`
 	LogInterval         *time.Duration `yaml:"interval"`
 	LogDestination      string         `yaml:"destination"`
@@ -138,6 +139,10 @@ func (m *MetricsConfiguration) LogInterval() time.Duration {
 
 func (m *MetricsConfiguration) LogDisable() int {
 	return *m.Logging.LogDisable
+}
+
+func (m *MetricsConfiguration) LogMessageLevelEnabled() bool {
+	return *m.Logging.LogLevelEnabled
 }
 
 func (m *MetricsConfiguration) LogPerDatabaseFiles() bool {
@@ -399,6 +404,10 @@ func (m *MetricsConfiguration) mergeLoggingConfig() {
 	}
 	if len(m.Logging.Format) == 0 {
 		m.Logging.Format = "logfmt"
+	}
+	if m.Logging.LogLevelEnabled == nil {
+		logLevelEnabled := false
+		m.Logging.LogLevelEnabled = &logLevelEnabled
 	}
 }
 
