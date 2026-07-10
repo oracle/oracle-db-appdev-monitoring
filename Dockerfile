@@ -54,6 +54,7 @@ RUN microdnf update -y && \
     microdnf install --setopt=install_weak_deps=0 -y oracle-instantclient-release-23ai-el8 && \
     microdnf install -y oracle-instantclient-basic glibc && \
     microdnf update -y expat gnutls glibc && \
+    rpm -e --nodeps platform-python-setuptools && \
     microdnf clean all
 
 ENV LD_LIBRARY_PATH=/usr/lib/oracle/23/client64/lib
@@ -73,6 +74,9 @@ USER 1000
 ENTRYPOINT ["/oracledb_exporter"]
 
 FROM ${BASE_IMAGE:-ghcr.io/oracle/oraclelinux:8-slim} AS exporter-goora
+
+RUN rpm -e --nodeps platform-python-setuptools && \
+    microdnf clean all
 
 COPY --from=build /go/src/oracledb_exporter/oracle-db-appdev-monitoring /oracledb_exporter
 ADD ./default-metrics.toml /default-metrics.toml

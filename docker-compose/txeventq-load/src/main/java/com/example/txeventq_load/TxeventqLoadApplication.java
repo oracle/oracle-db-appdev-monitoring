@@ -14,7 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.jms.DefaultJmsListenerContainerFactoryConfigurer;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.jms.annotation.EnableJms;
@@ -24,6 +23,8 @@ import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.support.converter.MappingJackson2MessageConverter;
 import org.springframework.jms.support.converter.MessageConverter;
 import org.springframework.jms.support.converter.MessageType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import jakarta.jms.ConnectionFactory;
 import jakarta.jms.Destination;
@@ -31,7 +32,6 @@ import jakarta.jms.Session;
 import jakarta.jms.TopicConnection;
 import jakarta.jms.TopicConnectionFactory;
 import jakarta.jms.TopicSession;
-import lombok.extern.slf4j.Slf4j;
 import oracle.jakarta.AQ.AQQueueTableProperty;
 import oracle.jakarta.jms.AQjmsDestination;
 import oracle.jakarta.jms.AQjmsFactory;
@@ -39,8 +39,9 @@ import oracle.jakarta.jms.AQjmsSession;
 
 @SpringBootApplication
 @EnableJms
-@Slf4j
 public class TxeventqLoadApplication implements CommandLineRunner {
+
+	private static final Logger log = LoggerFactory.getLogger(TxeventqLoadApplication.class);
 
 	private Random random = new Random();
 	private int NUM_TOPICS = 10;
@@ -70,14 +71,10 @@ public class TxeventqLoadApplication implements CommandLineRunner {
     }
 
 	@Bean
-    public JmsListenerContainerFactory<?> factory(ConnectionFactory connectionFactory,
-                                                  DefaultJmsListenerContainerFactoryConfigurer configurer) {
+	public JmsListenerContainerFactory<?> factory(ConnectionFactory connectionFactory) {
         DefaultJmsListenerContainerFactory factory = new DefaultJmsListenerContainerFactory();
-        // This provides all boot's default to this factory, including the message converter
-        configurer.configure(factory, connectionFactory);
-        // You could still override some of Boot's default if necessary.
         return factory;
-    }
+	}
 
 	@Override
 	public void run(String... args) throws Exception {
