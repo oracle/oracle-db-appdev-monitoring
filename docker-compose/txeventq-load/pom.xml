@@ -9,7 +9,7 @@ https://oss.oracle.com/licenses/upl. -->
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.4.5</version>
+		<version>4.1.0</version>
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.example</groupId>
@@ -32,6 +32,7 @@ https://oss.oracle.com/licenses/upl. -->
 	</scm>
 	<properties>
 		<java.version>21</java.version>
+		<logback.version>1.5.35</logback.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -42,13 +43,13 @@ https://oss.oracle.com/licenses/upl. -->
 		<dependency>
 			<groupId>com.oracle.database.spring</groupId>
 			<artifactId>oracle-spring-boot-starter-aqjms</artifactId>
-			<version>25.1.0</version>
+			<version>26.2.0</version>
 		</dependency>
 
 		<dependency>
 			<groupId>com.oracle.database.spring</groupId>
 			<artifactId>oracle-spring-boot-starter-ucp</artifactId>
-			<version>25.1.0</version>
+			<version>26.2.0</version>
 		</dependency>
 
 		<dependency>
