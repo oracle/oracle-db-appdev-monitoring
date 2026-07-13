@@ -13,7 +13,7 @@ set -euo pipefail
 # - darwin-arm64 binary tarball
 
 # Example usage:
-# ./build-all-macos.sh -v 2.4.1 -t godror -cmu
+# ./build-all-macos.sh -v 2.4.2 -t godror -cmu
 
 USAGE="Usage: $0 [-v VERSION] [-t TARGET] [-cmu]"
 VERSION=""
