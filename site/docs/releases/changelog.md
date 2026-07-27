@@ -9,7 +9,7 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
-Changes TBD
+- Restart the exporter process when its configuration file changes, after validating the updated configuration.
 
 ### 2.4.2, July 13th, 2026
 

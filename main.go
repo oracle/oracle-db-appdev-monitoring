@@ -17,7 +17,6 @@ import (
 	"path/filepath"
 	"runtime/debug"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/prometheus/common/promslog"
@@ -127,6 +126,18 @@ func main() {
 	}
 	logger := promslog.New(promLogConfig)
 
+	// Restart exporter on config file changes
+	restartRequests := make(chan restartRequest, 1)
+	go runRestartCoordinator(context.Background(), logger, restartRequests, restartProcess)
+	if err := watchConfigFile(context.Background(), logger, configFile, func() error {
+		_, err := collector.LoadMetricsConfiguration(logger, config)
+		return err
+	}, func() {
+		requestRestart(restartRequests, "configuration file changed")
+	}); err != nil {
+		logger.Error("unable to watch configuration file", "error", err)
+	}
+
 	freeOSMemInterval, enableFree := os.LookupEnv("FREE_INTERVAL")
 	if enableFree {
 		logger.Info("FREE_INTERVAL env var is present, so will attempt to release OS memory", "free_interval", freeOSMemInterval)
@@ -174,12 +185,7 @@ func main() {
 
 			go func() {
 				<-ticker.C
-				logger.Info("Restarting the process...")
-				executable, _ := os.Executable()
-				execErr := syscall.Exec(executable, os.Args, os.Environ())
-				if execErr != nil {
-					panic(execErr)
-				}
+				requestRestart(restartRequests, "RESTART_INTERVAL elapsed")
 			}()
 		}
 	}
