@@ -169,3 +169,9 @@ FROM container-registry.oracle.com/database/observability-exporter:2.4.1
 COPY my-exporter-config.yaml /
 ENTRYPOINT ["/oracledb_exporter", "--config.file", "/my-exporter-config.yaml"]
 ```
+
+### Dynamic Configuration
+
+The exporter watches the config file, and will dynamically restart when this file changes (keeping the same PID). 
+
+If the new config file is invalid or otherwise cannot be parsed, the exporter continues using the previous version of the config file, until a valid config file is supplied.
