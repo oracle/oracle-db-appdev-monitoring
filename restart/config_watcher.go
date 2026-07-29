@@ -1,7 +1,7 @@
 // Copyright (c) 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
-package main
+package restart
 
 import (
 	"context"
@@ -16,16 +16,16 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-type restartRequest string
+type Request string
 
-func requestRestart(requests chan<- restartRequest, reason restartRequest) {
+func RequestRestart(requests chan<- Request, reason Request) {
 	select {
 	case requests <- reason:
 	default:
 	}
 }
 
-func runRestartCoordinator(ctx context.Context, logger *slog.Logger, requests <-chan restartRequest, restart func() error) {
+func RunRestartCoordinator(ctx context.Context, logger *slog.Logger, requests <-chan Request, restart func() error) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -39,7 +39,7 @@ func runRestartCoordinator(ctx context.Context, logger *slog.Logger, requests <-
 	}
 }
 
-func restartProcess() error {
+func Process() error {
 	executable, err := os.Executable()
 	if err != nil {
 		return err
@@ -47,7 +47,7 @@ func restartProcess() error {
 	return syscall.Exec(executable, os.Args, os.Environ())
 }
 
-func watchConfigFile(ctx context.Context, logger *slog.Logger, configFile string, validate func() error, changed func()) error {
+func WatchConfigFile(ctx context.Context, logger *slog.Logger, configFile string, validate func() error, changed func()) error {
 	configFile, err := filepath.Abs(configFile)
 	if err != nil {
 		return err

@@ -134,3 +134,11 @@ oracledb_wait_time_system_io{database="db1"} 0.13
 # TYPE oracledb_wait_time_user_io counter
 oracledb_wait_time_user_io{database="db1"} 12.38
 ```
+
+## Build Info Metric
+
+The exporter broadcasts its build info through the `oracledb_exporter_build_info` metric. The metric contains the following labels, allowing users to determine the active exporter version at runtime.
+
+```bash
+oracledb_exporter_build_info{branch="",goarch="arm64",goos="darwin",goversion="<go version>",revision="<commit SHA>",tags="godror",version="<build version>"} 1
+```
