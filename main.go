@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/oracle/oracle-db-appdev-monitoring/restart"
 	"github.com/prometheus/common/promslog"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -127,13 +128,13 @@ func main() {
 	logger := promslog.New(promLogConfig)
 
 	// Restart exporter on config file changes
-	restartRequests := make(chan restartRequest, 1)
-	go runRestartCoordinator(context.Background(), logger, restartRequests, restartProcess)
-	if err := watchConfigFile(context.Background(), logger, configFile, func() error {
+	restartRequests := make(chan restart.Request, 1)
+	go restart.RunRestartCoordinator(context.Background(), logger, restartRequests, restart.Process)
+	if err := restart.WatchConfigFile(context.Background(), logger, configFile, func() error {
 		_, err := collector.LoadMetricsConfiguration(logger, config)
 		return err
 	}, func() {
-		requestRestart(restartRequests, "configuration file changed")
+		restart.RequestRestart(restartRequests, "configuration file changed")
 	}); err != nil {
 		logger.Error("unable to watch configuration file", "error", err)
 	}
@@ -185,7 +186,7 @@ func main() {
 
 			go func() {
 				<-ticker.C
-				requestRestart(restartRequests, "RESTART_INTERVAL elapsed")
+				restart.RequestRestart(restartRequests, "RESTART_INTERVAL elapsed")
 			}()
 		}
 	}

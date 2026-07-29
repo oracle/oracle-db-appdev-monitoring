@@ -1,7 +1,7 @@
 // Copyright (c) 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
-package main
+package restart
 
 import (
 	"context"
@@ -25,7 +25,7 @@ func TestWatchConfigFileRestartsForAtomicReplacement(t *testing.T) {
 	changed := make(chan struct{}, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
-	if err := watchConfigFile(ctx, testSlogLogger(), configFile, func() error { return nil }, func() {
+	if err := WatchConfigFile(ctx, testSlogLogger(), configFile, func() error { return nil }, func() {
 		changed <- struct{}{}
 	}); err != nil {
 		t.Fatalf("watchConfigFile() error = %v", err)
@@ -50,7 +50,7 @@ func TestWatchConfigFileKeepsRunningForInvalidConfiguration(t *testing.T) {
 	changed := make(chan struct{}, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
-	if err := watchConfigFile(ctx, testSlogLogger(), configFile, func() error {
+	if err := WatchConfigFile(ctx, testSlogLogger(), configFile, func() error {
 		_, err := collector.LoadMetricsConfiguration(testSlogLogger(), &collector.Config{ConfigFile: configFile})
 		return err
 	}, func() {
@@ -80,16 +80,16 @@ func TestIsConfigChangeEventRecognizesKubernetesDataSymlink(t *testing.T) {
 }
 
 func TestRequestRestartCoalescesRequests(t *testing.T) {
-	requests := make(chan restartRequest, 1)
-	requestRestart(requests, "configuration file changed")
-	requestRestart(requests, "RESTART_INTERVAL elapsed")
+	requests := make(chan Request, 1)
+	RequestRestart(requests, "configuration file changed")
+	RequestRestart(requests, "RESTART_INTERVAL elapsed")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	var restarts atomic.Int32
 	done := make(chan struct{})
 	go func() {
-		runRestartCoordinator(ctx, testSlogLogger(), requests, func() error {
+		RunRestartCoordinator(ctx, testSlogLogger(), requests, func() error {
 			restarts.Add(1)
 			cancel()
 			return nil
