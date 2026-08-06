@@ -75,7 +75,7 @@ ENTRYPOINT ["/oracledb_exporter"]
 
 FROM ${BASE_IMAGE:-ghcr.io/oracle/oraclelinux:8-slim} AS exporter-goora
 
-RUN rpm -e --nodeps platform-python-setuptools && \
+RUN microdnf update -y && \
     microdnf clean all
 
 COPY --from=build /go/src/oracledb_exporter/oracle-db-appdev-monitoring /oracledb_exporter
