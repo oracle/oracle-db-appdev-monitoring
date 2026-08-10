@@ -59,6 +59,9 @@ func TestWatchConfigFileKeepsRunningForInvalidConfiguration(t *testing.T) {
 		t.Fatalf("watchConfigFile() error = %v", err)
 	}
 
+	// In-place writes can briefly expose an empty or partially written file. The
+	// watcher must validate only the settled contents, rather than restarting for
+	// a transient configuration that happens to be valid.
 	writeConfig(t, configFile, "log:\n  level: invalid\n")
 	assertNoChange(t, changed)
 

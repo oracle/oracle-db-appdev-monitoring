@@ -11,6 +11,7 @@ List of upcoming and historic changes to the exporter.
 
 - Add an optional OTLP metrics publisher for scheduled scrapes, so the metrics exporter can publish metrics to OTLP backends.
 - Restart the exporter process when its configuration file changes, after validating the updated configuration.
+- Avoid restarting for a transient configuration while an in-place configuration-file update is still being written.
 
 ### 2.4.2, July 13th, 2026
 
