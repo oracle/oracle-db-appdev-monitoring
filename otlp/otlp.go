@@ -90,7 +90,6 @@ func New(ctx context.Context, cfg *collector.OTLPConfig, version string, interva
 		resourceAttributes["service.version"] = version
 	}
 
-	// Periodically reads metrics from the OTLP exporter
 	reader := metric.NewPeriodicReader(exporter,
 		metric.WithInterval(interval),
 		metric.WithTimeout(timeout),
@@ -138,11 +137,6 @@ func clientTLSConfig(cfg *collector.OTLPTLSConfig) (*tls.Config, error) {
 // Shutdown flushes the SDK reader and releases the exporter connection.
 func (p *Pipeline) Shutdown(ctx context.Context) error {
 	return p.provider.Shutdown(ctx)
-}
-
-// ForceFlush collects and exports a snapshot immediately.
-func (p *Pipeline) ForceFlush(ctx context.Context) error {
-	return p.provider.ForceFlush(ctx)
 }
 
 func copyAttributes(attributes map[string]string) map[string]string {

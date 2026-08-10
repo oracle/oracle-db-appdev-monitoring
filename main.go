@@ -180,7 +180,7 @@ func main() {
 
 	logger.Info("Starting oracledb_exporter", "version", Version)
 	logger.Info("Build context", "build", version.BuildContext())
-	logger.Info("Collect from: ", "metricPath", m.MetricsPath)
+	logger.Info("Collect from", "metricPath", m.MetricsPath)
 
 	opts := promhttp.HandlerOpts{
 		ErrorHandling: promhttp.ContinueOnError,

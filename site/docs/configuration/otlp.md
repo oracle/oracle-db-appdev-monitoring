@@ -5,11 +5,11 @@ sidebar_position: 7
 
 # OTLP Metric Publishing
 
-The exporter can periodically publish its collected metrics to an OTLP/gRPC collector. OTLP export is optional: when the `otlp` section is not configured, metrics will not be published over OTLP/gRCP.
+The exporter can periodically publish its collected metrics to an OTLP/gRPC collector. OTLP export is optional: when the `otlp` section is not configured, metrics are available only from the Prometheus `/metrics` endpoint.
 
-OTLP publishing exports the gauges, counters, histograms, and untyped metrics as the Prometheus `/metrics` endpoint. OTLP metrics are published on the `metrics.scrapeInterval` duration when OTLP is configured.
+OTLP publishing exports the gauges, counters, histograms, and untyped metrics exposed by the Prometheus `/metrics` endpoint. It requires a positive `metrics.scrapeInterval`. The OTLP reader and scheduled scraper use that same interval, but run on independent schedules.
 
-## Basic OTLP/gRCP exporter configuration
+## Basic OTLP/gRPC exporter configuration
 
 Use an `http://` endpoint for plaintext gRPC, or an `https://` endpoint for TLS. The scheme is required.
 
@@ -19,10 +19,10 @@ metrics:
 
 otlp:
   endpoint: https://otel-collector.example.com:4317
-  timeout: 30s # default 30s
+  timeout: 10s # default 10s
   headers: # optional, specify any request headers
     Authorization: "Bearer ${OTLP_TOKEN}"
-  resourceAttributes: # optional, any additional OTLP resource attributes 
+  resourceAttributes: # optional, additional OTLP resource attributes
     deployment.environment: production
 ```
 

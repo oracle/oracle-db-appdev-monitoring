@@ -27,8 +27,6 @@ type Exporter struct {
 	databases           []*Database
 	logger              *slog.Logger
 	allConstLabels      []string
-	scheduledScrapeHook func()
-	hookMU              sync.RWMutex
 }
 
 type Database struct {

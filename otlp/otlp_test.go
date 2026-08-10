@@ -118,15 +118,11 @@ func TestPipelineExportsConfiguredHeadersAndResources(t *testing.T) {
 		Endpoint: "http://" + listener.Addr().String(), Timeout: &timeout,
 		Headers:            map[string]string{"Authorization": "Bearer token"},
 		ResourceAttributes: map[string]string{"service.name": "custom-exporter", "deployment.environment": "test"},
-	}, "1.2.3", time.Hour, staticGatherer{})
+	}, "1.2.3", 10*time.Millisecond, staticGatherer{})
 	if err != nil {
 		t.Fatalf("new pipeline: %v", err)
 	}
 	t.Cleanup(func() { _ = pipeline.Shutdown(context.Background()) })
-	if err := pipeline.ForceFlush(context.Background()); err != nil {
-		t.Fatalf("force flush: %v", err)
-	}
-
 	select {
 	case headers := <-service.headers:
 		if got := headers.Get("authorization"); len(got) != 1 || got[0] != "Bearer token" {
