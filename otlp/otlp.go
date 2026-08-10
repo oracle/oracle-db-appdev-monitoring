@@ -5,7 +5,11 @@ package otlp
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"net/url"
+	"os"
 	"time"
 
 	"github.com/oracle/oracle-db-appdev-monitoring/collector"
@@ -15,6 +19,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"google.golang.org/grpc/credentials"
 )
 
 const instrumentationScope = "github.com/oracle/oracle-db-appdev-monitoring"
@@ -50,19 +55,27 @@ func New(ctx context.Context, cfg *collector.OTLPConfig, version string, interva
 		return nil, fmt.Errorf("OTLP configuration is required")
 	}
 	if gatherer == nil {
-		return nil, fmt.Errorf("Prometheus gatherer is required")
+		return nil, fmt.Errorf("prometheus gatherer is required")
 	}
 	timeout := 10 * time.Second
 	if cfg.Timeout != nil {
 		timeout = *cfg.Timeout
 	}
 	opts := []otlpmetricgrpc.Option{
-		otlpmetricgrpc.WithEndpoint(cfg.Endpoint),
 		otlpmetricgrpc.WithTimeout(timeout),
 		otlpmetricgrpc.WithHeaders(copyAttributes(cfg.Headers)),
 	}
-	if cfg.Insecure {
-		opts = append(opts, otlpmetricgrpc.WithInsecure())
+	endpointURL, err := url.ParseRequestURI(cfg.Endpoint)
+	if err != nil || endpointURL.Host == "" || (endpointURL.Scheme != "http" && endpointURL.Scheme != "https") {
+		return nil, fmt.Errorf("OTLP endpoint must be an http:// or https:// URL")
+	}
+	opts = append(opts, otlpmetricgrpc.WithEndpointURL(cfg.Endpoint))
+	if cfg.TLS != nil {
+		tlsConfig, err := clientTLSConfig(cfg.TLS)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, otlpmetricgrpc.WithTLSCredentials(credentials.NewTLS(tlsConfig)))
 	}
 	exporter, err := otlpmetricgrpc.New(ctx, opts...)
 	if err != nil {
@@ -87,6 +100,39 @@ func New(ctx context.Context, cfg *collector.OTLPConfig, version string, interva
 		metric.WithResource(resource.NewWithAttributes("", attributes(resourceAttributes)...)),
 		metric.WithReader(reader),
 	)}, nil
+}
+
+func clientTLSConfig(cfg *collector.OTLPTLSConfig) (*tls.Config, error) {
+	tlsConfig := &tls.Config{
+		MinVersion:         tls.VersionTLS12,
+		ServerName:         cfg.ServerName,
+		InsecureSkipVerify: cfg.InsecureSkipVerify,
+	}
+	if cfg.MinVersion == "TLS1.3" {
+		tlsConfig.MinVersion = tls.VersionTLS13
+	}
+	if cfg.CAFile != "" {
+		certificate, err := os.ReadFile(cfg.CAFile)
+		if err != nil {
+			return nil, fmt.Errorf("read OTLP CA file: %w", err)
+		}
+		roots, err := x509.SystemCertPool()
+		if err != nil || roots == nil {
+			roots = x509.NewCertPool()
+		}
+		if !roots.AppendCertsFromPEM(certificate) {
+			return nil, fmt.Errorf("parse OTLP CA file %q", cfg.CAFile)
+		}
+		tlsConfig.RootCAs = roots
+	}
+	if cfg.CertFile != "" {
+		certificate, err := tls.LoadX509KeyPair(cfg.CertFile, cfg.KeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("load OTLP client certificate: %w", err)
+		}
+		tlsConfig.Certificates = []tls.Certificate{certificate}
+	}
+	return tlsConfig, nil
 }
 
 // Shutdown flushes the SDK reader and releases the exporter connection.

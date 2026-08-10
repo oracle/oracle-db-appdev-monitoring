@@ -160,6 +160,7 @@ func main() {
 
 	// If OTLP is enabled, connect the collector snapshots to the SDK metric pipeline.
 	if m.OTLP != nil {
+		logger.Info("Starting OTLP exporter")
 		otlpPipeline, err := otlp.New(context.Background(), m.OTLP, Version, exporter.ScrapeInterval(), prometheus.DefaultGatherer)
 		if err != nil {
 			logger.Error("unable to create OTLP metric pipeline", "error", err)

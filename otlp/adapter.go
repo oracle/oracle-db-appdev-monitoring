@@ -13,40 +13,32 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-// Adapter for Prometheus to OpenTelemetry SDK metrics
-
 // convertFamilies adapts a Prometheus collector snapshot to SDK metric data.
 func convertFamilies(families []*dto.MetricFamily) []metricdata.Metrics {
 	metrics := make([]metricdata.Metrics, 0, len(families))
 	for _, family := range families {
-		if metric := convertFamily(family); metric != nil {
-			metrics = append(metrics, *metric)
+		metric, ok := convertFamily(family)
+		if ok {
+			metrics = append(metrics, metric)
 		}
 	}
 	return metrics
 }
 
-func convertFamily(family *dto.MetricFamily) *metricdata.Metrics {
+func convertFamily(family *dto.MetricFamily) (metricdata.Metrics, bool) {
 	if family == nil || family.Name == nil {
-		return nil
+		return metricdata.Metrics{}, false
 	}
-	metric := &metricdata.Metrics{Name: family.GetName(), Description: family.GetHelp()}
+	metric := metricdata.Metrics{Name: family.GetName(), Description: family.GetHelp()}
 	switch family.GetType() {
-	case dto.MetricType_GAUGE, dto.MetricType_UNTYPED:
-		points := make([]metricdata.DataPoint[float64], 0, len(family.Metric))
-		for _, sample := range family.Metric {
-			value := sample.GetGauge().GetValue()
-			if family.GetType() == dto.MetricType_UNTYPED {
-				value = sample.GetUntyped().GetValue()
-			}
-			points = append(points, numberPoint(sample, value))
-		}
+	case dto.MetricType_GAUGE:
+		points := numberPoints(family.Metric, func(sample *dto.Metric) float64 { return sample.GetGauge().GetValue() })
+		metric.Data = metricdata.Gauge[float64]{DataPoints: points}
+	case dto.MetricType_UNTYPED:
+		points := numberPoints(family.Metric, func(sample *dto.Metric) float64 { return sample.GetUntyped().GetValue() })
 		metric.Data = metricdata.Gauge[float64]{DataPoints: points}
 	case dto.MetricType_COUNTER:
-		points := make([]metricdata.DataPoint[float64], 0, len(family.Metric))
-		for _, sample := range family.Metric {
-			points = append(points, numberPoint(sample, sample.GetCounter().GetValue()))
-		}
+		points := numberPoints(family.Metric, func(sample *dto.Metric) float64 { return sample.GetCounter().GetValue() })
 		metric.Data = metricdata.Sum[float64]{DataPoints: points, Temporality: metricdata.CumulativeTemporality, IsMonotonic: true}
 	case dto.MetricType_HISTOGRAM:
 		points := make([]metricdata.HistogramDataPoint[float64], 0, len(family.Metric))
@@ -55,9 +47,17 @@ func convertFamily(family *dto.MetricFamily) *metricdata.Metrics {
 		}
 		metric.Data = metricdata.Histogram[float64]{DataPoints: points, Temporality: metricdata.CumulativeTemporality}
 	default:
-		return nil
+		return metricdata.Metrics{}, false
 	}
-	return metric
+	return metric, true
+}
+
+func numberPoints(samples []*dto.Metric, value func(*dto.Metric) float64) []metricdata.DataPoint[float64] {
+	points := make([]metricdata.DataPoint[float64], 0, len(samples))
+	for _, sample := range samples {
+		points = append(points, numberPoint(sample, value(sample)))
+	}
+	return points
 }
 
 func numberPoint(sample *dto.Metric, value float64) metricdata.DataPoint[float64] {

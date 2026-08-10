@@ -9,9 +9,8 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
+- Add an optional OTLP metrics publisher for scheduled scrapes, so the metrics exporter can publish metrics to OTLP backends.
 - Restart the exporter process when its configuration file changes, after validating the updated configuration.
-- Add opt-in scheduled OTLP/gRPC metric publishing with static headers and resource attributes.
-- Route opt-in OTLP/gRPC publishing through the OpenTelemetry Go SDK metric pipeline, including the official exporter's retry and lifecycle behavior.
 
 ### 2.4.2, July 13th, 2026
 
