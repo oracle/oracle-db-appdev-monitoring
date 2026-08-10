@@ -33,6 +33,7 @@ import (
 
 	"github.com/oracle/oracle-db-appdev-monitoring/alertlog"
 	"github.com/oracle/oracle-db-appdev-monitoring/collector"
+	"github.com/oracle/oracle-db-appdev-monitoring/otlp"
 )
 
 var (
@@ -154,14 +155,35 @@ func main() {
 	}
 
 	exporter := collector.NewExporter(logger, m)
+	prometheus.MustRegister(exporter)
+	prometheus.MustRegister(cversion.NewCollector("oracledb_exporter"))
+
+	// If OTLP enabled, start the OTLP publisher
+	if m.OTLP != nil {
+		publisher, err := otlp.New(logger, m.OTLP, Version)
+		if err != nil {
+			logger.Error("unable to create OTLP publisher", "error", err)
+			os.Exit(1)
+		}
+		defer func() {
+			if err := publisher.Close(); err != nil {
+				logger.Error("unable to close OTLP publisher", "error", err)
+			}
+		}()
+		exporter.SetScheduledScrapeHook(func() {
+			families, err := prometheus.DefaultGatherer.Gather()
+			if err != nil {
+				logger.Error("unable to gather completed metric snapshot for OTLP", "error", err)
+				return
+			}
+			publisher.Publish(families)
+		})
+	}
 	if exporter.ScrapeInterval() != 0 {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		go exporter.RunScheduledScrapes(ctx)
 	}
-
-	prometheus.MustRegister(exporter)
-	prometheus.MustRegister(cversion.NewCollector("oracledb_exporter"))
 
 	logger.Info("Starting oracledb_exporter", "version", Version)
 	logger.Info("Build context", "build", version.BuildContext())

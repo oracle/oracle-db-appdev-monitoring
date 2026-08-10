@@ -403,6 +403,42 @@ func TestRunScheduledScrapesRunsWhenDatabaseBecomesReady(t *testing.T) {
 	waitForScheduledMetric(t, exporter, "oracledb_test_value")
 }
 
+func TestScheduledScrapeInvokesHookButCollectDoesNot(t *testing.T) {
+	exporter, database := newTestScheduledExporter(t, time.Hour)
+	database.startupReady.Store(true)
+	database.setUp(1)
+	hooks := make(chan struct{}, 1)
+	exporter.SetScheduledScrapeHook(func() { hooks <- struct{}{} })
+
+	exporter.doScrape(time.Now())
+	select {
+	case <-hooks:
+	case <-time.After(time.Second):
+		t.Fatal("expected completed scheduled scrape to invoke hook")
+	}
+
+	metricCh := make(chan prometheus.Metric, 1)
+	done := make(chan struct{})
+	go func() {
+		exporter.Collect(metricCh)
+		close(done)
+	}()
+	go func() {
+		for range metricCh {
+		}
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("timed out collecting scheduled scrape cache")
+	}
+	select {
+	case <-hooks:
+		t.Fatal("request-driven collection must not invoke scheduled scrape hook")
+	default:
+	}
+}
+
 func TestInitializeDatabasesRequestsScheduledScrapeAfterWarmup(t *testing.T) {
 	exporter, database := newTestScheduledExporter(t, time.Hour)
 

@@ -53,6 +53,18 @@ metrics:
   custom:
     - custom-metrics-example/custom-metrics.toml
 
+## Optional scheduled metric publishing to an OTLP/gRPC endpoint.
+## Configuring OTLP requires metrics.scrapeInterval to be set to a positive duration.
+# otlp:
+#   endpoint: otel-collector:4317
+#   # Set true only when connecting to a local plaintext collector.
+#   insecure: false
+#   timeout: 10s
+#   headers:
+#     Authorization: "Bearer ${OTLP_TOKEN}"
+#   resourceAttributes:
+#     deployment.environment: production
+
 log:
   # Log level: debug, info, warn, or error
   level: info

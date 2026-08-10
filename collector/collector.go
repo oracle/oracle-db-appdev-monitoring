@@ -221,6 +221,14 @@ func (e *Exporter) RunScheduledScrapes(ctx context.Context) {
 	}
 }
 
+// SetScheduledScrapeHook sets a callback invoked after each completed scheduled
+// scrape. The callback is not invoked for request-driven /metrics scrapes.
+func (e *Exporter) SetScheduledScrapeHook(hook func()) {
+	e.hookMU.Lock()
+	defer e.hookMU.Unlock()
+	e.scheduledScrapeHook = hook
+}
+
 func (e *Exporter) requestScheduledScrape() {
 	if e.scrapeInterval() == 0 || e.scrapeRequests == nil {
 		return
@@ -245,6 +253,13 @@ func (e *Exporter) doScrape(tick time.Time) {
 	e.mu.Lock() // ensure no simultaneous scrapes
 	e.scheduledScrape(&tick)
 	e.mu.Unlock()
+
+	e.hookMU.RLock()
+	hook := e.scheduledScrapeHook
+	e.hookMU.RUnlock()
+	if hook != nil {
+		hook()
+	}
 }
 
 func (e *Exporter) scheduledScrape(tick *time.Time) {

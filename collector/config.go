@@ -4,6 +4,7 @@
 package collector
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -36,6 +37,17 @@ type MetricsConfiguration struct {
 	Metrics       MetricsFilesConfig        `yaml:"metrics"`
 	Logging       LoggingConfig             `yaml:"log"`
 	Web           WebConfig                 `yaml:"web"`
+	OTLP          *OTLPConfig               `yaml:"otlp"`
+}
+
+// OTLPConfig configures scheduled metric publishing to an OTLP/gRPC endpoint.
+// The endpoint is required whenever this section is present.
+type OTLPConfig struct {
+	Endpoint           string            `yaml:"endpoint"`
+	Insecure           bool              `yaml:"insecure"`
+	Timeout            *time.Duration    `yaml:"timeout"`
+	Headers            map[string]string `yaml:"headers"`
+	ResourceAttributes map[string]string `yaml:"resourceAttributes"`
 }
 
 type WebConfig struct {
@@ -358,6 +370,7 @@ func (m *MetricsConfiguration) merge() {
 	m.mergeWebConfig()
 	m.mergeLoggingConfig()
 	m.mergeMetricsConfig()
+	m.mergeOTLPConfig()
 	if m.Metrics.ScrapeInterval == nil {
 		scrapeInterval := time.Duration(0)
 		m.Metrics.ScrapeInterval = &scrapeInterval
@@ -417,6 +430,13 @@ func (m *MetricsConfiguration) mergeMetricsConfig() {
 	}
 }
 
+func (m *MetricsConfiguration) mergeOTLPConfig() {
+	if m.OTLP != nil && m.OTLP.Timeout == nil {
+		timeout := 10 * time.Second
+		m.OTLP.Timeout = &timeout
+	}
+}
+
 func (m *MetricsConfiguration) validate(logger *slog.Logger) error {
 	m.checkDuplicatedDatabases(logger)
 	if err := m.validateOCIVaultAuth(); err != nil {
@@ -424,6 +444,25 @@ func (m *MetricsConfiguration) validate(logger *slog.Logger) error {
 	}
 	if err := m.validateLoggingConfig(); err != nil {
 		return err
+	}
+	if err := m.validateOTLPConfig(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *MetricsConfiguration) validateOTLPConfig() error {
+	if m.OTLP == nil {
+		return nil
+	}
+	if strings.TrimSpace(m.OTLP.Endpoint) == "" {
+		return errors.New("otlp.endpoint is required when otlp is configured")
+	}
+	if m.Metrics.ScrapeInterval == nil || *m.Metrics.ScrapeInterval <= 0 {
+		return errors.New("metrics.scrapeInterval must be greater than zero when otlp is configured")
+	}
+	if m.OTLP.Timeout == nil || *m.OTLP.Timeout <= 0 {
+		return errors.New("otlp.timeout must be greater than zero")
 	}
 	return nil
 }
