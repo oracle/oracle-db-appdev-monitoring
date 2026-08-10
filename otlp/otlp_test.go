@@ -5,14 +5,14 @@ package otlp
 
 import (
 	"context"
-	"io"
-	"log/slog"
 	"net"
 	"testing"
 	"time"
 
 	"github.com/oracle/oracle-db-appdev-monitoring/collector"
+	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	collectormetricspb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -31,7 +31,15 @@ func (s *metricsService) Export(ctx context.Context, request *collectormetricspb
 	return &collectormetricspb.ExportMetricsServiceResponse{}, nil
 }
 
-func TestConvertFamiliesConvertsGaugeCounterAndHistogram(t *testing.T) {
+type staticGatherer struct {
+	families []*dto.MetricFamily
+}
+
+func (g staticGatherer) Gather() ([]*dto.MetricFamily, error) { return g.families, nil }
+
+var _ prometheus.Gatherer = staticGatherer{}
+
+func TestProducerConvertsGaugeCounterAndHistogram(t *testing.T) {
 	nameGauge, nameCounter, nameHistogram := "gauge", "counter", "histogram"
 	help := "test metric"
 	labelName, labelValue := "database", "db1"
@@ -44,63 +52,43 @@ func TestConvertFamiliesConvertsGaugeCounterAndHistogram(t *testing.T) {
 		{Name: &nameHistogram, Help: &help, Type: dto.MetricType_HISTOGRAM.Enum(), Metric: []*dto.Metric{{Histogram: &dto.Histogram{SampleCount: &count, SampleSum: &sum, Bucket: []*dto.Bucket{{CumulativeCount: &firstBucket, UpperBound: &upperOne}, {CumulativeCount: &secondBucket, UpperBound: &upperTwo}}}}}},
 	}
 
-	metrics := convertFamilies(families)
+	scopes, err := (Producer{gatherer: staticGatherer{families: families}}).Produce(context.Background())
+	if err != nil {
+		t.Fatalf("produce: %v", err)
+	}
+	metrics := scopes[0].Metrics
 	if len(metrics) != 3 {
 		t.Fatalf("expected three converted metrics, got %d", len(metrics))
 	}
-	if got := metrics[0].GetGauge().DataPoints[0].GetAsDouble(); got != gaugeValue {
+	gauge := metrics[0].Data.(metricdata.Gauge[float64])
+	if got := gauge.DataPoints[0].Value; got != gaugeValue {
 		t.Fatalf("expected gauge value %v, got %v", gaugeValue, got)
 	}
-	if got := metrics[0].GetGauge().DataPoints[0].Attributes[0].GetValue().GetStringValue(); got != labelValue {
+	value, ok := gauge.DataPoints[0].Attributes.Value("database")
+	if !ok || value.AsString() != labelValue {
+		got := ""
+		if ok {
+			got = value.AsString()
+		}
 		t.Fatalf("expected label value %q, got %q", labelValue, got)
 	}
-	if got := metrics[1].GetSum().DataPoints[0].GetAsDouble(); got != counterValue {
+	counter := metrics[1].Data.(metricdata.Sum[float64])
+	if got := counter.DataPoints[0].Value; got != counterValue {
 		t.Fatalf("expected counter value %v, got %v", counterValue, got)
 	}
-	if !metrics[1].GetSum().GetIsMonotonic() {
+	if !counter.IsMonotonic {
 		t.Fatal("expected counter sum to be monotonic")
 	}
-	histogram := metrics[2].GetHistogram().DataPoints[0]
-	if got := histogram.GetBucketCounts(); len(got) != 3 || got[0] != 2 || got[1] != 3 || got[2] != 0 {
+	histogram := metrics[2].Data.(metricdata.Histogram[float64]).DataPoints[0]
+	if got := histogram.BucketCounts; len(got) != 3 || got[0] != 2 || got[1] != 3 || got[2] != 0 {
 		t.Fatalf("unexpected histogram bucket counts: %#v", got)
 	}
-	if got := histogram.GetExplicitBounds(); len(got) != 2 || got[0] != 1 || got[1] != 2 {
+	if got := histogram.Bounds; len(got) != 2 || got[0] != 1 || got[1] != 2 {
 		t.Fatalf("unexpected histogram bounds: %#v", got)
 	}
 }
 
-func TestNewAppliesDefaultAndConfiguredResourceAttributes(t *testing.T) {
-	timeout := time.Second
-	publisher, err := New(slog.New(slog.NewTextHandler(io.Discard, nil)), &collector.OTLPConfig{
-		Endpoint: "127.0.0.1:4317",
-		Insecure: true,
-		Timeout:  &timeout,
-		ResourceAttributes: map[string]string{
-			"service.name":           "custom-exporter",
-			"deployment.environment": "test",
-		},
-	}, "1.2.3")
-	if err != nil {
-		t.Fatalf("expected publisher to be created, got %v", err)
-	}
-	t.Cleanup(func() { _ = publisher.Close() })
-
-	attributes := map[string]string{}
-	for _, attribute := range publisher.resource.Attributes {
-		attributes[attribute.GetKey()] = attribute.GetValue().GetStringValue()
-	}
-	if got := attributes["service.name"]; got != "custom-exporter" {
-		t.Fatalf("expected configured service name, got %q", got)
-	}
-	if got := attributes["service.version"]; got != "1.2.3" {
-		t.Fatalf("expected default service version, got %q", got)
-	}
-	if got := attributes["deployment.environment"]; got != "test" {
-		t.Fatalf("expected configured deployment environment, got %q", got)
-	}
-}
-
-func TestPublisherExportsConfiguredHeadersAndResources(t *testing.T) {
+func TestPipelineExportsConfiguredHeadersAndResources(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("listen: %v", err)
@@ -109,23 +97,21 @@ func TestPublisherExportsConfiguredHeadersAndResources(t *testing.T) {
 	service := &metricsService{requests: make(chan *collectormetricspb.ExportMetricsServiceRequest, 1), headers: make(chan metadata.MD, 1)}
 	collectormetricspb.RegisterMetricsServiceServer(server, service)
 	go func() { _ = server.Serve(listener) }()
-	t.Cleanup(func() {
-		server.Stop()
-		_ = listener.Close()
-	})
+	t.Cleanup(func() { server.Stop(); _ = listener.Close() })
 
 	timeout := time.Second
-	publisher, err := New(slog.New(slog.NewTextHandler(io.Discard, nil)), &collector.OTLPConfig{
-		Endpoint: listener.Addr().String(),
-		Insecure: true,
-		Timeout:  &timeout,
-		Headers:  map[string]string{"Authorization": "Bearer token"},
-	}, "1.2.3")
+	pipeline, err := New(context.Background(), &collector.OTLPConfig{
+		Endpoint: listener.Addr().String(), Insecure: true, Timeout: &timeout,
+		Headers:            map[string]string{"Authorization": "Bearer token"},
+		ResourceAttributes: map[string]string{"service.name": "custom-exporter", "deployment.environment": "test"},
+	}, "1.2.3", time.Hour, staticGatherer{})
 	if err != nil {
-		t.Fatalf("new publisher: %v", err)
+		t.Fatalf("new pipeline: %v", err)
 	}
-	t.Cleanup(func() { _ = publisher.Close() })
-	publisher.export(nil)
+	t.Cleanup(func() { _ = pipeline.Shutdown(context.Background()) })
+	if err := pipeline.ForceFlush(context.Background()); err != nil {
+		t.Fatalf("force flush: %v", err)
+	}
 
 	select {
 	case headers := <-service.headers:
@@ -137,9 +123,18 @@ func TestPublisherExportsConfiguredHeadersAndResources(t *testing.T) {
 	}
 	select {
 	case request := <-service.requests:
-		attributes := request.ResourceMetrics[0].Resource.Attributes
-		if len(attributes) != 2 {
-			t.Fatalf("expected default resource attributes, got %#v", attributes)
+		attributes := map[string]string{}
+		for _, attribute := range request.ResourceMetrics[0].Resource.Attributes {
+			attributes[attribute.GetKey()] = attribute.GetValue().GetStringValue()
+		}
+		if got := attributes["service.name"]; got != "custom-exporter" {
+			t.Fatalf("expected configured service name, got %q", got)
+		}
+		if got := attributes["service.version"]; got != "1.2.3" {
+			t.Fatalf("expected default service version, got %q", got)
+		}
+		if got := attributes["deployment.environment"]; got != "test" {
+			t.Fatalf("expected configured deployment environment, got %q", got)
 		}
 	case <-time.After(time.Second):
 		t.Fatal("timed out waiting for OTLP request")

@@ -158,26 +158,18 @@ func main() {
 	prometheus.MustRegister(exporter)
 	prometheus.MustRegister(cversion.NewCollector("oracledb_exporter"))
 
-	// If OTLP enabled, start the OTLP publisher
+	// If OTLP is enabled, connect the collector snapshots to the SDK metric pipeline.
 	if m.OTLP != nil {
-		publisher, err := otlp.New(logger, m.OTLP, Version)
+		otlpPipeline, err := otlp.New(context.Background(), m.OTLP, Version, exporter.ScrapeInterval(), prometheus.DefaultGatherer)
 		if err != nil {
-			logger.Error("unable to create OTLP publisher", "error", err)
+			logger.Error("unable to create OTLP metric pipeline", "error", err)
 			os.Exit(1)
 		}
 		defer func() {
-			if err := publisher.Close(); err != nil {
-				logger.Error("unable to close OTLP publisher", "error", err)
+			if err := otlpPipeline.Shutdown(context.Background()); err != nil {
+				logger.Error("unable to shut down OTLP metric pipeline", "error", err)
 			}
 		}()
-		exporter.SetScheduledScrapeHook(func() {
-			families, err := prometheus.DefaultGatherer.Gather()
-			if err != nil {
-				logger.Error("unable to gather completed metric snapshot for OTLP", "error", err)
-				return
-			}
-			publisher.Publish(families)
-		})
 	}
 	if exporter.ScrapeInterval() != 0 {
 		ctx, cancel := context.WithCancel(context.Background())
