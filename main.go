@@ -33,6 +33,7 @@ import (
 
 	"github.com/oracle/oracle-db-appdev-monitoring/alertlog"
 	"github.com/oracle/oracle-db-appdev-monitoring/collector"
+	"github.com/oracle/oracle-db-appdev-monitoring/otlp"
 )
 
 var (
@@ -154,18 +155,32 @@ func main() {
 	}
 
 	exporter := collector.NewExporter(logger, m)
+	prometheus.MustRegister(exporter)
+	prometheus.MustRegister(cversion.NewCollector("oracledb_exporter"))
+
+	// If OTLP is enabled, connect the collector snapshots to the SDK metric pipeline.
+	if m.OTLP != nil {
+		logger.Info("Starting OTLP exporter")
+		otlpPipeline, err := otlp.New(context.Background(), m.OTLP, Version, exporter.ScrapeInterval(), prometheus.DefaultGatherer)
+		if err != nil {
+			logger.Error("unable to create OTLP metric pipeline", "error", err)
+			os.Exit(1)
+		}
+		defer func() {
+			if err := otlpPipeline.Shutdown(context.Background()); err != nil {
+				logger.Error("unable to shut down OTLP metric pipeline", "error", err)
+			}
+		}()
+	}
 	if exporter.ScrapeInterval() != 0 {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		go exporter.RunScheduledScrapes(ctx)
 	}
 
-	prometheus.MustRegister(exporter)
-	prometheus.MustRegister(cversion.NewCollector("oracledb_exporter"))
-
 	logger.Info("Starting oracledb_exporter", "version", Version)
 	logger.Info("Build context", "build", version.BuildContext())
-	logger.Info("Collect from: ", "metricPath", m.MetricsPath)
+	logger.Info("Collect from", "metricPath", m.MetricsPath)
 
 	opts := promhttp.HandlerOpts{
 		ErrorHandling: promhttp.ContinueOnError,

@@ -53,6 +53,24 @@ metrics:
   custom:
     - custom-metrics-example/custom-metrics.toml
 
+## Optional scheduled metric publishing to an OTLP/gRPC endpoint.
+## Configuring OTLP requires metrics.scrapeInterval to be set to a positive duration.
+# otlp:
+#   # http:// selects plaintext; https:// selects TLS.
+#   endpoint: http://otel-collector:4317
+#   timeout: 10s
+#   headers:
+#     Authorization: "Bearer ${OTLP_TOKEN}"
+#   # Optional TLS configuration for the outbound OTLP/gRPC client.
+#   # tls:
+#   #   caFile: /path/to/collector-ca.pem
+#   #   certFile: /path/to/client.pem
+#   #   keyFile: /path/to/client-key.pem
+#   #   serverName: otel-collector.example.com
+#   #   minVersion: TLS1.2
+#   resourceAttributes:
+#     deployment.environment: production
+
 log:
   # Log level: debug, info, warn, or error
   level: info

@@ -299,6 +299,81 @@ func TestLoadMetricsConfigurationRequiresConfigFile(t *testing.T) {
 	}
 }
 
+func TestLoadMetricsConfigurationLoadsOTLPConfig(t *testing.T) {
+	t.Setenv("OTLP_TOKEN", "test-token")
+	configPath := writeExporterConfig(t, `
+databases:
+  default:
+    username: scott
+    password: tiger
+    url: localhost:1521/freepdb1
+metrics:
+  scrapeInterval: 15s
+otlp:
+  endpoint: https://otel-collector:4317
+  headers:
+    Authorization: "Bearer ${OTLP_TOKEN}"
+  resourceAttributes:
+    deployment.environment: test
+  tls:
+    caFile: /etc/otel/ca.pem
+    serverName: collector.internal
+    minVersion: TLS1.3
+`)
+
+	cfg, err := LoadMetricsConfiguration(testLogger(), &Config{ConfigFile: configPath})
+	if err != nil {
+		t.Fatalf("expected config to load, got %v", err)
+	}
+	if cfg.OTLP == nil || cfg.OTLP.Endpoint != "https://otel-collector:4317" {
+		t.Fatalf("unexpected OTLP endpoint: %#v", cfg.OTLP)
+	}
+	if got := *cfg.OTLP.Timeout; got != 10*time.Second {
+		t.Fatalf("expected default OTLP timeout of 10s, got %s", got)
+	}
+	if got := cfg.OTLP.Headers["Authorization"]; got != "Bearer test-token" {
+		t.Fatalf("expected expanded OTLP header, got %q", got)
+	}
+	if cfg.OTLP.TLS == nil || cfg.OTLP.TLS.CAFile != "/etc/otel/ca.pem" || cfg.OTLP.TLS.ServerName != "collector.internal" || cfg.OTLP.TLS.MinVersion != "TLS1.3" {
+		t.Fatalf("unexpected OTLP TLS configuration: %#v", cfg.OTLP.TLS)
+	}
+}
+
+func TestLoadMetricsConfigurationRejectsInvalidOTLPConfig(t *testing.T) {
+	tests := []struct {
+		name    string
+		metrics string
+		otlp    string
+		wantErr string
+	}{
+		{name: "missing endpoint", metrics: "scrapeInterval: 15s", otlp: "headers: {}", wantErr: "otlp.endpoint"},
+		{name: "missing interval", metrics: "", otlp: "endpoint: https://otel-collector:4317", wantErr: "metrics.scrapeInterval"},
+		{name: "zero timeout", metrics: "scrapeInterval: 15s", otlp: "endpoint: https://otel-collector:4317\n  timeout: 0s", wantErr: "otlp.timeout"},
+		{name: "scheme-less endpoint", metrics: "scrapeInterval: 15s", otlp: "endpoint: otel-collector:4317", wantErr: "otlp.endpoint must"},
+		{name: "TLS with HTTP endpoint", metrics: "scrapeInterval: 15s", otlp: "endpoint: http://otel-collector:4317\n  tls: {}", wantErr: "otlp.tls cannot"},
+		{name: "incomplete mTLS", metrics: "scrapeInterval: 15s", otlp: "endpoint: https://otel-collector:4317\n  tls:\n    certFile: client.crt", wantErr: "otlp.tls.certFile"},
+		{name: "invalid TLS version", metrics: "scrapeInterval: 15s", otlp: "endpoint: https://otel-collector:4317\n  tls:\n    minVersion: TLS1.1", wantErr: "otlp.tls.minVersion"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configPath := writeExporterConfig(t, `
+databases:
+  default:
+    username: scott
+    password: tiger
+    url: localhost:1521/freepdb1
+metrics:
+  `+tt.metrics+`
+otlp:
+  `+tt.otlp)
+			_, err := LoadMetricsConfiguration(testLogger(), &Config{ConfigFile: configPath})
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("expected error containing %q, got %v", tt.wantErr, err)
+			}
+		})
+	}
+}
+
 func writeExporterConfig(t *testing.T, contents string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "config.yaml")
