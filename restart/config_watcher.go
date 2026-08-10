@@ -12,9 +12,12 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 )
+
+const configChangeSettleDelay = 50 * time.Millisecond
 
 type Request string
 
@@ -70,22 +73,20 @@ func WatchConfigFile(ctx context.Context, logger *slog.Logger, configFile string
 
 	go func() {
 		defer watcher.Close()
+		var settleTimer *time.Timer
+		var settle <-chan time.Time
+		defer func() {
+			if settleTimer != nil {
+				settleTimer.Stop()
+			}
+		}()
+
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case err, ok := <-watcher.Errors:
-				if !ok {
-					return
-				}
-				logger.Error("config file watcher error", "error", err)
-			case event, ok := <-watcher.Events:
-				if !ok {
-					return
-				}
-				if !isConfigChangeEvent(configFile, event) {
-					continue
-				}
+			case <-settle:
+				settle = nil
 
 				updatedFingerprint, err := configFingerprint(configFile)
 				if err != nil {
@@ -102,6 +103,30 @@ func WatchConfigFile(ctx context.Context, logger *slog.Logger, configFile string
 
 				fingerprint = updatedFingerprint
 				changed()
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					return
+				}
+				logger.Error("config file watcher error", "error", err)
+			case event, ok := <-watcher.Events:
+				if !ok {
+					return
+				}
+				if !isConfigChangeEvent(configFile, event) {
+					continue
+				}
+				if settleTimer == nil {
+					settleTimer = time.NewTimer(configChangeSettleDelay)
+				} else {
+					if !settleTimer.Stop() {
+						select {
+						case <-settleTimer.C:
+						default:
+						}
+					}
+					settleTimer.Reset(configChangeSettleDelay)
+				}
+				settle = settleTimer.C
 			}
 		}
 	}()
