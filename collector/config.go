@@ -14,6 +14,7 @@ import (
 
 	"github.com/oracle/oracle-db-appdev-monitoring/azvault"
 	"github.com/oracle/oracle-db-appdev-monitoring/hashivault"
+	"github.com/oracle/oracle-db-appdev-monitoring/oci"
 	"github.com/oracle/oracle-db-appdev-monitoring/ocivault"
 	"github.com/prometheus/exporter-toolkit/web"
 	"go.yaml.in/yaml/v2"
@@ -104,10 +105,10 @@ type VaultConfig struct {
 }
 
 type OCIVault struct {
-	ID             string            `yaml:"id"`
-	Auth           ocivault.AuthMode `yaml:"auth,omitempty"`
-	UsernameSecret string            `yaml:"usernameSecret"`
-	PasswordSecret string            `yaml:"passwordSecret"`
+	ID             string       `yaml:"id"`
+	Auth           oci.AuthMode `yaml:"auth,omitempty"`
+	UsernameSecret string       `yaml:"usernameSecret"`
+	PasswordSecret string       `yaml:"passwordSecret"`
 }
 
 type AZVault struct {
@@ -502,7 +503,7 @@ func (m *MetricsConfiguration) validateOCIVaultAuth() error {
 		if cfg.Vault == nil || cfg.Vault.OCI == nil {
 			continue
 		}
-		if err := ocivault.ValidateAuthMode(cfg.Vault.OCI.Auth); err != nil {
+		if err := oci.ValidateAuthMode(cfg.Vault.OCI.Auth); err != nil {
 			return fmt.Errorf("database %q: %w", name, err)
 		}
 	}

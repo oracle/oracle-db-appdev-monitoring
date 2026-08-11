@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/ocivault"
+	"github.com/oracle/oracle-db-appdev-monitoring/oci"
 )
 
 func TestConnectConfigGetConnMaxLifetime(t *testing.T) {
@@ -53,7 +53,7 @@ func TestDatabaseConfigGetPasswordReturnsPasswordFileError(t *testing.T) {
 func TestDatabaseConfigPassesOCIVaultAuthMode(t *testing.T) {
 	original := getOCIVaultSecret
 	var calls []string
-	getOCIVaultSecret = func(vaultID, secretName string, authMode ocivault.AuthMode) (string, error) {
+	getOCIVaultSecret = func(vaultID, secretName string, authMode oci.AuthMode) (string, error) {
 		calls = append(calls, fmt.Sprintf("%s/%s/%s", vaultID, secretName, authMode))
 		return "secret-value", nil
 	}
@@ -90,7 +90,7 @@ func TestDatabaseConfigPassesOCIVaultAuthMode(t *testing.T) {
 
 func TestMetricsConfigurationValidateOCIVaultAuth(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	authModes := []ocivault.AuthMode{"", "config_file", "instance_principal", "resource_principal", "workload_identity"}
+	authModes := []oci.AuthMode{"", "config_file", "instance_principal", "resource_principal", "workload_identity"}
 
 	for _, authMode := range authModes {
 		t.Run("valid "+string(authMode), func(t *testing.T) {
