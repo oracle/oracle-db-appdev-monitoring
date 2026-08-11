@@ -10,53 +10,11 @@ import (
 	"strings"
 
 	"github.com/oracle/oci-go-sdk/v65/common"
-	"github.com/oracle/oci-go-sdk/v65/common/auth"
 	"github.com/oracle/oci-go-sdk/v65/secrets"
+	"github.com/oracle/oracle-db-appdev-monitoring/oci"
 )
 
-type AuthMode string
-
-const (
-	AuthModeConfigFile        AuthMode = "config_file"
-	AuthModeInstancePrincipal AuthMode = "instance_principal"
-	AuthModeResourcePrincipal AuthMode = "resource_principal"
-	AuthModeWorkloadIdentity  AuthMode = "workload_identity"
-)
-
-var (
-	defaultConfigProvider = func() (common.ConfigurationProvider, error) {
-		return common.DefaultConfigProvider(), nil
-	}
-	instancePrincipalConfigurationProvider = func() (common.ConfigurationProvider, error) {
-		return auth.InstancePrincipalConfigurationProvider()
-	}
-	resourcePrincipalConfigurationProvider = func() (common.ConfigurationProvider, error) {
-		return auth.ResourcePrincipalConfigurationProvider()
-	}
-	workloadIdentityConfigurationProvider = func() (common.ConfigurationProvider, error) {
-		return auth.OkeWorkloadIdentityConfigurationProvider()
-	}
-)
-
-func AcceptedAuthModes() []string {
-	return []string{
-		string(AuthModeConfigFile),
-		string(AuthModeInstancePrincipal),
-		string(AuthModeResourcePrincipal),
-		string(AuthModeWorkloadIdentity),
-	}
-}
-
-func ValidateAuthMode(authMode AuthMode) error {
-	switch normalizeAuthMode(authMode) {
-	case AuthModeConfigFile, AuthModeInstancePrincipal, AuthModeResourcePrincipal, AuthModeWorkloadIdentity:
-		return nil
-	default:
-		return fmt.Errorf("unsupported OCI Vault auth mode %q; accepted values are: %s", authMode, strings.Join(AcceptedAuthModes(), ", "))
-	}
-}
-
-func GetVaultSecret(vaultId string, secretName string, authMode AuthMode) (string, error) {
+func GetVaultSecret(vaultId string, secretName string, authMode oci.AuthMode) (string, error) {
 	configProvider, err := configurationProviderForAuthMode(authMode)
 	if err != nil {
 		return "", err
@@ -80,28 +38,9 @@ func GetVaultSecret(vaultId string, secretName string, authMode AuthMode) (strin
 	return strings.TrimRight(rawSecret, "\r\n"), nil // make sure a \r and/or \n didn't make it into the secret
 }
 
-func configurationProviderForAuthMode(authMode AuthMode) (common.ConfigurationProvider, error) {
-	mode := normalizeAuthMode(authMode)
-	switch mode {
-	case AuthModeConfigFile:
-		return defaultConfigProvider()
-	case AuthModeInstancePrincipal:
-		return instancePrincipalConfigurationProvider()
-	case AuthModeResourcePrincipal:
-		return resourcePrincipalConfigurationProvider()
-	case AuthModeWorkloadIdentity:
-		return workloadIdentityConfigurationProvider()
-	default:
-		return defaultConfigProvider()
-	}
-}
-
-func normalizeAuthMode(authMode AuthMode) AuthMode {
-	mode := strings.ToLower(strings.TrimSpace(string(authMode)))
-	if mode == "" {
-		return AuthModeConfigFile
-	}
-	return AuthMode(mode)
+func configurationProviderForAuthMode(authMode oci.AuthMode) (common.ConfigurationProvider, error) {
+	configProvider, err := oci.ConfigurationProviderForAuthMode(authMode)
+	return configProvider, err
 }
 
 func getSecretFromBase64(resp secrets.GetSecretBundleByNameResponse) (string, error) {

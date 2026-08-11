@@ -10,13 +10,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/ocivault"
+	"github.com/oracle/oracle-db-appdev-monitoring/oci"
 )
 
 func TestWarmupConnectionPoolWithOCIVaultLookupErrorUsesBackoff(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	original := getOCIVaultSecret
-	getOCIVaultSecret = func(vaultID, secretName string, authMode ocivault.AuthMode) (string, error) {
+	getOCIVaultSecret = func(vaultID, secretName string, authMode oci.AuthMode) (string, error) {
 		return "", errors.New("vault unavailable")
 	}
 	t.Cleanup(func() {
