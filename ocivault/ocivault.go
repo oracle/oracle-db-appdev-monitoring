@@ -15,7 +15,7 @@ import (
 )
 
 func GetVaultSecret(vaultId string, secretName string, authMode oci.AuthMode) (string, error) {
-	configProvider, err := configurationProviderForAuthMode(authMode)
+	configProvider, err := oci.ConfigurationProviderForAuthMode(authMode)
 	if err != nil {
 		return "", err
 	}
@@ -36,11 +36,6 @@ func GetVaultSecret(vaultId string, secretName string, authMode oci.AuthMode) (s
 		return "", err
 	}
 	return strings.TrimRight(rawSecret, "\r\n"), nil // make sure a \r and/or \n didn't make it into the secret
-}
-
-func configurationProviderForAuthMode(authMode oci.AuthMode) (common.ConfigurationProvider, error) {
-	configProvider, err := oci.ConfigurationProviderForAuthMode(authMode)
-	return configProvider, err
 }
 
 func getSecretFromBase64(resp secrets.GetSecretBundleByNameResponse) (string, error) {

@@ -152,6 +152,41 @@ databases:
 	}
 }
 
+func TestLoadMetricsConfigurationLoadsDatabasesFromOCI(t *testing.T) {
+	configPath := writeExporterConfig(t, `
+databasesFrom:
+  oci:
+    auth: workload_identity
+    compartments:
+      - ocid1.compartment.oc1..example1
+      - ocid1.compartment.oc1..example2
+    filters:
+      lifecycleState: AVAILABLE
+      requiredTags:
+        oracledb-metrics-exporter-enabled: "true"
+`)
+
+	cfg, err := LoadMetricsConfiguration(testLogger(), &Config{ConfigFile: configPath})
+	if err != nil {
+		t.Fatalf("expected config to load, got %v", err)
+	}
+	if cfg.DatabasesFrom == nil || cfg.DatabasesFrom.OCI == nil {
+		t.Fatal("expected OCI database discovery configuration")
+	}
+	if got := cfg.DatabasesFrom.OCI.Auth; got != oci.AuthModeWorkloadIdentity {
+		t.Fatalf("expected workload identity auth, got %q", got)
+	}
+	if got := cfg.DatabasesFrom.OCI.Compartments; len(got) != 2 || got[0] != "ocid1.compartment.oc1..example1" || got[1] != "ocid1.compartment.oc1..example2" {
+		t.Fatalf("unexpected compartments: %#v", got)
+	}
+	if got := cfg.DatabasesFrom.OCI.Filters.LifecycleState; got != "AVAILABLE" {
+		t.Fatalf("expected AVAILABLE lifecycle state, got %q", got)
+	}
+	if got := cfg.DatabasesFrom.OCI.Filters.RequiredTags; got["oracledb-metrics-exporter-enabled"] != "true" {
+		t.Fatalf("expected required tag, got %#v", got)
+	}
+}
+
 func TestLoadMetricsConfigurationMapsLegacyListenAddressToWebConfig(t *testing.T) {
 	configPath := writeExporterConfig(t, `
 listenAddress: 127.0.0.1:9161

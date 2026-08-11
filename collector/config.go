@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	adb "github.com/oracle/oci-go-sdk/v65/database"
 	"github.com/oracle/oracle-db-appdev-monitoring/azvault"
 	"github.com/oracle/oracle-db-appdev-monitoring/hashivault"
 	"github.com/oracle/oracle-db-appdev-monitoring/oci"
@@ -40,6 +41,25 @@ type MetricsConfiguration struct {
 	Logging       LoggingConfig             `yaml:"log"`
 	Web           WebConfig                 `yaml:"web"`
 	OTLP          *OTLPConfig               `yaml:"otlp"`
+	DatabasesFrom *DatabasesFromConfig      `yaml:"databasesFrom"`
+}
+
+// DatabasesFromConfig configures database discovery sources.
+type DatabasesFromConfig struct {
+	OCI *OCIDatabasesFromConfig `yaml:"oci"`
+}
+
+// OCIDatabasesFromConfig configures OCI database discovery.
+type OCIDatabasesFromConfig struct {
+	Auth         oci.AuthMode                  `yaml:"auth"`
+	Compartments []string                      `yaml:"compartments"`
+	Filters      OCIDatabasesFromFiltersConfig `yaml:"filters"`
+}
+
+// OCIDatabasesFromFiltersConfig narrows the databases discovered from OCI.
+type OCIDatabasesFromFiltersConfig struct {
+	LifecycleState adb.DatabaseLifecycleStateEnum `yaml:"lifecycleState"`
+	RequiredTags   map[string]string              `yaml:"requiredTags"`
 }
 
 // OTLPConfig configures scheduled metric publishing to an OTLP/gRPC endpoint.
@@ -450,6 +470,22 @@ func (m *MetricsConfiguration) mergeOTLPConfig() {
 	}
 }
 
+func (m *MetricsConfiguration) mergeDatabasesFrom() {
+	if m.DatabasesFrom == nil {
+		return
+	}
+	if m.DatabasesFrom.OCI != nil {
+		if len(m.DatabasesFrom.OCI.Filters.LifecycleState) == 0 {
+			m.DatabasesFrom.OCI.Filters.LifecycleState = adb.DatabaseLifecycleStateAvailable
+		}
+		if len(m.DatabasesFrom.OCI.Filters.RequiredTags) == 0 {
+			m.DatabasesFrom.OCI.Filters.RequiredTags = map[string]string{
+				tagKeyExporterEnabled: "true",
+			}
+		}
+	}
+}
+
 func (m *MetricsConfiguration) validate(logger *slog.Logger) error {
 	m.checkDuplicatedDatabases(logger)
 	if err := m.validateOCIVaultAuth(); err != nil {
@@ -460,6 +496,24 @@ func (m *MetricsConfiguration) validate(logger *slog.Logger) error {
 	}
 	if err := m.validateOTLPConfig(); err != nil {
 		return err
+	}
+	if err := m.validateDatabasesFromConfig(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *MetricsConfiguration) validateDatabasesFromConfig() error {
+	if m.DatabasesFrom == nil {
+		return nil
+	}
+	if m.DatabasesFrom.OCI != nil {
+		if len(m.DatabasesFrom.OCI.Compartments) == 0 {
+			return errors.New("databasesFrom.oci.compartments is required when databasesFrom.oci is configured")
+		}
+		if err := oci.ValidateAuthMode(m.DatabasesFrom.OCI.Auth); err != nil {
+			return fmt.Errorf("databaseFrom OCI Auth: %w", err)
+		}
 	}
 	return nil
 }
