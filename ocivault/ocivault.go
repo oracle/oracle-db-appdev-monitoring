@@ -6,6 +6,7 @@ package ocivault
 import (
 	"context"
 	b64 "encoding/base64"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -13,6 +14,11 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/secrets"
 	"github.com/oracle/oracle-db-appdev-monitoring/oci"
 )
+
+type usernamePasswordSecret struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
 
 func GetVaultSecret(vaultId string, secretName string, authMode oci.AuthMode) (string, error) {
 	configProvider, err := oci.ConfigurationProviderForAuthMode(authMode)
@@ -36,6 +42,29 @@ func GetVaultSecret(vaultId string, secretName string, authMode oci.AuthMode) (s
 		return "", err
 	}
 	return strings.TrimRight(rawSecret, "\r\n"), nil // make sure a \r and/or \n didn't make it into the secret
+}
+
+func GetUsernamePasswordSecret(vaultID string, secretName string, authMode oci.AuthMode) (string, string, error) {
+	secret, err := GetVaultSecret(vaultID, secretName, authMode)
+	if err != nil {
+		return "", "", err
+	}
+	credentials, err := parseUsernamePasswordSecret(secret)
+	if err != nil {
+		return "", "", err
+	}
+	return credentials.Username, credentials.Password, nil
+}
+
+func parseUsernamePasswordSecret(secret string) (usernamePasswordSecret, error) {
+	credentials := usernamePasswordSecret{}
+	if err := json.Unmarshal([]byte(secret), &credentials); err != nil {
+		return usernamePasswordSecret{}, fmt.Errorf("decode OCI Vault username/password secret: %w", err)
+	}
+	if credentials.Username == "" || credentials.Password == "" {
+		return usernamePasswordSecret{}, fmt.Errorf("OCI Vault username/password secret must include non-empty username and password")
+	}
+	return credentials, nil
 }
 
 func getSecretFromBase64(resp secrets.GetSecretBundleByNameResponse) (string, error) {

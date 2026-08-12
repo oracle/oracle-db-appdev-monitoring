@@ -13,24 +13,9 @@ import (
 	"time"
 
 	adb "github.com/oracle/oci-go-sdk/v65/database"
-	"github.com/oracle/oracle-db-appdev-monitoring/azvault"
-	"github.com/oracle/oracle-db-appdev-monitoring/hashivault"
 	"github.com/oracle/oracle-db-appdev-monitoring/oci"
-	"github.com/oracle/oracle-db-appdev-monitoring/ocivault"
 	"github.com/prometheus/exporter-toolkit/web"
 	"go.yaml.in/yaml/v2"
-)
-
-var (
-	getOCIVaultSecret       = ocivault.GetVaultSecret
-	getAZVaultSecret        = azvault.GetVaultSecret
-	getHashiCorpVaultSecret = func(logger *slog.Logger, cfg *HashiCorpVault, requiredKeys []string) (map[string]string, error) {
-		client, err := hashivault.CreateVaultClient(logger, cfg.Socket)
-		if err != nil {
-			return nil, err
-		}
-		return client.GetVaultSecret(cfg.MountType, cfg.MountName, cfg.SecretPath, requiredKeys)
-	}
 )
 
 type MetricsConfiguration struct {
@@ -125,10 +110,11 @@ type VaultConfig struct {
 }
 
 type OCIVault struct {
-	ID             string       `yaml:"id"`
-	Auth           oci.AuthMode `yaml:"auth,omitempty"`
-	UsernameSecret string       `yaml:"usernameSecret"`
-	PasswordSecret string       `yaml:"passwordSecret"`
+	ID                     string       `yaml:"id"`
+	Auth                   oci.AuthMode `yaml:"auth,omitempty"`
+	UsernameSecret         string       `yaml:"usernameSecret"`
+	PasswordSecret         string       `yaml:"passwordSecret"`
+	UsernamePasswordSecret string       `yaml:"usernamePasswordSecret"`
 }
 
 type AZVault struct {
@@ -273,91 +259,6 @@ func (c ConnectConfig) GetQueryTimeout() int {
 		return 5
 	}
 	return *c.QueryTimeout
-}
-
-func (h HashiCorpVault) GetUsernameAttr() string {
-	if h.UsernameAttr == "" || h.MountType == hashivault.MountTypeDatabase {
-		return "username"
-	}
-	return h.UsernameAttr
-}
-
-func (h HashiCorpVault) GetPasswordAttr() string {
-	if h.PasswordAttr == "" || h.MountType == hashivault.MountTypeDatabase {
-		return "password"
-	}
-	return h.PasswordAttr
-}
-
-func (d DatabaseConfig) fetchHashiCorpVaultSecret() error {
-	if len(d.Vault.HashiCorp.fetchedSecert) > 0 {
-		// Secret is already fetched, do nothing
-		return nil
-	}
-	// Set default username and password attribute values
-	requiredKeys := []string{d.Vault.HashiCorp.GetUsernameAttr(), d.Vault.HashiCorp.GetPasswordAttr()}
-	secret, err := getHashiCorpVaultSecret(slog.Default(), d.Vault.HashiCorp, requiredKeys)
-	if err != nil {
-		return err
-	}
-	d.Vault.HashiCorp.fetchedSecert = secret
-	return nil
-}
-
-func (d DatabaseConfig) GetUsername() (string, error) {
-	if d.isOCIVault() && d.Vault.OCI.UsernameSecret != "" {
-		return getOCIVaultSecret(d.Vault.OCI.ID, d.Vault.OCI.UsernameSecret, d.Vault.OCI.Auth)
-	}
-	if d.isAzureVault() && d.Vault.Azure.UsernameSecret != "" {
-		return getAZVaultSecret(d.Vault.Azure.ID, d.Vault.Azure.UsernameSecret)
-	}
-	if d.isHashiCorpVault() && d.Vault.HashiCorp.MountType != "" && d.Vault.HashiCorp.MountName != "" && d.Vault.HashiCorp.SecretPath != "" {
-		if err := d.fetchHashiCorpVaultSecret(); err != nil {
-			return "", err
-		}
-		userName := d.Vault.HashiCorp.fetchedSecert[d.Vault.HashiCorp.GetUsernameAttr()]
-		if d.Vault.HashiCorp.AsProxy == "" {
-			return userName, nil
-		} else {
-			return fmt.Sprintf("%s[%s]", userName, d.Vault.HashiCorp.AsProxy), nil
-		}
-	}
-	return d.Username, nil
-}
-
-func (d DatabaseConfig) GetPassword() (string, error) {
-	if d.PasswordFile != "" {
-		bytes, err := os.ReadFile(d.PasswordFile)
-		if err != nil {
-			return "", fmt.Errorf("failed to read password file %q: %w", d.PasswordFile, err)
-		}
-		return string(bytes), nil
-	}
-	if d.isOCIVault() && d.Vault.OCI.PasswordSecret != "" {
-		return getOCIVaultSecret(d.Vault.OCI.ID, d.Vault.OCI.PasswordSecret, d.Vault.OCI.Auth)
-	}
-	if d.isAzureVault() && d.Vault.Azure.PasswordSecret != "" {
-		return getAZVaultSecret(d.Vault.Azure.ID, d.Vault.Azure.PasswordSecret)
-	}
-	if d.isHashiCorpVault() && d.Vault.HashiCorp.MountType != "" && d.Vault.HashiCorp.MountName != "" && d.Vault.HashiCorp.SecretPath != "" {
-		if err := d.fetchHashiCorpVaultSecret(); err != nil {
-			return "", err
-		}
-		return d.Vault.HashiCorp.fetchedSecert[d.Vault.HashiCorp.GetPasswordAttr()], nil
-	}
-	return d.Password, nil
-}
-
-func (d DatabaseConfig) isOCIVault() bool {
-	return d.Vault != nil && d.Vault.OCI != nil
-}
-
-func (d DatabaseConfig) isAzureVault() bool {
-	return d.Vault != nil && d.Vault.Azure != nil
-}
-
-func (d DatabaseConfig) isHashiCorpVault() bool {
-	return d.Vault != nil && d.Vault.HashiCorp != nil
 }
 
 func LoadMetricsConfiguration(logger *slog.Logger, cfg *Config) (*MetricsConfiguration, error) {

@@ -12,6 +12,37 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/secrets"
 )
 
+func TestGetUsernamePasswordSecret(t *testing.T) {
+	credentials, err := parseUsernamePasswordSecret(`{"username":"scott","password":"tiger"}`)
+	if err != nil {
+		t.Fatalf("expected JSON credentials, got %v", err)
+	}
+	if credentials.Username != "scott" || credentials.Password != "tiger" {
+		t.Fatalf("unexpected credentials: %#v", credentials)
+	}
+}
+
+func TestParseUsernamePasswordSecretRejectsInvalidJSON(t *testing.T) {
+	_, err := parseUsernamePasswordSecret("not JSON")
+	if err == nil || !strings.Contains(err.Error(), "decode OCI Vault username/password secret") {
+		t.Fatalf("expected OCI Vault JSON decode error, got %v", err)
+	}
+}
+
+func TestParseUsernamePasswordSecretRejectsMissingCredentials(t *testing.T) {
+	for _, secret := range []string{
+		`{}`,
+		`{"username":"scott"}`,
+		`{"password":"tiger"}`,
+		`null`,
+	} {
+		_, err := parseUsernamePasswordSecret(secret)
+		if err == nil || !strings.Contains(err.Error(), "must include non-empty username and password") {
+			t.Fatalf("expected missing credentials error for %s, got %v", secret, err)
+		}
+	}
+}
+
 func TestGetSecretFromBase64(t *testing.T) {
 	encoded := base64.StdEncoding.EncodeToString([]byte("tiger\r\n"))
 

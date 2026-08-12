@@ -19,6 +19,30 @@ databases:
         passwordSecret: <Secret containing DB password>
 ```
 
+### Combined username and password secret
+
+Alternatively, set `usernamePasswordSecret` to the name of one OCI Vault secret containing both credentials as JSON:
+
+```yaml
+databases:
+  mydb:
+    vault:
+      oci:
+        id: <VAULT OCID>
+        usernamePasswordSecret: <Secret containing DB credentials JSON>
+```
+
+The secret value must contain non-empty `username` and `password` properties:
+
+```json
+{
+  "username": "mydbuser",
+  "password": "mydbpassword"
+}
+```
+
+The exporter reads this secret once when it creates or reconnects the database connection. When `usernamePasswordSecret` is configured, it supplies the complete credential pair and takes precedence over `usernameSecret`, `passwordSecret`, `username`, `password`, and `passwordFile`.
+
 ## Config file
 
 Use `config_file` when the exporter should authenticate with the OCI Go SDK default configuration provider. This reads the local OCI config file, such as `$HOME/.oci/config`, unless the SDK is configured otherwise. If `auth` is omitted, `config_file` is used for backward compatibility.

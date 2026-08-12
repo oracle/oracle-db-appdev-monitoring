@@ -68,7 +68,7 @@ func TestHashiCorpVaultLookupErrorIsReturned(t *testing.T) {
 		},
 	}
 
-	_, err := cfg.GetPassword()
+	_, err := cfg.ResolveCredentials()
 	if err == nil {
 		t.Fatal("expected HashiCorp Vault lookup error")
 	}
@@ -95,7 +95,7 @@ func TestAzureVaultLookupErrorIsReturned(t *testing.T) {
 		},
 	}
 
-	_, err := cfg.GetPassword()
+	_, err := cfg.ResolveCredentials()
 	if err == nil {
 		t.Fatal("expected Azure Vault lookup error")
 	}

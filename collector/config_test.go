@@ -41,7 +41,7 @@ func TestDatabaseConfigGetPasswordReturnsPasswordFileError(t *testing.T) {
 		PasswordFile: filepath.Join(t.TempDir(), "missing-password"),
 	}
 
-	_, err := cfg.GetPassword()
+	_, err := cfg.ResolveCredentials()
 	if err == nil {
 		t.Fatal("expected missing password file to return an error")
 	}
@@ -72,19 +72,148 @@ func TestDatabaseConfigPassesOCIVaultAuthMode(t *testing.T) {
 		},
 	}
 
-	if got, err := cfg.GetUsername(); err != nil || got != "secret-value" {
-		t.Fatalf("expected username from OCI Vault, got %q, %v", got, err)
-	}
-	if got, err := cfg.GetPassword(); err != nil || got != "secret-value" {
-		t.Fatalf("expected password from OCI Vault, got %q, %v", got, err)
+	credentials, err := cfg.ResolveCredentials()
+	if err != nil || credentials.Username != "secret-value" || credentials.Password != "secret-value" {
+		t.Fatalf("expected credentials from OCI Vault, got %#v, %v", credentials, err)
 	}
 
 	want := []string{
-		"vault-1/db-username/instance_principal",
 		"vault-1/db-password/instance_principal",
+		"vault-1/db-username/instance_principal",
 	}
 	if strings.Join(calls, ",") != strings.Join(want, ",") {
 		t.Fatalf("unexpected OCI Vault calls: got %#v want %#v", calls, want)
+	}
+}
+
+func TestDatabaseConfigGetsCredentialsFromOCIUsernamePasswordSecret(t *testing.T) {
+	original := getOCIUsernamePasswordSecret
+	var calls []string
+	getOCIUsernamePasswordSecret = func(vaultID, secretName string, authMode oci.AuthMode) (string, string, error) {
+		calls = append(calls, fmt.Sprintf("%s/%s/%s", vaultID, secretName, authMode))
+		return "scott", "tiger", nil
+	}
+	t.Cleanup(func() {
+		getOCIUsernamePasswordSecret = original
+	})
+
+	cfg := DatabaseConfig{
+		Vault: &VaultConfig{
+			OCI: &OCIVault{
+				ID:                     "vault-1",
+				Auth:                   "instance_principal",
+				UsernamePasswordSecret: "db-credentials",
+			},
+		},
+	}
+
+	credentials, err := cfg.ResolveCredentials()
+	if err != nil || credentials.Username != "scott" || credentials.Password != "tiger" {
+		t.Fatalf("expected credentials from OCI Vault JSON secret, got %#v, %v", credentials, err)
+	}
+
+	want := []string{"vault-1/db-credentials/instance_principal"}
+	if strings.Join(calls, ",") != strings.Join(want, ",") {
+		t.Fatalf("unexpected OCI Vault calls: got %#v want %#v", calls, want)
+	}
+}
+
+func TestDatabaseConfigReturnsOCIUsernamePasswordSecretLookupError(t *testing.T) {
+	original := getOCIUsernamePasswordSecret
+	getOCIUsernamePasswordSecret = func(vaultID, secretName string, authMode oci.AuthMode) (string, string, error) {
+		return "", "", errors.New("vault unavailable")
+	}
+	t.Cleanup(func() {
+		getOCIUsernamePasswordSecret = original
+	})
+
+	cfg := DatabaseConfig{
+		Username: "fallback-username",
+		Password: "fallback-password",
+		Vault: &VaultConfig{OCI: &OCIVault{
+			ID:                     "vault-1",
+			UsernamePasswordSecret: "db-credentials",
+		}},
+	}
+
+	_, err := cfg.ResolveCredentials()
+	if err == nil || err.Error() != "vault unavailable" {
+		t.Fatalf("expected OCI Vault lookup error, got %v", err)
+	}
+}
+
+func TestDatabaseConfigPasswordFileOverridesSeparateOCIVaultPasswordSecret(t *testing.T) {
+	passwordFile := filepath.Join(t.TempDir(), "password")
+	if err := os.WriteFile(passwordFile, []byte("file-password"), 0o600); err != nil {
+		t.Fatalf("write password file: %v", err)
+	}
+
+	original := getOCIVaultSecret
+	getOCIVaultSecret = func(vaultID, secretName string, authMode oci.AuthMode) (string, error) {
+		t.Fatal("OCI Vault should not be called when passwordFile is configured")
+		return "", nil
+	}
+	t.Cleanup(func() {
+		getOCIVaultSecret = original
+	})
+
+	cfg := DatabaseConfig{
+		Username:     "scott",
+		PasswordFile: passwordFile,
+		Vault: &VaultConfig{OCI: &OCIVault{
+			ID:             "vault-1",
+			PasswordSecret: "db-password",
+		}},
+	}
+
+	credentials, err := cfg.ResolveCredentials()
+	if err != nil || credentials.Username != "scott" || credentials.Password != "file-password" {
+		t.Fatalf("expected password-file credentials, got %#v, %v", credentials, err)
+	}
+}
+
+func TestDatabaseConfigResolvesSingleOCIVaultCredential(t *testing.T) {
+	original := getOCIVaultSecret
+	getOCIVaultSecret = func(vaultID, secretName string, authMode oci.AuthMode) (string, error) {
+		return secretName + "-value", nil
+	}
+	t.Cleanup(func() {
+		getOCIVaultSecret = original
+	})
+
+	tests := []struct {
+		name     string
+		vault    OCIVault
+		username string
+		password string
+	}{
+		{
+			name:     "username",
+			vault:    OCIVault{ID: "vault-1", UsernameSecret: "db-username"},
+			username: "db-username-value",
+			password: "configured-password",
+		},
+		{
+			name:     "password",
+			vault:    OCIVault{ID: "vault-1", PasswordSecret: "db-password"},
+			username: "configured-username",
+			password: "db-password-value",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := DatabaseConfig{
+				Username: "configured-username",
+				Password: "configured-password",
+				Vault:    &VaultConfig{OCI: &tt.vault},
+			}
+
+			credentials, err := cfg.ResolveCredentials()
+			if err != nil || credentials.Username != tt.username || credentials.Password != tt.password {
+				t.Fatalf("unexpected credentials: %#v, %v", credentials, err)
+			}
+		})
 	}
 }
 

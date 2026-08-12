@@ -18,14 +18,11 @@ import (
 func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.DB, error) {
 	logger.Debug("Launching connection to "+maskDsn(dbconfig.URL), "database", dbname)
 
-	password, err := dbconfig.GetPassword()
+	credentials, err := dbconfig.ResolveCredentials()
 	if err != nil {
 		return nil, err
 	}
-	username, err := dbconfig.GetUsername()
-	if err != nil {
-		return nil, err
-	}
+	username, password := credentials.Username, credentials.Password
 	dbconfig.ExternalAuth = password == ""
 
 	logger.Debug(fmt.Sprintf("external authentication set to %t", dbconfig.ExternalAuth), "database", dbname)
