@@ -4,6 +4,9 @@
 package collector
 
 import (
+	"context"
+	"log/slog"
+
 	adb "github.com/oracle/oci-go-sdk/v65/database"
 	"github.com/oracle/oracle-db-appdev-monitoring/oci"
 )
@@ -12,14 +15,14 @@ const (
 	tagKeyExporterEnabled = "oracledb-metrics-exporter-enabled"
 )
 
-func discoverDatabases(databasesFrom *DatabasesFromConfig) ([]DatabaseConfig, error) {
+func discoverDatabases(logger *slog.Logger, cfg *DatabasesFromConfig) ([]DatabaseConfig, error) {
 	var databases []DatabaseConfig
-	if databasesFrom == nil { // no databases to discover
+	if cfg == nil { // no databases to discover
 		return nil, nil
 	}
 
-	if databasesFrom.OCI != nil {
-		ociDatabases, err := discoverOCIDatabases(databasesFrom.OCI)
+	if cfg.OCI != nil {
+		ociDatabases, err := discoverOCIDatabases(logger, cfg.OCI)
 		if err != nil {
 			return nil, err
 		}
@@ -29,16 +32,26 @@ func discoverDatabases(databasesFrom *DatabasesFromConfig) ([]DatabaseConfig, er
 	return databases, nil
 }
 
-func discoverOCIDatabases(databasesFrom *OCIDatabasesFromConfig) ([]DatabaseConfig, error) {
+func discoverOCIDatabases(logger *slog.Logger, cfg *OCIDatabasesFromConfig) ([]DatabaseConfig, error) {
 	var databases []DatabaseConfig
 
-	configProvider, err := oci.ConfigurationProviderForAuthMode(databasesFrom.Auth)
+	configProvider, err := oci.ConfigurationProviderForAuthMode(cfg.Auth)
 	if err != nil {
 		return nil, err
 	}
 	adbClient, err := adb.NewDatabaseClientWithConfigurationProvider(configProvider)
 	if err != nil {
 		return nil, err
+	}
+
+	var autonomousDatabases []adb.AutonomousDatabaseSummary
+
+	for _, compartment := range cfg.Compartments {
+		results, listErr := oci.ListAllDatabases(context.Background(), adbClient, compartment, cfg.Filters.RequiredTags, cfg.Filters.LifecycleState)
+		if listErr != nil {
+			return nil, listErr
+		}
+		autonomousDatabases = append(autonomousDatabases, results...)
 	}
 
 	return databases, nil

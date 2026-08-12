@@ -58,8 +58,8 @@ type OCIDatabasesFromConfig struct {
 
 // OCIDatabasesFromFiltersConfig narrows the databases discovered from OCI.
 type OCIDatabasesFromFiltersConfig struct {
-	LifecycleState adb.DatabaseLifecycleStateEnum `yaml:"lifecycleState"`
-	RequiredTags   map[string]string              `yaml:"requiredTags"`
+	LifecycleState adb.AutonomousDatabaseLifecycleStateEnum `yaml:"lifecycleState"`
+	RequiredTags   map[string]string                        `yaml:"requiredTags"`
 }
 
 // OTLPConfig configures scheduled metric publishing to an OTLP/gRPC endpoint.
@@ -476,7 +476,7 @@ func (m *MetricsConfiguration) mergeDatabasesFrom() {
 	}
 	if m.DatabasesFrom.OCI != nil {
 		if len(m.DatabasesFrom.OCI.Filters.LifecycleState) == 0 {
-			m.DatabasesFrom.OCI.Filters.LifecycleState = adb.DatabaseLifecycleStateAvailable
+			m.DatabasesFrom.OCI.Filters.LifecycleState = adb.AutonomousDatabaseLifecycleStateAvailable
 		}
 		if len(m.DatabasesFrom.OCI.Filters.RequiredTags) == 0 {
 			m.DatabasesFrom.OCI.Filters.RequiredTags = map[string]string{
