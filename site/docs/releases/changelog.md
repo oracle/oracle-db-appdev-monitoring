@@ -11,6 +11,7 @@ List of upcoming and historic changes to the exporter.
 
 - Add optional OCI Vault `usernamePasswordSecret` support for a JSON secret containing both database credentials.
 - Add root-level `databasesFrom.oci` configuration for authenticated, paginated OCI Autonomous Database discovery by compartment, lifecycle state, and required tags.
+- Map tagged Autonomous Database connection and OCI Vault settings into discovered database configurations.
 - Add an optional OTLP metrics publisher for scheduled scrapes, so the metrics exporter can publish metrics to OTLP backends.
 - Restart the exporter process when its configuration file changes, after validating the updated configuration.
 - Avoid restarting for a transient configuration while an in-place configuration-file update is still being written.
