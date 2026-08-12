@@ -40,13 +40,15 @@ Discovery reads freeform tags prefixed with `oracledb-metrics-exporter-`. These 
 
 | Tag suffix | Example | Current behavior |
 | --- | --- | --- |
-| `vault-id` | `oracledb-metrics-exporter-vault-id: ocid1.vault.oc1..example` | Sets `vault.oci.id`. |
-| `usernamePasswordSecret` | `oracledb-metrics-exporter-usernamePasswordSecret: orders-credentials` | Sets `vault.oci.usernamePasswordSecret`. The secret must contain the JSON credentials described in [OCI Vault](../oci-vault.md). |
+| `vault-id` | `oracledb-metrics-exporter-vault-id: ocid1.vault.oc1..example` | Sets `vault.oci.id`. Must be paired with `usernamePasswordSecret`. |
+| `usernamePasswordSecret` | `oracledb-metrics-exporter-usernamePasswordSecret: orders-credentials` | Sets `vault.oci.usernamePasswordSecret`. Must be paired with `vault-id`; the secret must contain the JSON credentials described in [OCI Vault](../oci-vault.md). |
 | `connect-service` | `oracledb-metrics-exporter-connect-service: HIGH` | Uses the ADB `HIGH`, `MEDIUM`, `LOW`, or `DEDICATED` connection string as the database URL. |
 | `wallet-secret` | `oracledb-metrics-exporter-wallet-secret: orders-wallet` | Recognized but ignored. See TODOs. |
 | `is-mtls-connection-required` | `oracledb-metrics-exporter-is-mtls-connection-required: "true"` | Recognized but ignored. See TODOs. |
 
 The `auth` value from `databasesFrom.oci` is also applied to the discovered OCI Vault configuration.
+
+A discovered database with invalid tag configuration is skipped and logged as a warning. If two discovered databases have the same `dbName`, the first is kept and later duplicates are skipped with a warning.
 
 ### Other database connection settings
 

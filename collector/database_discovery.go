@@ -24,6 +24,15 @@ const (
 	tagKeyMTLSConnectionRequired = tagPrefix + "is-mtls-connection-required"
 )
 
+var discoveryTagKeys = map[string]struct{}{
+	tagKeyExporterEnabled:        {},
+	tagKeyVaultID:                {},
+	tagKeyUsernamePasswordSecret: {},
+	tagKeyConnectService:         {},
+	tagKeyWalletSecret:           {},
+	tagKeyMTLSConnectionRequired: {},
+}
+
 func discoverDatabases(logger *slog.Logger, cfg *DatabasesFromConfig) (map[string]DatabaseConfig, error) {
 	databases := make(map[string]DatabaseConfig)
 	if cfg == nil { // no databases to discover
@@ -66,18 +75,29 @@ func discoverOCIDatabases(logger *slog.Logger, cfg *OCIDatabasesFromConfig) (map
 	}
 
 	for _, autonomousDatabase := range autonomousDatabases {
-		name := strings.TrimSpace(stringValue(autonomousDatabase.DbName))
-		if name == "" {
-			return nil, fmt.Errorf("discovered Autonomous Database has no database name")
-		}
-		database, databaseErr := databaseConfigFromAutonomousDatabase(autonomousDatabase, cfg.Auth, logger)
-		if databaseErr != nil {
-			return nil, fmt.Errorf("build configuration for discovered Autonomous Database %q: %w", name, databaseErr)
-		}
-		databases[name] = database
+		addAutonomousDatabase(databases, autonomousDatabase, cfg.Auth, logger)
 	}
 
 	return databases, nil
+}
+
+func addAutonomousDatabase(databases map[string]DatabaseConfig, autonomousDatabase adb.AutonomousDatabaseSummary, auth oci.AuthMode, logger *slog.Logger) {
+	name := strings.TrimSpace(stringValue(autonomousDatabase.DbName))
+	if name == "" {
+		logger.Warn("skipping discovered Autonomous Database without a database name")
+		return
+	}
+	if _, exists := databases[name]; exists {
+		logger.Warn("skipping duplicate discovered Autonomous Database", "database", name)
+		return
+	}
+
+	database, err := databaseConfigFromAutonomousDatabase(autonomousDatabase, auth, logger)
+	if err != nil {
+		logger.Warn("skipping discovered Autonomous Database", "database", name, "err", err)
+		return
+	}
+	databases[name] = database
 }
 
 func databaseConfigFromAutonomousDatabase(autonomousDatabase adb.AutonomousDatabaseSummary, auth oci.AuthMode, logger *slog.Logger) (DatabaseConfig, error) {
@@ -106,7 +126,11 @@ func databaseConfigFromAutonomousDatabase(autonomousDatabase adb.AutonomousDatab
 		}
 	}
 
-	if vaultID, usernamePasswordSecret := tags[tagKeyVaultID], tags[tagKeyUsernamePasswordSecret]; vaultID != "" || usernamePasswordSecret != "" {
+	vaultID, usernamePasswordSecret := tags[tagKeyVaultID], tags[tagKeyUsernamePasswordSecret]
+	if (vaultID == "") != (usernamePasswordSecret == "") {
+		return DatabaseConfig{}, fmt.Errorf("both %q and %q are required for OCI Vault credentials", tagKeyVaultID, tagKeyUsernamePasswordSecret)
+	}
+	if vaultID != "" {
 		database.Vault = &VaultConfig{OCI: &OCIVault{
 			ID:                     vaultID,
 			Auth:                   auth,
@@ -131,7 +155,8 @@ func databaseConfigFromAutonomousDatabase(autonomousDatabase adb.AutonomousDatab
 }
 
 func isDiscoveryTag(key string) bool {
-	return key == tagKeyExporterEnabled || key == tagKeyVaultID || key == tagKeyUsernamePasswordSecret || key == tagKeyConnectService || key == tagKeyWalletSecret || key == tagKeyMTLSConnectionRequired
+	_, ok := discoveryTagKeys[key]
+	return ok
 }
 
 func connectionStringForService(connectionStrings *adb.AutonomousDatabaseConnectionStrings, service string) (string, error) {
