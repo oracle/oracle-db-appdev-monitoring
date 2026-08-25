@@ -9,6 +9,7 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
+- Update the Go runtime to 1.26.6.
 - Add an optional OTLP metrics publisher for scheduled scrapes, so the metrics exporter can publish metrics to OTLP backends.
 - Restart the exporter process when its configuration file changes, after validating the updated configuration.
 - Avoid restarting for a transient configuration while an in-place configuration-file update is still being written.
