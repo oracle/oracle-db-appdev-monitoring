@@ -23,6 +23,11 @@ function HomepageHeader() {
             to="/docs/intro">
             Getting Started Tutorial
           </Link>
+          <Link
+            className="button button--secondary button--lg"
+            to="/docs/next/configuration/otlp">
+            Push Metrics with OTLP
+          </Link>
         </div>
       </div>
     </header>

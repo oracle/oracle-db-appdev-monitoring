@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 300" role="img" aria-labelledby="title description">
+  <title id="title">Oracle AI Database metrics delivery paths</title>
+  <desc id="description">Oracle AI Database sends data to the metrics exporter. Prometheus or Grafana Alloy pulls metrics from its metrics endpoint, while the exporter pushes metrics over OTLP gRPC to an OpenTelemetry collector or backend.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#2563eb"/>
+    </marker>
+  </defs>
+  <rect width="1000" height="300" rx="20" fill="#f8fafc"/>
+  <g font-family="sans-serif" text-anchor="middle">
+    <rect x="35" y="100" width="200" height="100" rx="14" fill="#ffffff" stroke="#475569" stroke-width="2"/>
+    <text x="135" y="143" fill="#0f172a" font-size="20" font-weight="700">Oracle AI Database</text>
+    <text x="135" y="174" fill="#475569" font-size="16">one or more instances</text>
+
+    <rect x="320" y="100" width="240" height="100" rx="14" fill="#ffffff" stroke="#c74634" stroke-width="3"/>
+    <text x="440" y="143" fill="#0f172a" font-size="20" font-weight="700">Metrics Exporter</text>
+    <text x="440" y="174" fill="#475569" font-size="16">scheduled collection</text>
+
+    <rect x="665" y="25" width="300" height="100" rx="14" fill="#ffffff" stroke="#2563eb" stroke-width="2"/>
+    <text x="815" y="68" fill="#0f172a" font-size="20">Prometheus or Collector</text>
+    <text x="815" y="99" fill="#475569" font-size="16">pull from /metrics</text>
+
+    <rect x="665" y="175" width="300" height="100" rx="14" fill="#ffffff" stroke="#2563eb" stroke-width="2"/>
+    <text x="815" y="218" fill="#0f172a" font-size="20" font-weight="700">OpenTelemetry Backend</text>
+    <text x="815" y="249" fill="#475569" font-size="16">OTLP/gRPC push</text>
+  </g>
+  <g fill="none" stroke="#2563eb" stroke-width="3" marker-end="url(#arrow)">
+    <path d="M235 150 H310"/>
+    <path d="M560 135 C610 135 615 75 655 75"/>
+    <path d="M560 165 C610 165 615 225 655 225"/>
+  </g>
+</svg>
