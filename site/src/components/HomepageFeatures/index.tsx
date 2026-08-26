@@ -1,5 +1,6 @@
 import type {ReactNode} from 'react';
 import clsx from 'clsx';
+import Link from '@docusaurus/Link';
 import Heading from '@theme/Heading';
 import styles from './styles.module.css';
 
@@ -11,12 +12,11 @@ type FeatureItem = {
 
 const FeatureList: FeatureItem[] = [
   {
-    title: 'Monitor From Anywhere',
+    title: 'Prometheus Pull or OTLP Push',
     Svg: require('@site/static/img/logo.svg').default,
     description: (
       <>
-        Run the Oracle AI Database Metrics Exporter as a local binary, container, or in Kubernetes.
-          Use pre-built AMD64 and ARM64 images to easily get started.
+        Expose metrics for Prometheus, <Link to="/docs/next/configuration/otlp">push them using OTLP/gRPC</Link>, or use both delivery paths together.
       </>
     ),
   },
