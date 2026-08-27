@@ -23,6 +23,7 @@ const (
 	ora03113code = 3113
 	ora03114code = 3114
 	ora12537code = 12537
+	ora12541code = 12541 // TNS:no listener
 )
 
 var errDatabaseSessionNotInitialized = errors.New("database session is not initialized")

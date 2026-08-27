@@ -1,4 +1,4 @@
-// Copyright (c) 2025, Oracle and/or its affiliates.
+// Copyright (c) 2025, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 //go:build goora
@@ -102,7 +102,7 @@ func isTemporaryConnectionError(err error) bool {
 		return false
 	}
 	switch oraErr.ErrCode {
-	case ora01033code, ora03113code, ora03114code, ora12537code:
+	case ora01033code, ora03113code, ora03114code, ora12537code, ora12541code:
 		return true
 	default:
 		return false
