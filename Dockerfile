@@ -67,6 +67,12 @@ ADD ./default-metrics.toml /default-metrics.toml
 RUN mkdir /log && chown 1000:1000 /log
 RUN mkdir /wallet && chown 1000:1000 /wallet
 
+# Give uid 1000 a passwd entry: Oracle Client looks the OS user up during OCIServerAttach and,
+# when getpwuid() fails, double-frees a shared buffer under concurrent connects
+# (SIGABRT "double free or corruption" in dpiConn_create, issue #384).
+RUN echo 'exporter:x:1000:1000:exporter:/:/sbin/nologin' >> /etc/passwd && \
+    echo 'exporter:x:1000:' >> /etc/group
+
 EXPOSE 9161
 
 USER 1000
