@@ -63,6 +63,10 @@ ENV PATH=$PATH:/usr/lib/oracle/23/client64/bin
 COPY --from=build /go/src/oracledb_exporter/oracle-db-appdev-monitoring /oracledb_exporter
 ADD ./default-metrics.toml /default-metrics.toml
 
+# Oracle Client looks up the OS user during OCIServerAttach; ensure UID 1000 has an entry.
+RUN echo 'exporter:x:1000:1000:exporter:/:/sbin/nologin' >> /etc/passwd && \
+    echo 'exporter:x:1000:' >> /etc/group
+
 # create the mount point for alert log exports (default location)
 RUN mkdir /log && chown 1000:1000 /log
 RUN mkdir /wallet && chown 1000:1000 /wallet

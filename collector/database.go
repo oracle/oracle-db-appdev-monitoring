@@ -23,7 +23,17 @@ const (
 	ora03113code = 3113
 	ora03114code = 3114
 	ora12537code = 12537
+	ora12541code = 12541
 )
+
+func isTemporaryConnectionErrorCode(code int) bool {
+	switch code {
+	case ora01033code, ora03113code, ora03114code, ora12537code, ora12541code:
+		return true
+	default:
+		return false
+	}
+}
 
 var errDatabaseSessionNotInitialized = errors.New("database session is not initialized")
 

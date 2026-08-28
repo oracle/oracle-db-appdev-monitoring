@@ -20,6 +20,29 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+func TestIsTemporaryConnectionErrorCode(t *testing.T) {
+	tests := []struct {
+		name string
+		code int
+		want bool
+	}{
+		{name: "database starting", code: ora01033code, want: true},
+		{name: "end of file on communication channel", code: ora03113code, want: true},
+		{name: "not connected to Oracle", code: ora03114code, want: true},
+		{name: "connection closed", code: ora12537code, want: true},
+		{name: "no listener", code: ora12541code, want: true},
+		{name: "invalid credentials", code: ora01017code, want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isTemporaryConnectionErrorCode(tt.code); got != tt.want {
+				t.Errorf("isTemporaryConnectionErrorCode(%d) = %t, want %t", tt.code, got, tt.want)
+			}
+		})
+	}
+}
+
 type testQueryDriver struct{}
 
 type testQueryConn struct {
