@@ -16,6 +16,7 @@ List of upcoming and historic changes to the exporter.
 - Avoid restarting for a transient configuration while an in-place configuration-file update is still being written.
 - Treat `ORA-12541: TNS:no listener` as a temporary connection error so unavailable database listeners honor `connectionBackoff`.
 - Add the exporter user's passwd entry to the godror container image, preventing concurrent Oracle Client connection creation from aborting when UID 1000 cannot be resolved.
+- Enable godror's Oracle session pool whenever a `poolIncrement`, `poolMaxConnections`, or `poolMinConnections` setting is configured, and cap warmup at the configured pool maximum.
 
 ### 2.4.2, July 13th, 2026
 

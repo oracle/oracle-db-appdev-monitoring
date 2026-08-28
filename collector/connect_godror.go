@@ -19,7 +19,6 @@ import (
 func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.DB, error) {
 	logger.Debug("Launching connection to "+maskDsn(dbconfig.URL), "database", dbname)
 
-	var P godror.ConnectionParams
 	password, err := dbconfig.GetPassword()
 	if err != nil {
 		return nil, err
@@ -37,28 +36,51 @@ func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.
 		dbconfig.Username = ""
 	}
 	logger.Info(msg, "database", dbname)
-	externalAuth := sql.NullBool{
-		Bool:  dbconfig.ExternalAuth,
-		Valid: true,
-	}
-	P.Username, P.Password, P.ConnectString, P.ExternalAuth = username, godror.NewPassword(password), dbconfig.URL, externalAuth
-
 	if dbconfig.GetPoolIncrement() > 0 {
 		logger.Debug(fmt.Sprintf("set pool increment to %d", dbconfig.PoolIncrement), "database", dbname)
-		P.PoolParams.SessionIncrement = dbconfig.GetPoolIncrement()
 	}
 	if dbconfig.GetPoolMaxConnections() > 0 {
 		logger.Debug(fmt.Sprintf("set pool max connections to %d", dbconfig.PoolMaxConnections), "database", dbname)
-		P.PoolParams.MaxSessions = dbconfig.GetPoolMaxConnections()
 	}
 	if dbconfig.GetPoolMinConnections() > 0 {
 		logger.Debug(fmt.Sprintf("set pool min connections to %d", dbconfig.PoolMinConnections), "database", dbname)
-		P.PoolParams.MinSessions = dbconfig.GetPoolMinConnections()
 	}
 
-	P.PoolParams.WaitTimeout = time.Second * 5
+	P := connectionParams(dbconfig, username, password)
 
-	// if TNS_ADMIN env var is set, set ConfigDir to that location
+	// note that this just configures the connection, it does not actually connect until later
+	// when we call db.Ping()
+	db := sql.OpenDB(godror.NewConnector(P))
+	return db, nil
+}
+
+func connectionParams(dbconfig DatabaseConfig, username, password string) godror.ConnectionParams {
+	var P godror.ConnectionParams
+	externalAuth := password == ""
+	if externalAuth {
+		username = ""
+	}
+	P.Username, P.Password, P.ConnectString, P.ExternalAuth = username, godror.NewPassword(password), dbconfig.URL, sql.NullBool{
+		Bool:  externalAuth,
+		Valid: true,
+	}
+
+	if dbconfig.GetPoolIncrement() > 0 {
+		P.PoolParams.SessionIncrement = dbconfig.GetPoolIncrement()
+	}
+	if dbconfig.GetPoolMaxConnections() > 0 {
+		P.PoolParams.MaxSessions = dbconfig.GetPoolMaxConnections()
+	}
+	if dbconfig.GetPoolMinConnections() > 0 {
+		P.PoolParams.MinSessions = dbconfig.GetPoolMinConnections()
+	}
+	// godror defaults to standalone connections, which ignore PoolParams. Any explicit
+	// pool setting, including zero, opts into ODPI-C pooling. Administrative roles remain
+	// standalone because godror's IsStandalone enforces that restriction.
+	if dbconfig.PoolIncrement != nil || dbconfig.PoolMaxConnections != nil || dbconfig.PoolMinConnections != nil {
+		P.StandaloneConnection = sql.NullBool{Bool: false, Valid: true}
+	}
+	P.PoolParams.WaitTimeout = time.Second * 5
 	P.ConfigDir = dbconfig.TNSAdmin
 
 	switch dbconfig.Role {
@@ -80,10 +102,7 @@ func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.
 		P.AdminRole = dsn.NoRole
 	}
 
-	// note that this just configures the connection, it does not actually connect until later
-	// when we call db.Ping()
-	db := sql.OpenDB(godror.NewConnector(P))
-	return db, nil
+	return P
 }
 
 func effectiveSQLPoolLimits(dbconfig DatabaseConfig) (int, int) {
@@ -94,6 +113,9 @@ func warmupConnectionPoolSize(dbconfig DatabaseConfig) int {
 	poolSize := dbconfig.GetMaxOpenConns()
 	if poolSize < 1 {
 		poolSize = dbconfig.GetPoolMaxConnections()
+	}
+	if poolMax := dbconfig.GetPoolMaxConnections(); poolMax > 0 && poolSize > poolMax {
+		poolSize = poolMax
 	}
 	return poolSize
 }
