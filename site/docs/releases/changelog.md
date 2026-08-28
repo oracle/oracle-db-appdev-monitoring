@@ -14,6 +14,8 @@ List of upcoming and historic changes to the exporter.
 - Add an OTLP quickstart, architecture overview, deployment guidance, and troubleshooting documentation, and highlight OTLP publishing on the project homepage and README.
 - Restart the exporter process when its configuration file changes, after validating the updated configuration.
 - Avoid restarting for a transient configuration while an in-place configuration-file update is still being written.
+- Treat `ORA-12541: TNS:no listener` as a temporary connection error so unavailable database listeners honor `connectionBackoff`.
+- Add the exporter user's passwd entry to the godror container image, preventing concurrent Oracle Client connection creation from aborting when UID 1000 cannot be resolved.
 
 ### 2.4.2, July 13th, 2026
 
