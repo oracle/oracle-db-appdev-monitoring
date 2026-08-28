@@ -7,6 +7,116 @@ package collector
 
 import "testing"
 
+func TestConnectionParamsUsePoolWhenConfigured(t *testing.T) {
+	zero := 0
+	tests := []struct {
+		name   string
+		config ConnectConfig
+	}{
+		{name: "pool increment", config: ConnectConfig{PoolIncrement: &zero}},
+		{name: "pool maximum", config: ConnectConfig{PoolMaxConnections: &zero}},
+		{name: "pool minimum", config: ConnectConfig{PoolMinConnections: &zero}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := connectionParams(DatabaseConfig{ConnectConfig: tt.config}, "scott", "tiger")
+			if params.IsStandalone() {
+				t.Fatal("expected an explicit pool setting to enable ODPI-C pooling")
+			}
+			if !params.StandaloneConnection.Valid || params.StandaloneConnection.Bool {
+				t.Fatalf("expected standaloneConnection=false, got %+v", params.StandaloneConnection)
+			}
+		})
+	}
+}
+
+func TestConnectionParamsDefaultsToStandalone(t *testing.T) {
+	params := connectionParams(DatabaseConfig{}, "scott", "tiger")
+	if !params.IsStandalone() {
+		t.Fatal("expected no pool settings to retain godror's standalone default")
+	}
+	if params.StandaloneConnection.Valid {
+		t.Fatalf("expected standaloneConnection to be unset, got %+v", params.StandaloneConnection)
+	}
+}
+
+func TestConnectionParamsKeepAdministrativeRolesStandalone(t *testing.T) {
+	poolMaxConnections := 4
+	params := connectionParams(DatabaseConfig{ConnectConfig: ConnectConfig{
+		Role:               "SYSDBA",
+		PoolMaxConnections: &poolMaxConnections,
+	}}, "sys", "tiger")
+	if !params.IsStandalone() {
+		t.Fatal("expected SYSDBA connections to remain standalone")
+	}
+}
+
+func TestConnectionParamsClearUsernameForExternalAuth(t *testing.T) {
+	params := connectionParams(DatabaseConfig{Username: "scott"}, "scott", "")
+	if params.Username != "" {
+		t.Fatalf("expected external authentication to clear username, got %q", params.Username)
+	}
+	if !params.ExternalAuth.Valid || !params.ExternalAuth.Bool {
+		t.Fatalf("expected external authentication, got %+v", params.ExternalAuth)
+	}
+}
+
+func TestConnectionParamsUsePoolWhenConfigured(t *testing.T) {
+	zero := 0
+	tests := []struct {
+		name   string
+		config ConnectConfig
+	}{
+		{name: "pool increment", config: ConnectConfig{PoolIncrement: &zero}},
+		{name: "pool maximum", config: ConnectConfig{PoolMaxConnections: &zero}},
+		{name: "pool minimum", config: ConnectConfig{PoolMinConnections: &zero}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := connectionParams(DatabaseConfig{ConnectConfig: tt.config}, "scott", "tiger")
+			if params.IsStandalone() {
+				t.Fatal("expected an explicit pool setting to enable ODPI-C pooling")
+			}
+			if !params.StandaloneConnection.Valid || params.StandaloneConnection.Bool {
+				t.Fatalf("expected standaloneConnection=false, got %+v", params.StandaloneConnection)
+			}
+		})
+	}
+}
+
+func TestConnectionParamsDefaultsToStandalone(t *testing.T) {
+	params := connectionParams(DatabaseConfig{}, "scott", "tiger")
+	if !params.IsStandalone() {
+		t.Fatal("expected no pool settings to retain godror's standalone default")
+	}
+	if params.StandaloneConnection.Valid {
+		t.Fatalf("expected standaloneConnection to be unset, got %+v", params.StandaloneConnection)
+	}
+}
+
+func TestConnectionParamsKeepAdministrativeRolesStandalone(t *testing.T) {
+	poolMaxConnections := 4
+	params := connectionParams(DatabaseConfig{ConnectConfig: ConnectConfig{
+		Role:               "SYSDBA",
+		PoolMaxConnections: &poolMaxConnections,
+	}}, "sys", "tiger")
+	if !params.IsStandalone() {
+		t.Fatal("expected SYSDBA connections to remain standalone")
+	}
+}
+
+func TestConnectionParamsClearUsernameForExternalAuth(t *testing.T) {
+	params := connectionParams(DatabaseConfig{Username: "scott"}, "scott", "")
+	if params.Username != "" {
+		t.Fatalf("expected external authentication to clear username, got %q", params.Username)
+	}
+	if !params.ExternalAuth.Valid || !params.ExternalAuth.Bool {
+		t.Fatalf("expected external authentication, got %+v", params.ExternalAuth)
+	}
+}
+
 func TestEffectiveSQLPoolLimitsUseSQLSettingsForGodror(t *testing.T) {
 	maxOpenConns := 10
 	maxIdleConns := 6
@@ -38,5 +148,31 @@ func TestWarmupConnectionPoolSizePreservesGodrorPoolFallback(t *testing.T) {
 
 	if got := warmupConnectionPoolSize(config); got != poolMaxConnections {
 		t.Fatalf("expected warmup to keep existing poolMaxConnections fallback, got %d", got)
+	}
+}
+
+func TestWarmupConnectionPoolSizeCapsAtGodrorPoolMaximum(t *testing.T) {
+	maxOpenConns := 10
+	poolMaxConnections := 4
+	config := DatabaseConfig{ConnectConfig: ConnectConfig{
+		MaxOpenConns:       &maxOpenConns,
+		PoolMaxConnections: &poolMaxConnections,
+	}}
+
+	if got := warmupConnectionPoolSize(config); got != poolMaxConnections {
+		t.Fatalf("expected warmup to be capped at poolMaxConnections, got %d", got)
+	}
+}
+
+func TestWarmupConnectionPoolSizeCapsAtGodrorPoolMaximum(t *testing.T) {
+	maxOpenConns := 10
+	poolMaxConnections := 4
+	config := DatabaseConfig{ConnectConfig: ConnectConfig{
+		MaxOpenConns:       &maxOpenConns,
+		PoolMaxConnections: &poolMaxConnections,
+	}}
+
+	if got := warmupConnectionPoolSize(config); got != poolMaxConnections {
+		t.Fatalf("expected warmup to be capped at poolMaxConnections, got %d", got)
 	}
 }
