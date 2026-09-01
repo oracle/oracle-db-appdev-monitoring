@@ -9,6 +9,14 @@ The exporter includes [default metrics](https://github.com/oracle/oracle-db-appd
 
 You can find the exporter's metric schema in the [Custom Metrics configuration](../configuration/custom-metrics.md#metric-schema).
 
+The exporter also reports how long the last scrape of each individual metric took, as
+`oracledb_exporter_last_metric_scrape_duration_seconds`. One series is reported per metric definition and
+database, labelled with the metric's `context` (as `collector`), its unique identifier (as `metric`), and
+whether that scrape succeeded (as `result`). Note that a single metric definition may produce several
+Prometheus metrics -- the `activity` metric below is scraped once and yields four -- so the duration is
+reported per definition, not per resulting metric. Use it to find which query is responsible when
+`oracledb_exporter_last_database_scrape_duration_seconds` grows.
+
 The following metrics are included by default. The values given are a sample for a single database, "db1":
 
 ```bash
@@ -38,6 +46,11 @@ oracledb_dbtype{database="db1"} 3
 # HELP oracledb_exporter_build_info A metric with a constant '1' value labeled by version, revision, branch, goversion from which oracledb_exporter was built, and the goos and goarch for the build.
 # TYPE oracledb_exporter_build_info gauge
 oracledb_exporter_build_info{branch="",goarch="arm64",goos="darwin",goversion="go1.24.5",revision="unknown",tags="unknown",version=""} 1
+# HELP oracledb_exporter_last_metric_scrape_duration_seconds Duration of the last scrape of an individual metric from Oracle DB, in seconds.
+# TYPE oracledb_exporter_last_metric_scrape_duration_seconds gauge
+oracledb_exporter_last_metric_scrape_duration_seconds{collector="activity",database="db1",metric="activity_value",result="success"} 0.001687
+oracledb_exporter_last_metric_scrape_duration_seconds{collector="sessions",database="db1",metric="sessions_value",result="success"} 0.002214
+oracledb_exporter_last_metric_scrape_duration_seconds{collector="top_sql",database="db1",metric="top_sql_elapsed",result="success"} 0.041903
 # HELP oracledb_exporter_last_scrape_duration_seconds Duration of the last scrape of metrics from Oracle DB.
 # TYPE oracledb_exporter_last_scrape_duration_seconds gauge
 oracledb_exporter_last_scrape_duration_seconds 0.05714725

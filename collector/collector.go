@@ -29,6 +29,12 @@ var (
 	exporterName = "exporter"
 )
 
+// Values of the "result" label on oracledb_exporter_last_metric_scrape_duration_seconds.
+const (
+	scrapeResultSuccess = "success"
+	scrapeResultError   = "error"
+)
+
 // ScrapeResult is container structure for error handling
 type ScrapeResult struct {
 	Err         error
@@ -83,6 +89,12 @@ func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
 			Name:      "last_database_scrape_duration_seconds",
 			Help:      "Duration of the last scrape of metrics from an Oracle DB.",
 		}, []string{m.DatabaseLabel()}),
+		metricScrapeDuration: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace: namespace,
+			Subsystem: exporterName,
+			Name:      "last_metric_scrape_duration_seconds",
+			Help:      "Duration of the last scrape of an individual metric from Oracle DB, in seconds.",
+		}, []string{"collector", "metric", m.DatabaseLabel(), "result"}),
 		totalScrapes: prometheus.NewCounter(prometheus.CounterOpts{
 			Namespace: namespace,
 			Subsystem: exporterName,
@@ -187,6 +199,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	e.scrape(ch, &now)
 	ch <- e.duration
 	e.databaseDuration.Collect(ch)
+	e.metricScrapeDuration.Collect(ch)
 	ch <- e.totalScrapes
 	ch <- e.error
 	e.scrapeErrors.Collect(ch)
@@ -269,6 +282,7 @@ func (e *Exporter) scheduledScrape(tick *time.Time) {
 	// report metadata metrics
 	metricCh <- e.duration
 	e.databaseDuration.Collect(metricCh)
+	e.metricScrapeDuration.Collect(metricCh)
 	metricCh <- e.totalScrapes
 	metricCh <- e.error
 	e.scrapeErrors.Collect(metricCh)
@@ -357,23 +371,26 @@ func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- er
 
 			scrapeStart := time.Now()
 			scrapeError := e.ScrapeMetric(d, ch, metric)
+			elapsed := time.Since(scrapeStart)
 			errChan <- scrapeError
 			if scrapeError != nil {
+				e.observeMetricScrapeDuration(d, metric, scrapeResultError, elapsed)
 				if shouldLogScrapeError(scrapeError, metric.IgnoreZeroResult) {
 					e.logger.Error("Error scraping metric",
 						"Context", metric.Context,
 						"MetricsDesc", fmt.Sprint(metric.MetricsDesc),
-						"duration", time.Since(scrapeStart),
+						"duration", elapsed,
 						"error", scrapeError,
 						"database", d.Name)
 				}
 				e.scrapeErrors.WithLabelValues(metric.Context, d.Name).Inc()
 			} else {
+				e.observeMetricScrapeDuration(d, metric, scrapeResultSuccess, elapsed)
 				d.MetricsCache.SetLastScraped(metric, tick)
 				e.logger.Debug("Successfully scraped metric",
 					"Context", metric.Context,
 					"MetricDesc", fmt.Sprint(metric.MetricsDesc),
-					"duration", time.Since(scrapeStart),
+					"duration", elapsed,
 					"database", d.Name)
 			}
 		}()
@@ -414,6 +431,23 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 	}
 
 	e.afterScrape(begun, totalErrors)
+}
+
+// observeMetricScrapeDuration records how long the last scrape of a single metric took for a
+// database. Only one series exists per metric and database at a time: the series for the opposite
+// result is removed, so the reported duration always describes the most recent scrape attempt.
+// Metrics that were not scraped (for example, because of a custom scrape interval) keep the value
+// recorded by their last actual scrape.
+func (e *Exporter) observeMetricScrapeDuration(d *Database, m *Metric, result string, elapsed time.Duration) {
+	if e.metricScrapeDuration == nil {
+		return
+	}
+	other := scrapeResultSuccess
+	if result == scrapeResultSuccess {
+		other = scrapeResultError
+	}
+	e.metricScrapeDuration.DeleteLabelValues(m.Context, m.ID, d.Name, other)
+	e.metricScrapeDuration.WithLabelValues(m.Context, m.ID, d.Name, result).Set(elapsed.Seconds())
 }
 
 func (e *Exporter) afterScrape(begun time.Time, totalErrors float64) {
