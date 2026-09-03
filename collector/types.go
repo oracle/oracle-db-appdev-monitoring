@@ -20,13 +20,16 @@ type Exporter struct {
 	customMetricsHashes map[string][]byte
 	duration, error     prometheus.Gauge
 	databaseDuration    *prometheus.GaugeVec
-	totalScrapes        prometheus.Counter
-	scrapeErrors        *prometheus.CounterVec
-	scrapeResults       []prometheus.Metric
-	scrapeRequests      chan struct{}
-	databases           []*Database
-	logger              *slog.Logger
-	allConstLabels      []string
+	// metricScrapeDuration tracks how long the last scrape of each individual metric took, per database.
+	// It is nil unless metrics.perMetricScrapeDuration.enabled is set; a nil vector disables the metric.
+	metricScrapeDuration *prometheus.GaugeVec
+	totalScrapes         prometheus.Counter
+	scrapeErrors         *prometheus.CounterVec
+	scrapeResults        []prometheus.Metric
+	scrapeRequests       chan struct{}
+	databases            []*Database
+	logger               *slog.Logger
+	allConstLabels       []string
 }
 
 type Database struct {

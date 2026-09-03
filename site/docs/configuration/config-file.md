@@ -78,6 +78,10 @@ metrics:
   ## How long to wait before attempting to reconnect to an invalid database (login or locked user).
   ## Defaults to 5 minutes.
   # connectionBackoff: 5m
+  ## Report how long the last scrape of each individual metric took.
+  ## Disabled by default; adds one series per metric definition and database.
+  # perMetricScrapeDuration:
+  #   enabled: false
   ## Path to default metrics file.
   default: default-metrics.toml
   ## Paths to any custom metrics files

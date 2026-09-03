@@ -135,6 +135,64 @@ oracledb_wait_time_system_io{database="db1"} 0.13
 oracledb_wait_time_user_io{database="db1"} 12.38
 ```
 
+## Per-Metric Scrape Duration
+
+The exporter can report how long the last scrape of each individual metric took, as
+`oracledb_exporter_last_metric_scrape_duration_seconds`. Use it to find which query is responsible when
+`oracledb_exporter_last_database_scrape_duration_seconds` grows, without having to enable debug logging.
+
+This metric is **disabled by default**. Enable it in your exporter configuration file:
+
+| Parameter                                | Description                                                          | Default |
+|------------------------------------------|----------------------------------------------------------------------|---------|
+| metrics.perMetricScrapeDuration.enabled  | When `true`, report the scrape duration of each individual metric.   | `false` |
+
+```yaml
+metrics:
+  perMetricScrapeDuration:
+    enabled: true
+```
+
+When enabled, the exporter reports one series per metric definition and database:
+
+```bash
+# HELP oracledb_exporter_last_metric_scrape_duration_seconds Duration of the last scrape of an individual metric from Oracle DB, in seconds.
+# TYPE oracledb_exporter_last_metric_scrape_duration_seconds gauge
+oracledb_exporter_last_metric_scrape_duration_seconds{collector="activity",database="db1",metric="activity_value",result="success"} 0.001687
+oracledb_exporter_last_metric_scrape_duration_seconds{collector="sessions",database="db1",metric="sessions_value",result="success"} 0.002214
+oracledb_exporter_last_metric_scrape_duration_seconds{collector="top_sql",database="db1",metric="top_sql_elapsed",result="success"} 0.041903
+```
+
+Each series is labelled with the metric's `context` (as `collector`), its unique identifier (as `metric`),
+the database label, and whether that scrape succeeded (as `result`). Only the most recent outcome is kept,
+so a metric contributes one series, not one per `result` value. A metric that has never been scraped --
+because its database is unreachable, or because it is not enabled for that database -- contributes nothing
+until it is scraped.
+
+### Cardinality
+
+This metric is opt-in because its series count scales with the number of databases you monitor:
+
+```
+series = (default metric definitions + custom metric definitions) x databases
+```
+
+The duration is reported per metric *definition*, not per resulting Prometheus metric. A definition that
+uses `fieldtoappend` produces several Prometheus metrics from a single query but is timed once: the
+`activity` metric above yields four metrics and one duration series.
+
+The default metrics file contains 12 metric definitions, so with the default metrics alone:
+
+| Databases | Custom metrics | Additional series |
+|-----------|----------------|-------------------|
+| 1         | 0              | 12                |
+| 100       | 0              | 1,200             |
+| 100       | 20             | 3,200             |
+| 300       | 20             | 9,600             |
+
+If you monitor many databases, consider enabling this metric temporarily while investigating slow scrapes,
+rather than leaving it on permanently.
+
 ## Build Info Metric
 
 The exporter broadcasts its build info through the `oracledb_exporter_build_info` metric. The metric contains the following labels, allowing users to determine the active exporter version at runtime.

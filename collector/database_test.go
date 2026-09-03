@@ -477,6 +477,12 @@ func newTestScheduledExporter(t *testing.T, scrapeInterval time.Duration) (*Expo
 			Name:      "last_database_scrape_duration_seconds",
 			Help:      "test",
 		}, []string{"database"}),
+		metricScrapeDuration: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Namespace: namespace,
+			Subsystem: exporterName,
+			Name:      "last_metric_scrape_duration_seconds",
+			Help:      "test",
+		}, []string{"collector", "metric", "database", "result"}),
 		totalScrapes: prometheus.NewCounter(prometheus.CounterOpts{
 			Namespace: namespace,
 			Subsystem: exporterName,

@@ -22,6 +22,11 @@ func (e *Exporter) reloadMetrics() bool {
 	e.metricsToScrape = metricsToScrape
 	e.refreshCustomMetricsHashes()
 	e.initCache()
+	// Metric definitions that no longer exist must not keep reporting the duration of their last scrape.
+	// The vector is nil when metrics.perMetricScrapeDuration.enabled is false.
+	if e.metricScrapeDuration != nil {
+		e.metricScrapeDuration.Reset()
+	}
 	return true
 }
 
