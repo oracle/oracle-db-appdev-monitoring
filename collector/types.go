@@ -21,6 +21,7 @@ type Exporter struct {
 	duration, error     prometheus.Gauge
 	databaseDuration    *prometheus.GaugeVec
 	// metricScrapeDuration tracks how long the last scrape of each individual metric took, per database.
+	// It is nil unless metrics.perMetricScrapeDuration.enabled is set; a nil vector disables the metric.
 	metricScrapeDuration *prometheus.GaugeVec
 	totalScrapes         prometheus.Counter
 	scrapeErrors         *prometheus.CounterVec

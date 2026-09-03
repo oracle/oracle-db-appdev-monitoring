@@ -130,11 +130,18 @@ type HashiCorpVault struct {
 }
 
 type MetricsFilesConfig struct {
-	DatabaseLabel     string `yaml:"databaseLabel"`
-	Default           string
-	Custom            []string
-	ScrapeInterval    *time.Duration `yaml:"scrapeInterval"`
-	ConnectionBackoff *time.Duration `yaml:"connectionBackoff"`
+	DatabaseLabel           string `yaml:"databaseLabel"`
+	Default                 string
+	Custom                  []string
+	ScrapeInterval          *time.Duration                `yaml:"scrapeInterval"`
+	ConnectionBackoff       *time.Duration                `yaml:"connectionBackoff"`
+	PerMetricScrapeDuration PerMetricScrapeDurationConfig `yaml:"perMetricScrapeDuration"`
+}
+
+// PerMetricScrapeDurationConfig configures the optional per-metric scrape duration metric.
+// The metric is disabled by default, as it adds one series per metric definition and database.
+type PerMetricScrapeDurationConfig struct {
+	Enabled *bool `yaml:"enabled"`
 }
 
 type LoggingConfig struct {
@@ -152,6 +159,15 @@ func (m *MetricsConfiguration) DatabaseLabel() string {
 		return "database"
 	}
 	return m.Metrics.DatabaseLabel
+}
+
+// PerMetricScrapeDurationEnabled reports whether the exporter records how long the scrape of each
+// individual metric took. Disabled by default, as it adds one series per metric definition and database.
+func (m *MetricsConfiguration) PerMetricScrapeDurationEnabled() bool {
+	if m.Metrics.PerMetricScrapeDuration.Enabled == nil {
+		return false
+	}
+	return *m.Metrics.PerMetricScrapeDuration.Enabled
 }
 
 func (m *MetricsConfiguration) LogDestination() string {
@@ -440,6 +456,10 @@ func (m *MetricsConfiguration) mergeLoggingConfig() {
 func (m *MetricsConfiguration) mergeMetricsConfig() {
 	if len(m.Metrics.Default) == 0 {
 		m.Metrics.Default = "default-metrics.toml"
+	}
+	if m.Metrics.PerMetricScrapeDuration.Enabled == nil {
+		perMetricScrapeDuration := false
+		m.Metrics.PerMetricScrapeDuration.Enabled = &perMetricScrapeDuration
 	}
 }
 

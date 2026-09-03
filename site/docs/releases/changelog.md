@@ -9,7 +9,7 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
-- Add the `oracledb_exporter_last_metric_scrape_duration_seconds` metric, reporting how long the last scrape of each individual metric took, per database, so slow queries can be identified without enabling debug logging.
+- Add the optional `oracledb_exporter_last_metric_scrape_duration_seconds` metric, reporting how long the last scrape of each individual metric took, per database, so slow queries can be identified without enabling debug logging. Disabled by default; enable it with `metrics.perMetricScrapeDuration.enabled`.
 
 ### 2.5.0, August 31st, 2026
 

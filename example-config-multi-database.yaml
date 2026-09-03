@@ -100,6 +100,11 @@ databases:
 metrics:
   ## How often to scrape metrics. If not provided, metrics will be scraped on request.
   # scrapeInterval: 15s
+  ## Report how long the last scrape of each individual metric took.
+  ## Disabled by default. This adds one series per metric definition and database, so the
+  ## series count grows with the number of databases configured above.
+  # perMetricScrapeDuration:
+  #   enabled: false
   ## Path to default metrics file.
   default: default-metrics.toml
   ## Paths to any custom metrics files

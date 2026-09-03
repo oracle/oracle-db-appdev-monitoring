@@ -150,6 +150,79 @@ databases:
 	if got := *cfg.Web.ListenAddresses; len(got) != 1 || got[0] != ":9161" {
 		t.Fatalf("expected default web listen address, got %#v", got)
 	}
+	if cfg.PerMetricScrapeDurationEnabled() {
+		t.Fatal("expected the per-metric scrape duration metric to be disabled by default")
+	}
+}
+
+func TestLoadMetricsConfigurationReadsPerMetricScrapeDuration(t *testing.T) {
+	tests := []struct {
+		name    string
+		metrics string
+		want    bool
+	}{
+		{
+			name: "enabled",
+			metrics: `
+metrics:
+  perMetricScrapeDuration:
+    enabled: true
+`,
+			want: true,
+		},
+		{
+			name: "explicitly disabled",
+			metrics: `
+metrics:
+  perMetricScrapeDuration:
+    enabled: false
+`,
+			want: false,
+		},
+		{
+			name:    "not configured",
+			metrics: "",
+			want:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configPath := writeExporterConfig(t, `
+databases:
+  default:
+    username: scott
+    password: tiger
+    url: localhost:1521/freepdb1
+`+tt.metrics)
+
+			cfg, err := LoadMetricsConfiguration(testLogger(), &Config{ConfigFile: configPath})
+			if err != nil {
+				t.Fatalf("expected config to load, got %v", err)
+			}
+			if got := cfg.PerMetricScrapeDurationEnabled(); got != tt.want {
+				t.Fatalf("expected PerMetricScrapeDurationEnabled() to be %t, got %t", tt.want, got)
+			}
+		})
+	}
+}
+
+// The config is parsed with yaml.UnmarshalStrict, so a misspelled key must not be silently ignored.
+func TestLoadMetricsConfigurationRejectsUnknownMetricsKey(t *testing.T) {
+	configPath := writeExporterConfig(t, `
+databases:
+  default:
+    username: scott
+    password: tiger
+    url: localhost:1521/freepdb1
+metrics:
+  perMetricScrapeDurations:
+    enabled: true
+`)
+
+	if _, err := LoadMetricsConfiguration(testLogger(), &Config{ConfigFile: configPath}); err == nil {
+		t.Fatal("expected a misspelled metrics key to be rejected")
+	}
 }
 
 func TestLoadMetricsConfigurationMapsLegacyListenAddressToWebConfig(t *testing.T) {

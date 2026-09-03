@@ -51,6 +51,22 @@ func maskDsn(dsn string) string {
 	return dsn
 }
 
+// newMetricScrapeDurationVec builds the per-metric scrape duration vector, or returns nil when the
+// feature is disabled. A nil vector disables the metric entirely: nothing is recorded, and nothing is
+// reported. The metric is opt-in because it adds one series per metric definition and database, which
+// is significant for deployments monitoring many databases.
+func newMetricScrapeDurationVec(m *MetricsConfiguration) *prometheus.GaugeVec {
+	if !m.PerMetricScrapeDurationEnabled() {
+		return nil
+	}
+	return prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: namespace,
+		Subsystem: exporterName,
+		Name:      "last_metric_scrape_duration_seconds",
+		Help:      "Duration of the last scrape of an individual metric from Oracle DB, in seconds.",
+	}, []string{"collector", "metric", m.DatabaseLabel(), "result"})
+}
+
 // NewExporter creates a new Exporter instance
 func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
 	var databases []*Database
@@ -89,12 +105,7 @@ func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
 			Name:      "last_database_scrape_duration_seconds",
 			Help:      "Duration of the last scrape of metrics from an Oracle DB.",
 		}, []string{m.DatabaseLabel()}),
-		metricScrapeDuration: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Subsystem: exporterName,
-			Name:      "last_metric_scrape_duration_seconds",
-			Help:      "Duration of the last scrape of an individual metric from Oracle DB, in seconds.",
-		}, []string{"collector", "metric", m.DatabaseLabel(), "result"}),
+		metricScrapeDuration: newMetricScrapeDurationVec(m),
 		totalScrapes: prometheus.NewCounter(prometheus.CounterOpts{
 			Namespace: namespace,
 			Subsystem: exporterName,
@@ -199,7 +210,9 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	e.scrape(ch, &now)
 	ch <- e.duration
 	e.databaseDuration.Collect(ch)
-	e.metricScrapeDuration.Collect(ch)
+	if e.metricScrapeDuration != nil {
+		e.metricScrapeDuration.Collect(ch)
+	}
 	ch <- e.totalScrapes
 	ch <- e.error
 	e.scrapeErrors.Collect(ch)
@@ -282,7 +295,9 @@ func (e *Exporter) scheduledScrape(tick *time.Time) {
 	// report metadata metrics
 	metricCh <- e.duration
 	e.databaseDuration.Collect(metricCh)
-	e.metricScrapeDuration.Collect(metricCh)
+	if e.metricScrapeDuration != nil {
+		e.metricScrapeDuration.Collect(metricCh)
+	}
 	metricCh <- e.totalScrapes
 	metricCh <- e.error
 	e.scrapeErrors.Collect(metricCh)
@@ -439,6 +454,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 // Metrics that were not scraped (for example, because of a custom scrape interval) keep the value
 // recorded by their last actual scrape.
 func (e *Exporter) observeMetricScrapeDuration(d *Database, m *Metric, result string, elapsed time.Duration) {
+	// The vector is nil when metrics.perMetricScrapeDuration.enabled is false.
 	if e.metricScrapeDuration == nil {
 		return
 	}

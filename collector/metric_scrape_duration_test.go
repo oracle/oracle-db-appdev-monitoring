@@ -97,7 +97,14 @@ context = "custom_instances"
 metricsdesc = { value = "Custom instances." }
 request = "select 1 as value from dual"
 `)
-	exporter := newTestExporterWithCustomMetrics(path)
+	// The shared helper leaves the feature disabled, so build an exporter that enables it.
+	enabled := true
+	exporter := NewExporter(slog.New(slog.NewTextHandler(io.Discard, nil)), &MetricsConfiguration{
+		Metrics: MetricsFilesConfig{
+			Custom:                  []string{path},
+			PerMetricScrapeDuration: PerMetricScrapeDurationConfig{Enabled: &enabled},
+		},
+	})
 	database := &Database{Name: "db1", DatabaseLabel: "database"}
 	removed := newTestDurationMetric("")
 	exporter.observeMetricScrapeDuration(database, removed, scrapeResultSuccess, time.Second)
@@ -130,35 +137,64 @@ func TestCollectEmitsMetricScrapeDuration(t *testing.T) {
 	t.Run("on demand scrapes", func(t *testing.T) {
 		metric := newTestDurationMetric("")
 		exporter, database := newTestDurationExporter(t, openTestQueryDBWithRows(t, nil), metric)
-		exporter.mu = &sync.Mutex{}
-		exporter.totalScrapes = prometheus.NewCounter(prometheus.CounterOpts{Name: "test_scrapes_total", Help: "test"})
-		exporter.duration = prometheus.NewGauge(prometheus.GaugeOpts{Name: "test_duration_seconds", Help: "test"})
-		exporter.error = prometheus.NewGauge(prometheus.GaugeOpts{Name: "test_error", Help: "test"})
-		exporter.databases = []*Database{database}
 
-		var descs []string
-		ch := make(chan prometheus.Metric)
-		done := make(chan struct{})
-		go func() {
-			for m := range ch {
-				descs = append(descs, m.Desc().String())
-			}
-			close(done)
-		}()
-		exporter.Collect(ch)
-		close(ch)
-		<-done
+		descs := collectExporterMetrics(t, exporter, database)
 
-		found := false
-		for _, desc := range descs {
-			if strings.Contains(desc, `fqName: "`+metricScrapeDurationName+`"`) {
-				found = true
-			}
-		}
-		if !found {
+		if !containsMetric(descs, metricScrapeDurationName) {
 			t.Fatalf("expected %s in the on-demand collect results, got %v", metricScrapeDurationName, descs)
 		}
 	})
+}
+
+// The metric is opt-in: it adds one series per metric definition and database, which matters for
+// deployments monitoring many databases.
+func TestPerMetricScrapeDurationIsOptIn(t *testing.T) {
+	tests := []struct {
+		name    string
+		enabled *bool
+		want    bool
+	}{
+		{name: "absent from config", enabled: nil, want: false},
+		{name: "explicitly disabled", enabled: boolPtr(false), want: false},
+		{name: "explicitly enabled", enabled: boolPtr(true), want: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := &MetricsConfiguration{
+				Metrics: MetricsFilesConfig{
+					PerMetricScrapeDuration: PerMetricScrapeDurationConfig{Enabled: tt.enabled},
+				},
+			}
+			if got := config.PerMetricScrapeDurationEnabled(); got != tt.want {
+				t.Fatalf("expected PerMetricScrapeDurationEnabled() to be %t, got %t", tt.want, got)
+			}
+
+			exporter := NewExporter(slog.New(slog.NewTextHandler(io.Discard, nil)), config)
+			if got := exporter.metricScrapeDuration != nil; got != tt.want {
+				t.Fatalf("expected the duration vector to be created: %t, got %t", tt.want, got)
+			}
+		})
+	}
+}
+
+// A disabled exporter must neither report the metric nor panic on the nil vector.
+func TestScrapeDatabaseSkipsDurationWhenDisabled(t *testing.T) {
+	metric := newTestDurationMetric("")
+	exporter, database := newTestDurationExporter(t, openTestQueryDBWithRows(t, nil), metric)
+	exporter.metricScrapeDuration = nil
+
+	runScrapeDatabase(t, exporter, database)
+
+	descs := collectExporterMetrics(t, exporter, database)
+
+	if containsMetric(descs, metricScrapeDurationName) {
+		t.Fatalf("did not expect %s while the feature is disabled, got %v", metricScrapeDurationName, descs)
+	}
+}
+
+func boolPtr(b bool) *bool {
+	return &b
 }
 
 func newTestDurationMetric(scrapeInterval string) *Metric {
@@ -227,6 +263,41 @@ func runScrapeDatabase(t *testing.T, exporter *Exporter, database *Database) {
 	}
 	for range errChan {
 	}
+}
+
+// collectExporterMetrics fills in the exporter fields Collect needs, runs a full on-demand
+// collection, and returns the descriptor of every metric that was emitted.
+func collectExporterMetrics(t *testing.T, exporter *Exporter, database *Database) []string {
+	t.Helper()
+
+	exporter.mu = &sync.Mutex{}
+	exporter.totalScrapes = prometheus.NewCounter(prometheus.CounterOpts{Name: "test_scrapes_total", Help: "test"})
+	exporter.duration = prometheus.NewGauge(prometheus.GaugeOpts{Name: "test_duration_seconds", Help: "test"})
+	exporter.error = prometheus.NewGauge(prometheus.GaugeOpts{Name: "test_error", Help: "test"})
+	exporter.databases = []*Database{database}
+
+	var descs []string
+	ch := make(chan prometheus.Metric)
+	done := make(chan struct{})
+	go func() {
+		for m := range ch {
+			descs = append(descs, m.Desc().String())
+		}
+		close(done)
+	}()
+	exporter.Collect(ch)
+	close(ch)
+	<-done
+	return descs
+}
+
+func containsMetric(descs []string, fqName string) bool {
+	for _, desc := range descs {
+		if strings.Contains(desc, `fqName: "`+fqName+`"`) {
+			return true
+		}
+	}
+	return false
 }
 
 // gaugeSeries returns the current values of a GaugeVec, keyed by a stable rendering of its labels.
