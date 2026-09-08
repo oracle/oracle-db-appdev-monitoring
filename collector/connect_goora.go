@@ -13,9 +13,11 @@ import (
 	"github.com/sijms/go-ora/v2/network"
 	"log/slog"
 	"net/url"
+
+	"github.com/oracle/oracle-db-appdev-monitoring/config"
 )
 
-func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.DB, error) {
+func connect(logger *slog.Logger, dbname string, dbconfig config.DatabaseConfig) (*sql.DB, error) {
 	logger.Debug("Launching connection to "+maskDsn(dbconfig.URL), "database", dbname)
 
 	password, err := dbconfig.GetPassword()
@@ -62,7 +64,7 @@ func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.
 	return db, nil
 }
 
-func effectiveSQLPoolLimits(dbconfig DatabaseConfig) (int, int) {
+func effectiveSQLPoolLimits(dbconfig config.DatabaseConfig) (int, int) {
 	maxOpenConns := dbconfig.GetMaxOpenConns()
 	if dbconfig.GetPoolMaxConnections() > 0 {
 		maxOpenConns = dbconfig.GetPoolMaxConnections()
@@ -75,7 +77,7 @@ func effectiveSQLPoolLimits(dbconfig DatabaseConfig) (int, int) {
 	return maxOpenConns, maxIdleConns
 }
 
-func warmupConnectionPoolSize(dbconfig DatabaseConfig) int {
+func warmupConnectionPoolSize(dbconfig config.DatabaseConfig) int {
 	maxOpenConns, _ := effectiveSQLPoolLimits(dbconfig)
 	return maxOpenConns
 }

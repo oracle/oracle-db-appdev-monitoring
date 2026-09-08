@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/oracle/oracle-db-appdev-monitoring/config"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -38,7 +39,7 @@ const (
 // ScrapeResult is container structure for error handling
 type ScrapeResult struct {
 	Err         error
-	Metric      Metric
+	Metric      config.Metric
 	ScrapeStart time.Time
 }
 
@@ -55,7 +56,7 @@ func maskDsn(dsn string) string {
 // feature is disabled. A nil vector disables the metric entirely: nothing is recorded, and nothing is
 // reported. The metric is opt-in because it adds one series per metric definition and database, which
 // is significant for deployments monitoring many databases.
-func newMetricScrapeDurationVec(m *MetricsConfiguration) *prometheus.GaugeVec {
+func newMetricScrapeDurationVec(m *config.MetricsConfiguration) *prometheus.GaugeVec {
 	if !m.PerMetricScrapeDurationEnabled() {
 		return nil
 	}
@@ -68,7 +69,7 @@ func newMetricScrapeDurationVec(m *MetricsConfiguration) *prometheus.GaugeVec {
 }
 
 // NewExporter creates a new Exporter instance
-func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
+func NewExporter(logger *slog.Logger, m *config.MetricsConfiguration) *Exporter {
 	var databases []*Database
 
 	var allConstLabels []string
@@ -129,10 +130,10 @@ func NewExporter(logger *slog.Logger, m *MetricsConfiguration) *Exporter {
 		databases:            databases,
 		allConstLabels:       allConstLabels,
 	}
-	metricsToScrape, err := e.loadMetricsToScrape()
+	metricsToScrape, err := config.LoadMetrics(logger, m)
 	if err != nil {
 		logger.Error("failed to load custom metrics during startup; continuing with default metrics only", "error", err)
-		metricsToScrape = e.DefaultMetrics()
+		metricsToScrape = config.DefaultMetrics(logger, m.Metrics)
 	}
 	e.metricsToScrape = metricsToScrape
 	e.initCache()
@@ -453,7 +454,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 // result is removed, so the reported duration always describes the most recent scrape attempt.
 // Metrics that were not scraped (for example, because of a custom scrape interval) keep the value
 // recorded by their last actual scrape.
-func (e *Exporter) observeMetricScrapeDuration(d *Database, m *Metric, result string, elapsed time.Duration) {
+func (e *Exporter) observeMetricScrapeDuration(d *Database, m *config.Metric, result string, elapsed time.Duration) {
 	// The vector is nil when metrics.perMetricScrapeDuration.enabled is false.
 	if e.metricScrapeDuration == nil {
 		return
@@ -528,13 +529,13 @@ func hashFile(h hash.Hash, fn string) error {
 }
 
 // ScrapeMetric is an interface method to call scrapeGenericValues using Metric struct values
-func (e *Exporter) ScrapeMetric(d *Database, ch chan<- prometheus.Metric, m *Metric) error {
+func (e *Exporter) ScrapeMetric(d *Database, ch chan<- prometheus.Metric, m *config.Metric) error {
 	e.logger.Debug("Calling function ScrapeGenericValues()")
 	return e.scrapeGenericValues(d, ch, m)
 }
 
 // generic method for retrieving metrics.
-func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric, m *Metric) error {
+func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric, m *config.Metric) error {
 	metricsCount := 0
 	constLabels := d.constLabels(e.constLabels())
 

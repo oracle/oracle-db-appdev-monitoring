@@ -5,22 +5,26 @@
 
 package collector
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/oracle/oracle-db-appdev-monitoring/config"
+)
 
 func TestConnectionParamsUsePoolWhenConfigured(t *testing.T) {
 	zero := 0
 	tests := []struct {
 		name   string
-		config ConnectConfig
+		config config.ConnectConfig
 	}{
-		{name: "pool increment", config: ConnectConfig{PoolIncrement: &zero}},
-		{name: "pool maximum", config: ConnectConfig{PoolMaxConnections: &zero}},
-		{name: "pool minimum", config: ConnectConfig{PoolMinConnections: &zero}},
+		{name: "pool increment", config: config.ConnectConfig{PoolIncrement: &zero}},
+		{name: "pool maximum", config: config.ConnectConfig{PoolMaxConnections: &zero}},
+		{name: "pool minimum", config: config.ConnectConfig{PoolMinConnections: &zero}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			params := connectionParams(DatabaseConfig{ConnectConfig: tt.config}, "scott", "tiger")
+			params := connectionParams(config.DatabaseConfig{ConnectConfig: tt.config}, "scott", "tiger")
 			if params.IsStandalone() {
 				t.Fatal("expected an explicit pool setting to enable ODPI-C pooling")
 			}
@@ -32,7 +36,7 @@ func TestConnectionParamsUsePoolWhenConfigured(t *testing.T) {
 }
 
 func TestConnectionParamsDefaultsToStandalone(t *testing.T) {
-	params := connectionParams(DatabaseConfig{}, "scott", "tiger")
+	params := connectionParams(config.DatabaseConfig{}, "scott", "tiger")
 	if !params.IsStandalone() {
 		t.Fatal("expected no pool settings to retain godror's standalone default")
 	}
@@ -43,7 +47,7 @@ func TestConnectionParamsDefaultsToStandalone(t *testing.T) {
 
 func TestConnectionParamsKeepAdministrativeRolesStandalone(t *testing.T) {
 	poolMaxConnections := 4
-	params := connectionParams(DatabaseConfig{ConnectConfig: ConnectConfig{
+	params := connectionParams(config.DatabaseConfig{ConnectConfig: config.ConnectConfig{
 		Role:               "SYSDBA",
 		PoolMaxConnections: &poolMaxConnections,
 	}}, "sys", "tiger")
@@ -53,7 +57,7 @@ func TestConnectionParamsKeepAdministrativeRolesStandalone(t *testing.T) {
 }
 
 func TestConnectionParamsClearUsernameForExternalAuth(t *testing.T) {
-	params := connectionParams(DatabaseConfig{Username: "scott"}, "scott", "")
+	params := connectionParams(config.DatabaseConfig{Username: "scott"}, "scott", "")
 	if params.Username != "" {
 		t.Fatalf("expected external authentication to clear username, got %q", params.Username)
 	}
@@ -67,14 +71,14 @@ func TestEffectiveSQLPoolLimitsUseSQLSettingsForGodror(t *testing.T) {
 	maxIdleConns := 6
 	poolMaxConnections := 4
 	poolMinConnections := 2
-	config := DatabaseConfig{ConnectConfig: ConnectConfig{
+	dbconfig := config.DatabaseConfig{ConnectConfig: config.ConnectConfig{
 		MaxOpenConns:       &maxOpenConns,
 		MaxIdleConns:       &maxIdleConns,
 		PoolMaxConnections: &poolMaxConnections,
 		PoolMinConnections: &poolMinConnections,
 	}}
 
-	gotMaxOpenConns, gotMaxIdleConns := effectiveSQLPoolLimits(config)
+	gotMaxOpenConns, gotMaxIdleConns := effectiveSQLPoolLimits(dbconfig)
 	if gotMaxOpenConns != maxOpenConns {
 		t.Fatalf("expected maxOpenConns to set max open connections, got %d", gotMaxOpenConns)
 	}
@@ -86,12 +90,12 @@ func TestEffectiveSQLPoolLimitsUseSQLSettingsForGodror(t *testing.T) {
 func TestWarmupConnectionPoolSizePreservesGodrorPoolFallback(t *testing.T) {
 	maxOpenConns := 0
 	poolMaxConnections := 4
-	config := DatabaseConfig{ConnectConfig: ConnectConfig{
+	dbconfig := config.DatabaseConfig{ConnectConfig: config.ConnectConfig{
 		MaxOpenConns:       &maxOpenConns,
 		PoolMaxConnections: &poolMaxConnections,
 	}}
 
-	if got := warmupConnectionPoolSize(config); got != poolMaxConnections {
+	if got := warmupConnectionPoolSize(dbconfig); got != poolMaxConnections {
 		t.Fatalf("expected warmup to keep existing poolMaxConnections fallback, got %d", got)
 	}
 }
@@ -99,12 +103,12 @@ func TestWarmupConnectionPoolSizePreservesGodrorPoolFallback(t *testing.T) {
 func TestWarmupConnectionPoolSizeCapsAtGodrorPoolMaximum(t *testing.T) {
 	maxOpenConns := 10
 	poolMaxConnections := 4
-	config := DatabaseConfig{ConnectConfig: ConnectConfig{
+	dbconfig := config.DatabaseConfig{ConnectConfig: config.ConnectConfig{
 		MaxOpenConns:       &maxOpenConns,
 		PoolMaxConnections: &poolMaxConnections,
 	}}
 
-	if got := warmupConnectionPoolSize(config); got != poolMaxConnections {
+	if got := warmupConnectionPoolSize(dbconfig); got != poolMaxConnections {
 		t.Fatalf("expected warmup to be capped at poolMaxConnections, got %d", got)
 	}
 }

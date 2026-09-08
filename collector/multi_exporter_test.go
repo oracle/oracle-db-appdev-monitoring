@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/oracle/oracle-db-appdev-monitoring/config"
 )
 
 const customMetricFixture = `[[metric]]
@@ -108,8 +110,8 @@ request = "select 2 as value from dual"
 
 func newTestExporterWithCustomMetrics(customMetricsPath string) *Exporter {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return NewExporter(logger, &MetricsConfiguration{
-		Metrics: MetricsFilesConfig{
+	return NewExporter(logger, &config.MetricsConfiguration{
+		Metrics: config.MetricsFilesConfig{
 			Custom: []string{customMetricsPath},
 		},
 	})

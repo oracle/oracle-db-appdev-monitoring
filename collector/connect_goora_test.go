@@ -5,28 +5,32 @@
 
 package collector
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/oracle/oracle-db-appdev-monitoring/config"
+)
 
 func TestEffectiveSQLPoolLimitsPreferGooraPoolSettings(t *testing.T) {
 	maxOpenConns := 10
 	maxIdleConns := 6
 	poolMaxConnections := 4
 	poolMinConnections := 2
-	config := DatabaseConfig{ConnectConfig: ConnectConfig{
+	dbconfig := config.DatabaseConfig{ConnectConfig: config.ConnectConfig{
 		MaxOpenConns:       &maxOpenConns,
 		MaxIdleConns:       &maxIdleConns,
 		PoolMaxConnections: &poolMaxConnections,
 		PoolMinConnections: &poolMinConnections,
 	}}
 
-	gotMaxOpenConns, gotMaxIdleConns := effectiveSQLPoolLimits(config)
+	gotMaxOpenConns, gotMaxIdleConns := effectiveSQLPoolLimits(dbconfig)
 	if gotMaxOpenConns != poolMaxConnections {
 		t.Fatalf("expected poolMaxConnections to set max open connections, got %d", gotMaxOpenConns)
 	}
 	if gotMaxIdleConns != poolMinConnections {
 		t.Fatalf("expected poolMinConnections to set max idle connections, got %d", gotMaxIdleConns)
 	}
-	if got := warmupConnectionPoolSize(config); got != poolMaxConnections {
+	if got := warmupConnectionPoolSize(dbconfig); got != poolMaxConnections {
 		t.Fatalf("expected warmup to use poolMaxConnections, got %d", got)
 	}
 }
@@ -34,12 +38,12 @@ func TestEffectiveSQLPoolLimitsPreferGooraPoolSettings(t *testing.T) {
 func TestEffectiveSQLPoolLimitsFallbackToSQLSettingsForGoora(t *testing.T) {
 	maxOpenConns := 8
 	maxIdleConns := 3
-	config := DatabaseConfig{ConnectConfig: ConnectConfig{
+	dbconfig := config.DatabaseConfig{ConnectConfig: config.ConnectConfig{
 		MaxOpenConns: &maxOpenConns,
 		MaxIdleConns: &maxIdleConns,
 	}}
 
-	gotMaxOpenConns, gotMaxIdleConns := effectiveSQLPoolLimits(config)
+	gotMaxOpenConns, gotMaxIdleConns := effectiveSQLPoolLimits(dbconfig)
 	if gotMaxOpenConns != maxOpenConns {
 		t.Fatalf("expected maxOpenConns fallback, got %d", gotMaxOpenConns)
 	}
@@ -51,13 +55,13 @@ func TestEffectiveSQLPoolLimitsFallbackToSQLSettingsForGoora(t *testing.T) {
 func TestInitDBKeepsGooraPoolMaxConnections(t *testing.T) {
 	maxOpenConns := 10
 	poolMaxConnections := 4
-	config := DatabaseConfig{ConnectConfig: ConnectConfig{
+	dbconfig := config.DatabaseConfig{ConnectConfig: config.ConnectConfig{
 		MaxOpenConns:       &maxOpenConns,
 		PoolMaxConnections: &poolMaxConnections,
 	}}
 	db := openTestQueryDB(t)
 
-	initdb(testLogger(), "db1", config, db)
+	initdb(testLogger(), "db1", dbconfig, db)
 
 	if got := db.Stats().MaxOpenConnections; got != poolMaxConnections {
 		t.Fatalf("expected initdb to keep poolMaxConnections as max open connections, got %d", got)

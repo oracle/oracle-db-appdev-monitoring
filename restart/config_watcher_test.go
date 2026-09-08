@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/oracle/oracle-db-appdev-monitoring/collector"
+	"github.com/oracle/oracle-db-appdev-monitoring/config"
 )
 
 func TestWatchConfigFileRestartsForAtomicReplacement(t *testing.T) {
@@ -51,7 +51,7 @@ func TestWatchConfigFileKeepsRunningForInvalidConfiguration(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	if err := WatchConfigFile(ctx, testSlogLogger(), configFile, func() error {
-		_, err := collector.LoadMetricsConfiguration(testSlogLogger(), &collector.Config{ConfigFile: configFile})
+		_, err := config.LoadMetricsConfiguration(testSlogLogger(), &config.Config{ConfigFile: configFile})
 		return err
 	}, func() {
 		changed <- struct{}{}

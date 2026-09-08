@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/collector"
+	"github.com/oracle/oracle-db-appdev-monitoring/config"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -20,15 +20,15 @@ import (
 )
 
 func TestTLSCredentialsConfiguresClientTLS(t *testing.T) {
-	config, err := clientTLSConfig(&collector.OTLPTLSConfig{ServerName: "collector.example", MinVersion: "TLS1.3"})
+	tlsConfig, err := clientTLSConfig(&config.OTLPTLSConfig{ServerName: "collector.example", MinVersion: "TLS1.3"})
 	if err != nil {
 		t.Fatalf("client TLS config: %v", err)
 	}
-	if config.ServerName != "collector.example" {
-		t.Fatalf("expected configured server name, got %q", config.ServerName)
+	if tlsConfig.ServerName != "collector.example" {
+		t.Fatalf("expected configured server name, got %q", tlsConfig.ServerName)
 	}
-	if config.MinVersion != tls.VersionTLS13 {
-		t.Fatalf("expected TLS 1.3 minimum version, got %d", config.MinVersion)
+	if tlsConfig.MinVersion != tls.VersionTLS13 {
+		t.Fatalf("expected TLS 1.3 minimum version, got %d", tlsConfig.MinVersion)
 	}
 }
 
@@ -114,7 +114,7 @@ func TestPipelineExportsConfiguredHeadersAndResources(t *testing.T) {
 	t.Cleanup(func() { server.Stop(); _ = listener.Close() })
 
 	timeout := time.Second
-	pipeline, err := New(context.Background(), &collector.OTLPConfig{
+	pipeline, err := New(context.Background(), &config.OTLPConfig{
 		Endpoint: "http://" + listener.Addr().String(), Timeout: &timeout,
 		Headers:            map[string]string{"Authorization": "Bearer token"},
 		ResourceAttributes: map[string]string{"service.name": "custom-exporter", "deployment.environment": "test"},

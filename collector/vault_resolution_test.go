@@ -7,103 +7,33 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/oci"
+	"github.com/oracle/oracle-db-appdev-monitoring/config"
 )
 
-func TestWarmupConnectionPoolWithOCIVaultLookupErrorUsesBackoff(t *testing.T) {
+func TestWarmupConnectionPoolWithConfigurationLookupErrorUsesBackoff(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	original := getOCIVaultSecret
-	getOCIVaultSecret = func(vaultID, secretName string, authMode oci.AuthMode) (string, error) {
-		return "", errors.New("vault unavailable")
-	}
-	t.Cleanup(func() {
-		getOCIVaultSecret = original
-	})
-
-	db := NewDatabase(logger, "database", "db1", DatabaseConfig{
-		URL: "dbhost/service",
-		Vault: &VaultConfig{
-			OCI: &OCIVault{
-				ID:             "vault-1",
-				PasswordSecret: "db-password",
-			},
-		},
+	db := NewDatabase(logger, "database", "db1", config.DatabaseConfig{
+		URL:          "dbhost/service",
+		PasswordFile: filepath.Join(t.TempDir(), "missing-password"),
 	})
 
 	if db.Session != nil {
-		t.Fatal("expected session initialization to fail when OCI Vault lookup fails")
+		t.Fatal("expected session initialization to fail when configuration lookup fails")
 	}
 
 	err := db.WarmupConnectionPool(logger, time.Minute)
 	if err == nil {
-		t.Fatal("expected warmup to fail after OCI Vault lookup error")
+		t.Fatal("expected warmup to fail after configuration lookup error")
 	}
-	if err.Error() != "vault unavailable" {
-		t.Fatalf("expected vault error to be preserved, got %v", err)
+	if !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected missing password file error to be preserved, got %v", err)
 	}
 	if db.invalidUntil == nil {
-		t.Fatal("expected invalidUntil to be set after vault lookup failure")
+		t.Fatal("expected invalidUntil to be set after configuration lookup failure")
 	}
-}
-
-func TestHashiCorpVaultLookupErrorIsReturned(t *testing.T) {
-	original := getHashiCorpVaultSecret
-	getHashiCorpVaultSecret = func(logger *slog.Logger, cfg *HashiCorpVault, requiredKeys []string) (map[string]string, error) {
-		return nil, errors.New("hashicorp vault unavailable")
-	}
-	t.Cleanup(func() {
-		getHashiCorpVaultSecret = original
-	})
-
-	cfg := DatabaseConfig{
-		Vault: &VaultConfig{
-			HashiCorp: &HashiCorpVault{
-				MountType:  hashiCorpMountTypeKVv2ForTest(),
-				MountName:  "secret",
-				SecretPath: "db/prod",
-			},
-		},
-	}
-
-	_, err := cfg.GetPassword()
-	if err == nil {
-		t.Fatal("expected HashiCorp Vault lookup error")
-	}
-	if err.Error() != "hashicorp vault unavailable" {
-		t.Fatalf("expected HashiCorp Vault error to be preserved, got %v", err)
-	}
-}
-
-func TestAzureVaultLookupErrorIsReturned(t *testing.T) {
-	original := getAZVaultSecret
-	getAZVaultSecret = func(vaultID, secretName string) (string, error) {
-		return "", errors.New("azure vault unavailable")
-	}
-	t.Cleanup(func() {
-		getAZVaultSecret = original
-	})
-
-	cfg := DatabaseConfig{
-		Vault: &VaultConfig{
-			Azure: &AZVault{
-				ID:             "vault-1",
-				PasswordSecret: "db-password",
-			},
-		},
-	}
-
-	_, err := cfg.GetPassword()
-	if err == nil {
-		t.Fatal("expected Azure Vault lookup error")
-	}
-	if err.Error() != "azure vault unavailable" {
-		t.Fatalf("expected Azure Vault error to be preserved, got %v", err)
-	}
-}
-
-func hashiCorpMountTypeKVv2ForTest() string {
-	return "kvv2"
 }

@@ -14,9 +14,10 @@ import (
 
 	"github.com/godror/godror"
 	"github.com/godror/godror/dsn"
+	"github.com/oracle/oracle-db-appdev-monitoring/config"
 )
 
-func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.DB, error) {
+func connect(logger *slog.Logger, dbname string, dbconfig config.DatabaseConfig) (*sql.DB, error) {
 	logger.Debug("Launching connection to "+maskDsn(dbconfig.URL), "database", dbname)
 
 	password, err := dbconfig.GetPassword()
@@ -54,7 +55,7 @@ func connect(logger *slog.Logger, dbname string, dbconfig DatabaseConfig) (*sql.
 	return db, nil
 }
 
-func connectionParams(dbconfig DatabaseConfig, username, password string) godror.ConnectionParams {
+func connectionParams(dbconfig config.DatabaseConfig, username, password string) godror.ConnectionParams {
 	var P godror.ConnectionParams
 	externalAuth := password == ""
 	if externalAuth {
@@ -105,11 +106,11 @@ func connectionParams(dbconfig DatabaseConfig, username, password string) godror
 	return P
 }
 
-func effectiveSQLPoolLimits(dbconfig DatabaseConfig) (int, int) {
+func effectiveSQLPoolLimits(dbconfig config.DatabaseConfig) (int, int) {
 	return dbconfig.GetMaxOpenConns(), dbconfig.GetMaxIdleConns()
 }
 
-func warmupConnectionPoolSize(dbconfig DatabaseConfig) int {
+func warmupConnectionPoolSize(dbconfig config.DatabaseConfig) int {
 	poolSize := dbconfig.GetMaxOpenConns()
 	if poolSize < 1 {
 		poolSize = dbconfig.GetPoolMaxConnections()

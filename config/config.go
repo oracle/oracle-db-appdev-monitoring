@@ -1,7 +1,7 @@
 // Copyright (c) 2025, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
-package collector
+package config
 
 import (
 	"errors"
@@ -31,6 +31,10 @@ var (
 		return client.GetVaultSecret(cfg.MountType, cfg.MountName, cfg.SecretPath, requiredKeys)
 	}
 )
+
+type Config struct {
+	ConfigFile string
+}
 
 type MetricsConfiguration struct {
 	ListenAddress string                    `yaml:"listenAddress"`
