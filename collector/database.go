@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/oracle/oracle-db-appdev-monitoring/config"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -60,7 +61,7 @@ func (d *Database) constLabels(labels map[string]string) map[string]string {
 	return labels
 }
 
-func NewDatabase(logger *slog.Logger, dblabel, dbname string, dbconfig DatabaseConfig) *Database {
+func NewDatabase(logger *slog.Logger, dblabel, dbname string, dbconfig config.DatabaseConfig) *Database {
 	db, err := connect(logger, dbname, dbconfig)
 	if err != nil {
 		logger.Error("Failed to initialize database session", "error", err, "database", dbname)
@@ -81,7 +82,7 @@ func (d *Database) StartupReady() bool {
 }
 
 // initCache resets the metrics cached. Used on startup and when metrics are reloaded.
-func (d *Database) initCache(metrics map[string]*Metric) {
+func (d *Database) initCache(metrics map[string]*config.Metric) {
 	d.MetricsCache = NewMetricsCache(metrics)
 }
 
@@ -326,7 +327,7 @@ func isClosedDatabaseError(err error) bool {
 	return errors.Is(err, sql.ErrConnDone) || strings.Contains(err.Error(), "sql: database is closed")
 }
 
-func initdb(logger *slog.Logger, dbname string, dbconfig DatabaseConfig, db *sql.DB) {
+func initdb(logger *slog.Logger, dbname string, dbconfig config.DatabaseConfig, db *sql.DB) {
 	configureSQLConnectionPool(logger, dbname, dbconfig, db)
 	logger.Debug(fmt.Sprintf("set connection max lifetime to %s", dbconfig.GetConnMaxLifetime()), "database", dbname)
 	db.SetConnMaxLifetime(dbconfig.GetConnMaxLifetime())
@@ -348,7 +349,7 @@ func initdb(logger *slog.Logger, dbname string, dbconfig DatabaseConfig, db *sql
 	logger.Info("Connected as SYSDBA? "+sysdba, "database", dbname)
 }
 
-func configureSQLConnectionPool(logger *slog.Logger, dbname string, dbconfig DatabaseConfig, db *sql.DB) {
+func configureSQLConnectionPool(logger *slog.Logger, dbname string, dbconfig config.DatabaseConfig, db *sql.DB) {
 	maxOpenConns, maxIdleConns := effectiveSQLPoolLimits(dbconfig)
 	logger.Debug(fmt.Sprintf("set max idle connections to %d", maxIdleConns), "database", dbname)
 	db.SetMaxIdleConns(maxIdleConns)

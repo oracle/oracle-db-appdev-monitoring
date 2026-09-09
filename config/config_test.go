@@ -1,7 +1,7 @@
 // Copyright (c) 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
-package collector
+package config
 
 import (
 	"errors"
@@ -442,6 +442,256 @@ otlp:
 			_, err := LoadMetricsConfiguration(testLogger(), &Config{ConfigFile: configPath})
 			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
 				t.Fatalf("expected error containing %q, got %v", tt.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestMetricsNormalizeIdentifiers(t *testing.T) {
+	tests := []struct {
+		name  string
+		check func(t *testing.T, metrics *Metrics)
+	}{
+		{
+			name: "metrics desc key",
+			check: func(t *testing.T, metrics *Metrics) {
+				if _, ok := metrics.Metric[0].MetricsDesc["sqlid_without_profile_on_wcr_pta_multi_deep_bin_v"]; !ok {
+					t.Fatal("expected metricsdesc key to be normalized to lowercase")
+				}
+			},
+		},
+		{
+			name: "metrics bucket key",
+			check: func(t *testing.T, metrics *Metrics) {
+				if _, ok := metrics.Metric[0].MetricsBuckets["sqlid_without_profile_on_wcr_pta_multi_deep_bin_v"]; !ok {
+					t.Fatal("expected metricsbuckets key to be normalized to lowercase")
+				}
+			},
+		},
+		{
+			name: "metrics bucket field key",
+			check: func(t *testing.T, metrics *Metrics) {
+				if _, ok := metrics.Metric[0].MetricsBuckets["sqlid_without_profile_on_wcr_pta_multi_deep_bin_v"]["bucket_1"]; !ok {
+					t.Fatal("expected histogram bucket field key to be normalized to lowercase")
+				}
+			},
+		},
+		{
+			name: "field to append",
+			check: func(t *testing.T, metrics *Metrics) {
+				if metrics.Metric[0].FieldToAppend != "sql_id" {
+					t.Fatalf("expected fieldtoappend to be normalized to lowercase, got %q", metrics.Metric[0].FieldToAppend)
+				}
+			},
+		},
+		{
+			name: "labels",
+			check: func(t *testing.T, metrics *Metrics) {
+				if metrics.Metric[0].Labels[0] != "sql_id" || metrics.Metric[0].Labels[1] != "inst_id" {
+					t.Fatalf("expected labels to be normalized to lowercase, got %v", metrics.Metric[0].Labels)
+				}
+			},
+		},
+		{
+			name: "all loaded metrics",
+			check: func(t *testing.T, metrics *Metrics) {
+				if metrics.Metric[1].FieldToAppend != "db_name" {
+					t.Fatalf("expected second metric fieldtoappend to be normalized to lowercase, got %q", metrics.Metric[1].FieldToAppend)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			metrics := &Metrics{
+				Metric: []*Metric{
+					{
+						Labels:        []string{"SQL_ID", "Inst_ID"},
+						FieldToAppend: "SQL_ID",
+						MetricsDesc: map[string]string{
+							"sqlid_without_profile_on_WCR_PTA_MULTI_DEEP_BIN_V": "test metric",
+						},
+						MetricsType: map[string]string{
+							"sqlid_without_profile_on_WCR_PTA_MULTI_DEEP_BIN_V": "histogram",
+						},
+						MetricsBuckets: map[string]map[string]string{
+							"sqlid_without_profile_on_WCR_PTA_MULTI_DEEP_BIN_V": {
+								"Bucket_1": "1",
+							},
+						},
+					},
+					{
+						Labels:        []string{"DB_NAME"},
+						FieldToAppend: "DB_NAME",
+					},
+				},
+			}
+
+			metrics.normalizeIdentifiers()
+			tt.check(t, metrics)
+		})
+	}
+}
+
+func TestMetricNormalizeIdentifiersSetsDeterministicID(t *testing.T) {
+	metric := &Metric{
+		Context: "sessions",
+		MetricsDesc: map[string]string{
+			"B": "second",
+			"a": "first",
+		},
+	}
+
+	metric.normalizeIdentifiers()
+
+	if metric.ID != "sessions_a_b" {
+		t.Fatalf("expected normalized metric ID %q, got %q", "sessions_a_b", metric.ID)
+	}
+}
+
+func TestMetricsToMapUsesStableMetricID(t *testing.T) {
+	firstDesc := make(map[string]string, 2)
+	firstDesc["b"] = "second"
+	firstDesc["a"] = "first"
+
+	secondDesc := make(map[string]string, 2)
+	secondDesc["a"] = "first"
+	secondDesc["b"] = "second"
+
+	metrics := Metrics{
+		Metric: []*Metric{
+			{
+				Context:     "sessions",
+				MetricsDesc: firstDesc,
+				Request:     "first",
+			},
+			{
+				Context:     "sessions",
+				MetricsDesc: secondDesc,
+				Request:     "second",
+			},
+		},
+	}
+
+	metrics.normalizeIdentifiers()
+	got := metrics.toMap()
+
+	if len(got) != 1 {
+		t.Fatalf("expected one merged metric, got %d", len(got))
+	}
+	if got["sessions_a_b"] == nil {
+		t.Fatalf("expected merged metric keyed by %q", "sessions_a_b")
+	}
+	if got["sessions_a_b"].Request != "second" {
+		t.Fatalf("expected later metric to overwrite existing entry, got request %q", got["sessions_a_b"].Request)
+	}
+}
+
+func TestDefaultMetricsAssignsIDs(t *testing.T) {
+	metrics := DefaultMetrics(testLogger(), MetricsFilesConfig{})
+
+	if len(metrics) == 0 {
+		t.Fatal("expected embedded default metrics to load")
+	}
+
+	for id, metric := range metrics {
+		if id == "" {
+			t.Fatal("expected default metric map key to be non-empty")
+		}
+		if metric == nil {
+			t.Fatalf("expected metric for ID %q", id)
+		}
+		if metric.ID != id {
+			t.Fatalf("expected metric ID %q to match map key, got %q", id, metric.ID)
+		}
+	}
+}
+
+func TestMetricGetLabels(t *testing.T) {
+	tests := []struct {
+		name     string
+		metric   Metric
+		expected []string
+	}{
+		{
+			name: "returns all labels when field to append is empty",
+			metric: Metric{
+				Labels: []string{"database", "instance"},
+			},
+			expected: []string{"database", "instance"},
+		},
+		{
+			name: "omits field to append from labels",
+			metric: Metric{
+				Labels:        []string{"database", "instance", "sql_id"},
+				FieldToAppend: "sql_id",
+			},
+			expected: []string{"database", "instance"},
+		},
+		{
+			name: "returns labels unchanged when field to append is not present",
+			metric: Metric{
+				Labels:        []string{"database", "instance"},
+				FieldToAppend: "sql_id",
+			},
+			expected: []string{"database", "instance"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.metric.GetLabels()
+			if len(got) != len(tt.expected) {
+				t.Fatalf("expected %d labels, got %d (%v)", len(tt.expected), len(got), got)
+			}
+			for i := range tt.expected {
+				if got[i] != tt.expected[i] {
+					t.Fatalf("expected labels %v, got %v", tt.expected, got)
+				}
+			}
+		})
+	}
+}
+
+func TestMetricIsEnabledForDatabase(t *testing.T) {
+	tests := []struct {
+		name     string
+		metric   Metric
+		database string
+		expected bool
+	}{
+		{
+			name:     "enabled for all databases when databases is nil",
+			metric:   Metric{Databases: nil},
+			database: "prod",
+			expected: true,
+		},
+		{
+			name:     "enabled when database is listed",
+			metric:   Metric{Databases: []string{"prod", "staging"}},
+			database: "prod",
+			expected: true,
+		},
+		{
+			name:     "disabled when database is not listed",
+			metric:   Metric{Databases: []string{"staging"}},
+			database: "prod",
+			expected: false,
+		},
+		{
+			name:     "disabled for all databases when list is empty but non nil",
+			metric:   Metric{Databases: []string{}},
+			database: "prod",
+			expected: false,
+		},
+	}
+
+	for i := range tests {
+		t.Run(tests[i].name, func(t *testing.T) {
+			got := tests[i].metric.IsEnabledForDatabase(tests[i].database)
+			if got != tests[i].expected {
+				t.Fatalf("expected %v, got %v", tests[i].expected, got)
 			}
 		})
 	}

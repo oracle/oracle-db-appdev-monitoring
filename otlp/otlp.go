@@ -12,7 +12,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/collector"
+	"github.com/oracle/oracle-db-appdev-monitoring/config"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -50,7 +50,7 @@ type Pipeline struct {
 }
 
 // New creates an SDK metric pipeline with the official OTLP/gRPC exporter.
-func New(ctx context.Context, cfg *collector.OTLPConfig, version string, interval time.Duration, gatherer prometheus.Gatherer) (*Pipeline, error) {
+func New(ctx context.Context, cfg *config.OTLPConfig, version string, interval time.Duration, gatherer prometheus.Gatherer) (*Pipeline, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("OTLP configuration is required")
 	}
@@ -101,7 +101,7 @@ func New(ctx context.Context, cfg *collector.OTLPConfig, version string, interva
 	)}, nil
 }
 
-func clientTLSConfig(cfg *collector.OTLPTLSConfig) (*tls.Config, error) {
+func clientTLSConfig(cfg *config.OTLPTLSConfig) (*tls.Config, error) {
 	tlsConfig := &tls.Config{
 		MinVersion:         tls.VersionTLS12,
 		ServerName:         cfg.ServerName,

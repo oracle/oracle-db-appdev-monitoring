@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/oracle/oracle-db-appdev-monitoring/config"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -99,10 +100,10 @@ request = "select 1 as value from dual"
 `)
 	// The shared helper leaves the feature disabled, so build an exporter that enables it.
 	enabled := true
-	exporter := NewExporter(slog.New(slog.NewTextHandler(io.Discard, nil)), &MetricsConfiguration{
-		Metrics: MetricsFilesConfig{
+	exporter := NewExporter(slog.New(slog.NewTextHandler(io.Discard, nil)), &config.MetricsConfiguration{
+		Metrics: config.MetricsFilesConfig{
 			Custom:                  []string{path},
-			PerMetricScrapeDuration: PerMetricScrapeDurationConfig{Enabled: &enabled},
+			PerMetricScrapeDuration: config.PerMetricScrapeDurationConfig{Enabled: &enabled},
 		},
 	})
 	database := &Database{Name: "db1", DatabaseLabel: "database"}
@@ -161,16 +162,16 @@ func TestPerMetricScrapeDurationIsOptIn(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config := &MetricsConfiguration{
-				Metrics: MetricsFilesConfig{
-					PerMetricScrapeDuration: PerMetricScrapeDurationConfig{Enabled: tt.enabled},
+			metricsConfig := &config.MetricsConfiguration{
+				Metrics: config.MetricsFilesConfig{
+					PerMetricScrapeDuration: config.PerMetricScrapeDurationConfig{Enabled: tt.enabled},
 				},
 			}
-			if got := config.PerMetricScrapeDurationEnabled(); got != tt.want {
+			if got := metricsConfig.PerMetricScrapeDurationEnabled(); got != tt.want {
 				t.Fatalf("expected PerMetricScrapeDurationEnabled() to be %t, got %t", tt.want, got)
 			}
 
-			exporter := NewExporter(slog.New(slog.NewTextHandler(io.Discard, nil)), config)
+			exporter := NewExporter(slog.New(slog.NewTextHandler(io.Discard, nil)), metricsConfig)
 			if got := exporter.metricScrapeDuration != nil; got != tt.want {
 				t.Fatalf("expected the duration vector to be created: %t, got %t", tt.want, got)
 			}
@@ -197,22 +198,22 @@ func boolPtr(b bool) *bool {
 	return &b
 }
 
-func newTestDurationMetric(scrapeInterval string) *Metric {
-	metric := &Metric{
+func newTestDurationMetric(scrapeInterval string) *config.Metric {
+	metric := &config.Metric{
+		ID:             "test_value",
 		Context:        "test",
 		MetricsDesc:    map[string]string{"value": "Test metric."},
 		MetricsType:    map[string]string{"value": "gauge"},
 		Request:        "select 1 as value from dual",
 		ScrapeInterval: scrapeInterval,
 	}
-	metric.normalizeIdentifiers()
 	return metric
 }
 
-func newTestDurationExporter(t *testing.T, session *sql.DB, metric *Metric) (*Exporter, *Database) {
+func newTestDurationExporter(t *testing.T, session *sql.DB, metric *config.Metric) (*Exporter, *Database) {
 	t.Helper()
 
-	metricsToScrape := map[string]*Metric{metric.ID: metric}
+	metricsToScrape := map[string]*config.Metric{metric.ID: metric}
 	database := &Database{
 		Name:          "db1",
 		Session:       session,
@@ -223,7 +224,7 @@ func newTestDurationExporter(t *testing.T, session *sql.DB, metric *Metric) (*Ex
 
 	exporter := &Exporter{
 		logger:               slog.New(slog.NewTextHandler(io.Discard, nil)),
-		MetricsConfiguration: &MetricsConfiguration{},
+		MetricsConfiguration: &config.MetricsConfiguration{},
 		metricsToScrape:      metricsToScrape,
 		databaseDuration: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: namespace,

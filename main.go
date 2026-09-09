@@ -33,6 +33,7 @@ import (
 
 	"github.com/oracle/oracle-db-appdev-monitoring/alertlog"
 	"github.com/oracle/oracle-db-appdev-monitoring/collector"
+	"github.com/oracle/oracle-db-appdev-monitoring/config"
 	"github.com/oracle/oracle-db-appdev-monitoring/otlp"
 )
 
@@ -114,8 +115,8 @@ func main() {
 
 	bootstrapLogConfig, _ := promslogConfig("info", "logfmt")
 	bootstrapLogger := promslog.New(bootstrapLogConfig)
-	config := &collector.Config{ConfigFile: configFile}
-	m, err := collector.LoadMetricsConfiguration(bootstrapLogger, config)
+	exporterConfig := &config.Config{ConfigFile: configFile}
+	m, err := config.LoadMetricsConfiguration(bootstrapLogger, exporterConfig)
 	if err != nil {
 		bootstrapLogger.Error("unable to load metrics configuration file", "error", err)
 		os.Exit(1)
@@ -132,7 +133,7 @@ func main() {
 	restartRequests := make(chan restart.Request, 1)
 	go restart.RunRestartCoordinator(context.Background(), logger, restartRequests, restart.Process)
 	if err := restart.WatchConfigFile(context.Background(), logger, configFile, func() error {
-		_, err := collector.LoadMetricsConfiguration(logger, config)
+		_, err := config.LoadMetricsConfiguration(logger, exporterConfig)
 		return err
 	}, func() {
 		restart.RequestRestart(restartRequests, "configuration file changed")

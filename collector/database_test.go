@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/oracle/oracle-db-appdev-monitoring/config"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -289,7 +290,7 @@ func TestWarmupSessionClosesAcquiredConnectionsAfterPartialFailure(t *testing.T)
 	maxOpenConns := 3
 	db := &Database{
 		Name:          "db1",
-		Config:        DatabaseConfig{ConnectConfig: ConnectConfig{MaxOpenConns: &maxOpenConns}},
+		Config:        config.DatabaseConfig{ConnectConfig: config.ConnectConfig{MaxOpenConns: &maxOpenConns}},
 		DatabaseLabel: "database",
 	}
 
@@ -371,7 +372,7 @@ func TestScrapeDatabaseSkipsWhileStartupInProgress(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	exporter := &Exporter{
 		logger:               logger,
-		MetricsConfiguration: &MetricsConfiguration{},
+		MetricsConfiguration: &config.MetricsConfiguration{},
 		databaseDuration: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: "test",
@@ -443,21 +444,21 @@ func newTestScheduledExporter(t *testing.T, scrapeInterval time.Duration) (*Expo
 	t.Helper()
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	metric := &Metric{
+	metric := &config.Metric{
 		ID:          "test_value",
 		Context:     "test",
 		MetricsDesc: map[string]string{"value": "Test metric."},
 		MetricsType: map[string]string{"value": "gauge"},
 		Request:     "select 1 as value from dual",
 	}
-	metricsToScrape := map[string]*Metric{
+	metricsToScrape := map[string]*config.Metric{
 		metric.ID: metric,
 	}
 	maxOpenConns := 1
 	database := &Database{
 		Name:          "db1",
 		Session:       openTestQueryDB(t),
-		Config:        DatabaseConfig{ConnectConfig: ConnectConfig{MaxOpenConns: &maxOpenConns}},
+		Config:        config.DatabaseConfig{ConnectConfig: config.ConnectConfig{MaxOpenConns: &maxOpenConns}},
 		DatabaseLabel: "database",
 	}
 	database.initCache(metricsToScrape)
@@ -504,8 +505,8 @@ func newTestScheduledExporter(t *testing.T, scrapeInterval time.Duration) (*Expo
 		scrapeRequests: make(chan struct{}, 1),
 		databases:      []*Database{database},
 		logger:         logger,
-		MetricsConfiguration: &MetricsConfiguration{
-			Metrics: MetricsFilesConfig{
+		MetricsConfiguration: &config.MetricsConfiguration{
+			Metrics: config.MetricsFilesConfig{
 				DatabaseLabel:  "database",
 				ScrapeInterval: &scrapeInterval,
 			},
