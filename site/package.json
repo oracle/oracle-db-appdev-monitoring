@@ -20,8 +20,8 @@
     "@mdx-js/react": "^3.1.1",
     "clsx": "^2.0.0",
     "prism-react-renderer": "^2.4.1",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   },
   "devDependencies": {
     "@docusaurus/faster": "3.10.2",
@@ -32,6 +32,7 @@
   },
   "overrides": {
     "follow-redirects": "1.16.0",
+    "qs": "6.16.0",
     "serialize-javascript": "7.0.6",
     "terser-webpack-plugin": "5.6.1",
     "uuid": "14.0.1"
