@@ -34,6 +34,7 @@ import (
 	"github.com/oracle/oracle-db-appdev-monitoring/alertlog"
 	"github.com/oracle/oracle-db-appdev-monitoring/collector"
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
+	"github.com/oracle/oracle-db-appdev-monitoring/db"
 	"github.com/oracle/oracle-db-appdev-monitoring/otlp"
 )
 
@@ -155,7 +156,8 @@ func main() {
 		logger.Info("RESTART_INTERVAL env var is not present, so will not restart myself periodically")
 	}
 
-	exporter := collector.NewExporter(logger, m)
+	databases := db.NewDatabases(logger, m)
+	exporter := collector.NewExporter(logger, m, databases)
 	prometheus.MustRegister(exporter)
 	prometheus.MustRegister(cversion.NewCollector("oracledb_exporter"))
 

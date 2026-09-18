@@ -18,31 +18,9 @@ import (
 	"time"
 
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
+	"github.com/oracle/oracle-db-appdev-monitoring/db"
 	"github.com/prometheus/client_golang/prometheus"
 )
-
-func TestIsTemporaryConnectionErrorCode(t *testing.T) {
-	tests := []struct {
-		name string
-		code int
-		want bool
-	}{
-		{name: "database starting", code: ora01033code, want: true},
-		{name: "end of file on communication channel", code: ora03113code, want: true},
-		{name: "not connected to Oracle", code: ora03114code, want: true},
-		{name: "connection closed", code: ora12537code, want: true},
-		{name: "no listener", code: ora12541code, want: true},
-		{name: "invalid credentials", code: ora01017code, want: false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := isTemporaryConnectionErrorCode(tt.code); got != tt.want {
-				t.Errorf("isTemporaryConnectionErrorCode(%d) = %t, want %t", tt.code, got, tt.want)
-			}
-		})
-	}
-}
 
 type testQueryDriver struct{}
 
@@ -59,9 +37,8 @@ type testQueryConnector struct {
 }
 
 var testQueryDriverID atomic.Uint64
-var errWarmupConnectionFailed = errors.New("warmup connection failed")
 
-func (testQueryDriver) Open(name string) (driver.Conn, error) {
+func (testQueryDriver) Open(string) (driver.Conn, error) {
 	return testQueryConn{rows: &testQueryRows{}}, nil
 }
 
@@ -69,6 +46,8 @@ func (c testQueryConnector) Connect(context.Context) (driver.Conn, error) {
 	rows := c.rows
 	if rows == nil {
 		rows = &testQueryRows{}
+	} else if cloneable, ok := rows.(interface{ CloneTestRows() driver.Rows }); ok {
+		rows = cloneable.CloneTestRows()
 	}
 	return testQueryConn{rows: rows}, nil
 }
@@ -89,7 +68,14 @@ func (testQueryConn) Begin() (driver.Tx, error) {
 	return nil, errors.New("not implemented")
 }
 
+func (testQueryConn) ExecContext(context.Context, string, []driver.NamedValue) (driver.Result, error) {
+	return driver.RowsAffected(0), nil
+}
+
 func (c testQueryConn) QueryContext(context.Context, string, []driver.NamedValue) (driver.Rows, error) {
+	if cloneable, ok := c.rows.(interface{ CloneTestRows() driver.Rows }); ok {
+		return cloneable.CloneTestRows(), nil
+	}
 	return c.rows, nil
 }
 
@@ -99,6 +85,10 @@ func (r *testQueryRows) Columns() []string {
 
 func (r *testQueryRows) Close() error {
 	return nil
+}
+
+func (r *testQueryRows) CloneTestRows() driver.Rows {
+	return &testQueryRows{}
 }
 
 func (r *testQueryRows) Next(dest []driver.Value) error {
@@ -127,247 +117,6 @@ func openTestQueryDBWithRows(t *testing.T, rows driver.Rows) *sql.DB {
 	return db
 }
 
-type partialWarmupFailureConnector struct {
-	successfulConnects int64
-	connectAttempts    atomic.Int64
-}
-
-type partialWarmupFailureConn struct{}
-
-func (c *partialWarmupFailureConnector) Connect(context.Context) (driver.Conn, error) {
-	if c.connectAttempts.Add(1) > c.successfulConnects {
-		return nil, errWarmupConnectionFailed
-	}
-	return partialWarmupFailureConn{}, nil
-}
-
-func (c *partialWarmupFailureConnector) Driver() driver.Driver {
-	return testQueryDriver{}
-}
-
-func (partialWarmupFailureConn) Prepare(string) (driver.Stmt, error) {
-	return nil, errors.New("not implemented")
-}
-
-func (partialWarmupFailureConn) Close() error {
-	return nil
-}
-
-func (partialWarmupFailureConn) Begin() (driver.Tx, error) {
-	return nil, errors.New("not implemented")
-}
-
-func (partialWarmupFailureConn) ExecContext(context.Context, string, []driver.NamedValue) (driver.Result, error) {
-	return driver.RowsAffected(0), nil
-}
-
-func (partialWarmupFailureConn) QueryContext(context.Context, string, []driver.NamedValue) (driver.Rows, error) {
-	return &testQueryRows{}, nil
-}
-
-func TestIsValid(t *testing.T) {
-	tests := []struct {
-		name         string
-		invalidUntil *time.Time
-		wantNil      bool
-	}{
-		{
-			name:         "Nil invalidUntil",
-			invalidUntil: nil,
-			wantNil:      true,
-		},
-		{
-			name:         "Future invalidUntil",
-			invalidUntil: func() *time.Time { t := time.Now().Add(time.Minute); return &t }(),
-			wantNil:      false,
-		},
-		{
-			name:         "Past invalidUntil",
-			invalidUntil: func() *time.Time { t := time.Now().Add(-time.Minute); return &t }(),
-			wantNil:      true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			db := &Database{invalidUntil: tt.invalidUntil}
-			result := db.IsValid()
-			if tt.wantNil {
-				if result != nil {
-					t.Fatalf("expected nil retryAfter, got %v", *result)
-				}
-				return
-			}
-			if result == nil {
-				t.Fatal("expected non-nil retryAfter")
-			}
-			if *result <= 0 {
-				t.Fatalf("expected positive retryAfter, got %v", *result)
-			}
-		})
-	}
-}
-
-func TestInvalidate(t *testing.T) {
-	db := &Database{}
-	backoff := time.Minute
-	db.invalidate(backoff)
-	if db.invalidUntil == nil {
-		t.Fatal("Expected non-nil invalidUntil")
-	}
-	if time.Now().After(*db.invalidUntil) {
-		t.Error("Expected invalidUntil in the future")
-	}
-}
-
-func TestClearInvalid(t *testing.T) {
-	db := &Database{}
-	db.invalidate(time.Minute)
-	db.clearInvalid()
-	if db.invalidUntil != nil {
-		t.Fatal("Expected invalidUntil to be cleared")
-	}
-}
-
-func TestIsClosedDatabaseError(t *testing.T) {
-	tests := []struct {
-		name string
-		err  error
-		want bool
-	}{
-		{
-			name: "sql err conn done",
-			err:  sql.ErrConnDone,
-			want: true,
-		},
-		{
-			name: "closed database text",
-			err:  errors.New("sql: database is closed"),
-			want: true,
-		},
-		{
-			name: "other error",
-			err:  errors.New("other"),
-			want: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := isClosedDatabaseError(tt.err); got != tt.want {
-				t.Fatalf("expected %v, got %v", tt.want, got)
-			}
-		})
-	}
-}
-
-func TestWarmupConnectionPoolWithNilSessionSetsStartupReadyAndBackoff(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	db := &Database{}
-
-	err := db.WarmupConnectionPool(logger, time.Minute)
-	if err == nil {
-		t.Fatal("expected warmup to fail for nil session")
-	}
-	if !db.StartupReady() {
-		t.Fatal("expected startupReady to be true after warmup attempt")
-	}
-	if db.IsValid() == nil {
-		t.Fatal("expected invalidUntil to be set after warmup failure")
-	}
-	if got := db.getUp(); got != 0 {
-		t.Fatalf("expected database up metric to remain 0, got %v", got)
-	}
-}
-
-func TestWarmupSessionClosesAcquiredConnectionsAfterPartialFailure(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	connector := &partialWarmupFailureConnector{successfulConnects: 2}
-	session := sql.OpenDB(connector)
-	t.Cleanup(func() {
-		_ = session.Close()
-	})
-	maxOpenConns := 3
-	db := &Database{
-		Name:          "db1",
-		Config:        config.DatabaseConfig{ConnectConfig: config.ConnectConfig{MaxOpenConns: &maxOpenConns}},
-		DatabaseLabel: "database",
-	}
-
-	err := db.warmupSession(logger, session)
-
-	if !errors.Is(err, errWarmupConnectionFailed) {
-		t.Fatalf("expected warmup connection failure, got %v", err)
-	}
-	if got := connector.connectAttempts.Load(); got != 3 {
-		t.Fatalf("expected initdb plus partial warmup to make 3 connection attempts, got %d", got)
-	}
-	if got := session.Stats().InUse; got != 0 {
-		t.Fatalf("expected acquired warmup connections to be returned to the pool, got %d in use", got)
-	}
-}
-
-func TestDatabaseStateAccessIsRaceSafe(t *testing.T) {
-	db := &Database{
-		DatabaseLabel: "database",
-	}
-	var wg sync.WaitGroup
-
-	for i := 0; i < 8; i++ {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			for j := 0; j < 200; j++ {
-				if (i+j)%2 == 0 {
-					db.invalidate(time.Millisecond)
-				} else {
-					db.clearInvalid()
-				}
-				db.setUp(float64((i + j) % 2))
-				_ = db.IsValid()
-				_, _ = db.UpMetric(map[string]string{}).Desc(), db.getUp()
-			}
-		}(i)
-	}
-
-	wg.Wait()
-}
-
-func TestQueryContextHoldsReadLockUntilUnlock(t *testing.T) {
-	db := &Database{
-		Session: openTestQueryDB(t),
-	}
-
-	rows, unlock, err := db.QueryContext(context.Background(), "select 1 from dual")
-	if err != nil {
-		t.Fatalf("expected query to succeed, got %v", err)
-	}
-
-	locked := make(chan struct{})
-	go func() {
-		db.reconnectMU.Lock()
-		close(locked)
-		db.reconnectMU.Unlock()
-	}()
-
-	select {
-	case <-locked:
-		t.Fatal("expected reconnect write lock to wait for active query reader")
-	case <-time.After(100 * time.Millisecond):
-	}
-
-	if err := rows.Close(); err != nil {
-		t.Fatalf("expected rows close to succeed, got %v", err)
-	}
-	unlock()
-
-	select {
-	case <-locked:
-	case <-time.After(time.Second):
-		t.Fatal("expected reconnect write lock to proceed after query reader released lock")
-	}
-}
-
 func TestScrapeDatabaseSkipsWhileStartupInProgress(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	exporter := &Exporter{
@@ -382,7 +131,7 @@ func TestScrapeDatabaseSkipsWhileStartupInProgress(t *testing.T) {
 			[]string{"database"},
 		),
 	}
-	database := &Database{
+	database := &db.Database{
 		Name:          "db1",
 		DatabaseLabel: "database",
 	}
@@ -420,8 +169,9 @@ func TestRunScheduledScrapesRunsWhenDatabaseBecomesReady(t *testing.T) {
 		t.Fatal("did not expect test metric before database startup is ready")
 	}
 
-	database.startupReady.Store(true)
-	database.setUp(1)
+	if err := database.WarmupConnectionPool(testLogger(), time.Hour); err != nil {
+		t.Fatalf("expected test database warmup to succeed, got %v", err)
+	}
 	exporter.requestScheduledScrape()
 
 	waitForScheduledMetric(t, exporter, "oracledb_test_value")
@@ -440,7 +190,7 @@ func TestInitializeDatabasesRequestsScheduledScrapeAfterWarmup(t *testing.T) {
 	}
 }
 
-func newTestScheduledExporter(t *testing.T, scrapeInterval time.Duration) (*Exporter, *Database) {
+func newTestScheduledExporter(t *testing.T, scrapeInterval time.Duration) (*Exporter, *db.Database) {
 	t.Helper()
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -455,15 +205,14 @@ func newTestScheduledExporter(t *testing.T, scrapeInterval time.Duration) (*Expo
 		metric.ID: metric,
 	}
 	maxOpenConns := 1
-	database := &Database{
+	database := &db.Database{
 		Name:          "db1",
 		Session:       openTestQueryDB(t),
 		Config:        config.DatabaseConfig{ConnectConfig: config.ConnectConfig{MaxOpenConns: &maxOpenConns}},
 		DatabaseLabel: "database",
 	}
-	database.initCache(metricsToScrape)
 
-	return &Exporter{
+	exporter := &Exporter{
 		mu:              &sync.Mutex{},
 		metricsToScrape: metricsToScrape,
 		duration: prometheus.NewGauge(prometheus.GaugeOpts{
@@ -503,7 +252,7 @@ func newTestScheduledExporter(t *testing.T, scrapeInterval time.Duration) (*Expo
 			Help:      "test",
 		}, []string{"collector", "database"}),
 		scrapeRequests: make(chan struct{}, 1),
-		databases:      []*Database{database},
+		databases:      []*db.Database{database},
 		logger:         logger,
 		MetricsConfiguration: &config.MetricsConfiguration{
 			Metrics: config.MetricsFilesConfig{
@@ -511,7 +260,9 @@ func newTestScheduledExporter(t *testing.T, scrapeInterval time.Duration) (*Expo
 				ScrapeInterval: &scrapeInterval,
 			},
 		},
-	}, database
+	}
+	exporter.initCache()
+	return exporter, database
 }
 
 func waitForScheduledScrape(t *testing.T, exporter *Exporter) {
@@ -558,7 +309,6 @@ func hasScheduledMetric(exporter *Exporter, fqName string) bool {
 func collectScheduledMetrics(exporter *Exporter) []string {
 	ch := make(chan prometheus.Metric)
 	done := make(chan []string, 1)
-
 	go func() {
 		var descs []string
 		for metric := range ch {
@@ -566,7 +316,6 @@ func collectScheduledMetrics(exporter *Exporter) []string {
 		}
 		done <- descs
 	}()
-
 	exporter.Collect(ch)
 	close(ch)
 	return <-done

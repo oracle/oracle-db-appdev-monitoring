@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/oracle/oracle-db-appdev-monitoring/db"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -18,6 +19,10 @@ var errTestRowsIteration = errors.New("row iteration failed")
 
 type testRowsWithIterationError struct {
 	read bool
+}
+
+func (r *testRowsWithIterationError) CloneTestRows() driver.Rows {
+	return &testRowsWithIterationError{}
 }
 
 func (r *testRowsWithIterationError) Columns() []string {
@@ -108,7 +113,7 @@ func TestGeneratePrometheusMetricsReturnsRowsErr(t *testing.T) {
 	exporter := &Exporter{
 		logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
 	}
-	db := &Database{
+	db := &db.Database{
 		Session: openTestQueryDBWithRows(t, &testRowsWithIterationError{}),
 	}
 	parseCalls := 0

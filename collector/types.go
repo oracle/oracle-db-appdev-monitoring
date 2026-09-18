@@ -3,13 +3,12 @@
 package collector
 
 import (
-	"database/sql"
 	"log/slog"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
+	"github.com/oracle/oracle-db-appdev-monitoring/db"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -28,27 +27,10 @@ type Exporter struct {
 	scrapeErrors         *prometheus.CounterVec
 	scrapeResults        []prometheus.Metric
 	scrapeRequests       chan struct{}
-	databases            []*Database
+	databases            []*db.Database
+	metricsCaches        map[*db.Database]*MetricsCache
 	logger               *slog.Logger
 	allConstLabels       []string
-}
-
-type Database struct {
-	Name       string
-	Up         float64
-	Session    *sql.DB
-	Config     config.DatabaseConfig
-	connectErr error
-	// MetricsCache holds computed metrics for a database, so these metrics are available on each scrape.
-	// Given a metric's scrape configuration, it may not be computed on the same interval as other metrics.
-	MetricsCache *MetricsCache
-
-	invalidUntil  *time.Time
-	DatabaseLabel string
-	startupReady  atomic.Bool
-
-	reconnectMU        sync.RWMutex
-	reconnectAttemptMU sync.Mutex
 }
 
 type MetricsCache struct {

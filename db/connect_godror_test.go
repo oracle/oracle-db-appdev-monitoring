@@ -3,7 +3,7 @@
 
 //go:build !goora
 
-package collector
+package db
 
 import (
 	"testing"
