@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
+	"github.com/oracle/oracle-db-appdev-monitoring/db"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -80,7 +81,7 @@ func TestScrapeDatabaseKeepsDurationForSkippedMetric(t *testing.T) {
 	exporter.observeMetricScrapeDuration(database, metric, scrapeResultSuccess, 1500*time.Millisecond)
 	// The metric was just scraped, so its custom scrape interval means it is served from the cache.
 	tick := time.Now()
-	database.MetricsCache.SetLastScraped(metric, &tick)
+	exporter.metricsCache(database).SetLastScraped(metric, &tick)
 
 	runScrapeDatabase(t, exporter, database)
 
@@ -105,8 +106,8 @@ request = "select 1 as value from dual"
 			Custom:                  []string{path},
 			PerMetricScrapeDuration: config.PerMetricScrapeDurationConfig{Enabled: &enabled},
 		},
-	})
-	database := &Database{Name: "db1", DatabaseLabel: "database"}
+	}, nil)
+	database := &db.Database{Name: "db1", DatabaseLabel: "database"}
 	removed := newTestDurationMetric("")
 	exporter.observeMetricScrapeDuration(database, removed, scrapeResultSuccess, time.Second)
 
@@ -124,8 +125,9 @@ request = "select 1 as value from dual"
 func TestCollectEmitsMetricScrapeDuration(t *testing.T) {
 	t.Run("scheduled scrapes", func(t *testing.T) {
 		exporter, database := newTestScheduledExporter(t, time.Hour)
-		database.startupReady.Store(true)
-		database.setUp(1)
+		if err := database.WarmupConnectionPool(testLogger(), time.Hour); err != nil {
+			t.Fatalf("expected test database warmup to succeed, got %v", err)
+		}
 
 		tick := time.Now()
 		exporter.scheduledScrape(&tick)
@@ -171,7 +173,7 @@ func TestPerMetricScrapeDurationIsOptIn(t *testing.T) {
 				t.Fatalf("expected PerMetricScrapeDurationEnabled() to be %t, got %t", tt.want, got)
 			}
 
-			exporter := NewExporter(slog.New(slog.NewTextHandler(io.Discard, nil)), metricsConfig)
+			exporter := NewExporter(slog.New(slog.NewTextHandler(io.Discard, nil)), metricsConfig, nil)
 			if got := exporter.metricScrapeDuration != nil; got != tt.want {
 				t.Fatalf("expected the duration vector to be created: %t, got %t", tt.want, got)
 			}
@@ -210,22 +212,24 @@ func newTestDurationMetric(scrapeInterval string) *config.Metric {
 	return metric
 }
 
-func newTestDurationExporter(t *testing.T, session *sql.DB, metric *config.Metric) (*Exporter, *Database) {
+func newTestDurationExporter(t *testing.T, session *sql.DB, metric *config.Metric) (*Exporter, *db.Database) {
 	t.Helper()
 
 	metricsToScrape := map[string]*config.Metric{metric.ID: metric}
-	database := &Database{
+	database := &db.Database{
 		Name:          "db1",
 		Session:       session,
 		DatabaseLabel: "database",
 	}
-	database.startupReady.Store(true)
-	database.initCache(metricsToScrape)
+	if err := database.WarmupConnectionPool(testLogger(), time.Hour); err != nil {
+		t.Fatalf("expected test database warmup to succeed, got %v", err)
+	}
 
 	exporter := &Exporter{
 		logger:               slog.New(slog.NewTextHandler(io.Discard, nil)),
 		MetricsConfiguration: &config.MetricsConfiguration{},
 		metricsToScrape:      metricsToScrape,
+		databases:            []*db.Database{database},
 		databaseDuration: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: exporterName,
@@ -245,11 +249,12 @@ func newTestDurationExporter(t *testing.T, session *sql.DB, metric *config.Metri
 			Help:      "test",
 		}, []string{"collector", "database"}),
 	}
+	exporter.initCache()
 	return exporter, database
 }
 
 // runScrapeDatabase performs a single database scrape and waits for every per-metric goroutine to finish.
-func runScrapeDatabase(t *testing.T, exporter *Exporter, database *Database) {
+func runScrapeDatabase(t *testing.T, exporter *Exporter, database *db.Database) {
 	t.Helper()
 
 	metricCh := make(chan prometheus.Metric, len(exporter.metricsToScrape)+1)
@@ -268,14 +273,14 @@ func runScrapeDatabase(t *testing.T, exporter *Exporter, database *Database) {
 
 // collectExporterMetrics fills in the exporter fields Collect needs, runs a full on-demand
 // collection, and returns the descriptor of every metric that was emitted.
-func collectExporterMetrics(t *testing.T, exporter *Exporter, database *Database) []string {
+func collectExporterMetrics(t *testing.T, exporter *Exporter, database *db.Database) []string {
 	t.Helper()
 
 	exporter.mu = &sync.Mutex{}
 	exporter.totalScrapes = prometheus.NewCounter(prometheus.CounterOpts{Name: "test_scrapes_total", Help: "test"})
 	exporter.duration = prometheus.NewGauge(prometheus.GaugeOpts{Name: "test_duration_seconds", Help: "test"})
 	exporter.error = prometheus.NewGauge(prometheus.GaugeOpts{Name: "test_error", Help: "test"})
-	exporter.databases = []*Database{database}
+	exporter.databases = []*db.Database{database}
 
 	var descs []string
 	ch := make(chan prometheus.Metric)

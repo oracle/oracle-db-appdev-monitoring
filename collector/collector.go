@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
+	"github.com/oracle/oracle-db-appdev-monitoring/db"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -43,15 +44,6 @@ type ScrapeResult struct {
 	ScrapeStart time.Time
 }
 
-func maskDsn(dsn string) string {
-	parts := strings.Split(dsn, "@")
-	if len(parts) > 1 {
-		maskedURL := "***@" + parts[1]
-		return maskedURL
-	}
-	return dsn
-}
-
 // newMetricScrapeDurationVec builds the per-metric scrape duration vector, or returns nil when the
 // feature is disabled. A nil vector disables the metric entirely: nothing is recorded, and nothing is
 // reported. The metric is opt-in because it adds one series per metric definition and database, which
@@ -69,26 +61,18 @@ func newMetricScrapeDurationVec(m *config.MetricsConfiguration) *prometheus.Gaug
 }
 
 // NewExporter creates a new Exporter instance
-func NewExporter(logger *slog.Logger, m *config.MetricsConfiguration) *Exporter {
-	var databases []*Database
-
+func NewExporter(logger *slog.Logger, m *config.MetricsConfiguration, databases []*db.Database) *Exporter {
 	var allConstLabels []string
 	// All the metrics of the same name need to have the same set of labels
 	// If a label is set for a particular database, it must be included also
 	// in the same metrics collected from other databases. It will just be
 	// set to a blank value.
-	for _, dbconfig := range m.Databases {
-		for label, _ := range dbconfig.Labels {
+	for _, database := range databases {
+		for label := range database.Config.Labels {
 			if !slices.Contains(allConstLabels, label) {
 				allConstLabels = append(allConstLabels, label)
 			}
 		}
-	}
-
-	for dbname, dbconfig := range m.Databases {
-		logger.Info("Registering database", "database", dbname)
-		database := NewDatabase(logger, m.DatabaseLabel(), dbname, dbconfig)
-		databases = append(databases, database)
 	}
 	e := &Exporter{
 		mu:                  &sync.Mutex{},
@@ -218,7 +202,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	ch <- e.error
 	e.scrapeErrors.Collect(ch)
 	for _, db := range e.databases {
-		ch <- db.UpMetric(e.constLabels())
+		ch <- e.databaseUpMetric(db)
 	}
 }
 
@@ -303,13 +287,13 @@ func (e *Exporter) scheduledScrape(tick *time.Time) {
 	metricCh <- e.error
 	e.scrapeErrors.Collect(metricCh)
 	for _, db := range e.databases {
-		metricCh <- db.UpMetric(e.constLabels())
+		metricCh <- e.databaseUpMetric(db)
 	}
 	close(metricCh)
 	wg.Wait()
 }
 
-func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- error, d *Database, tick *time.Time) {
+func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- error, d *db.Database, tick *time.Time) {
 	// collect total scrape time per database
 	dbScrapeStart := time.Now()
 	wg := &sync.WaitGroup{}
@@ -330,24 +314,24 @@ func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- er
 		return
 	}
 	// If ping fails, we will try again on the next iteration of metrics scraping
-	if err := d.ping(e.logger, e.MetricsConfiguration.ConnectionBackoff()); err != nil {
+	if err := d.Ping(e.logger, e.MetricsConfiguration.ConnectionBackoff()); err != nil {
 		e.logger.Error("Error pinging database", "error", err, "database", d.Name)
 		errChan <- err
 		return
 	}
-	e.logger.Debug("Successfully pinged Oracle AI Database: "+maskDsn(d.Config.URL), "database", d.Name)
+	e.logger.Debug("Successfully pinged Oracle AI Database: "+db.MaskDSN(d.Config.URL), "database", d.Name)
 
 	metricsToScrape := 0
 	for _, metric := range e.metricsToScrape {
 		metric := metric //https://golang.org/doc/faq#closures_and_goroutines
-		isScrapeMetric := isScrapeMetric(e.logger, tick, metric, d)
+		isScrapeMetric := e.isScrapeMetric(e.logger, tick, metric, d)
 		metricsToScrape++
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			// If the metric doesn't need to be scraped, send the cached values
 			if !isScrapeMetric {
-				d.MetricsCache.SendAll(ch, metric)
+				e.metricsCache(d).SendAll(ch, metric)
 				errChan <- nil
 				return
 			}
@@ -402,7 +386,7 @@ func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- er
 				e.scrapeErrors.WithLabelValues(metric.Context, d.Name).Inc()
 			} else {
 				e.observeMetricScrapeDuration(d, metric, scrapeResultSuccess, elapsed)
-				d.MetricsCache.SetLastScraped(metric, tick)
+				e.metricsCache(d).SetLastScraped(metric, tick)
 				e.logger.Debug("Successfully scraped metric",
 					"Context", metric.Context,
 					"MetricDesc", fmt.Sprint(metric.MetricsDesc),
@@ -454,7 +438,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
 // result is removed, so the reported duration always describes the most recent scrape attempt.
 // Metrics that were not scraped (for example, because of a custom scrape interval) keep the value
 // recorded by their last actual scrape.
-func (e *Exporter) observeMetricScrapeDuration(d *Database, m *config.Metric, result string, elapsed time.Duration) {
+func (e *Exporter) observeMetricScrapeDuration(d *db.Database, m *config.Metric, result string, elapsed time.Duration) {
 	// The vector is nil when metrics.perMetricScrapeDuration.enabled is false.
 	if e.metricScrapeDuration == nil {
 		return
@@ -473,7 +457,7 @@ func (e *Exporter) afterScrape(begun time.Time, totalErrors float64) {
 }
 
 // GetDBs is used by the log exporter to share the database connection
-func (e *Exporter) GetDBs() []*Database {
+func (e *Exporter) GetDBs() []*db.Database {
 	return e.databases
 }
 
@@ -529,15 +513,15 @@ func hashFile(h hash.Hash, fn string) error {
 }
 
 // ScrapeMetric is an interface method to call scrapeGenericValues using Metric struct values
-func (e *Exporter) ScrapeMetric(d *Database, ch chan<- prometheus.Metric, m *config.Metric) error {
+func (e *Exporter) ScrapeMetric(d *db.Database, ch chan<- prometheus.Metric, m *config.Metric) error {
 	e.logger.Debug("Calling function ScrapeGenericValues()")
 	return e.scrapeGenericValues(d, ch, m)
 }
 
 // generic method for retrieving metrics.
-func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric, m *config.Metric) error {
+func (e *Exporter) scrapeGenericValues(d *db.Database, ch chan<- prometheus.Metric, m *config.Metric) error {
 	metricsCount := 0
-	constLabels := d.constLabels(e.constLabels())
+	constLabels := databaseConstLabels(e.constLabels(), d)
 
 	if duplicatedLabels(constLabels, m.GetLabels()) {
 		e.logger.Warn("metric has duplicated labels, skipping", "metric", m.ID, "labels", m.GetLabels(), "database", d.Name)
@@ -598,16 +582,16 @@ func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric,
 					}
 					buckets[lelimit] = counter
 				}
-				d.MetricsCache.CacheAndSend(ch, m, prometheus.MustNewConstHistogram(desc, count, value, buckets, labelsValues...))
+				e.metricsCache(d).CacheAndSend(ch, m, prometheus.MustNewConstHistogram(desc, count, value, buckets, labelsValues...))
 			} else {
-				d.MetricsCache.CacheAndSend(ch, m, prometheus.MustNewConstMetric(desc, getMetricType(e.logger, metric, m.MetricsType), value, labelsValues...))
+				e.metricsCache(d).CacheAndSend(ch, m, prometheus.MustNewConstMetric(desc, getMetricType(e.logger, metric, m.MetricsType), value, labelsValues...))
 			}
 			metricsCount++
 		}
 		return nil
 	}
 	e.logger.Debug("Calling function GeneratePrometheusMetrics()")
-	d.MetricsCache.Reset(m)
+	e.metricsCache(d).Reset(m)
 	err := e.generatePrometheusMetrics(d, genericParser, m.Request, getQueryTimeout(e.logger, m, d))
 	e.logger.Debug("ScrapeGenericValues() - metricsCount: " + strconv.Itoa(metricsCount))
 	if err != nil {
@@ -623,7 +607,7 @@ func (e *Exporter) scrapeGenericValues(d *Database, ch chan<- prometheus.Metric,
 
 // inspired by https://kylewbanks.com/blog/query-result-to-map-in-golang
 // Parse SQL result and call parsing function to each row
-func (e *Exporter) generatePrometheusMetrics(d *Database, parse func(row map[string]string) error, query string, queryTimeout time.Duration) error {
+func (e *Exporter) generatePrometheusMetrics(d *db.Database, parse func(row map[string]string) error, query string, queryTimeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), queryTimeout)
 	defer cancel()
 	rows, unlock, err := d.QueryContext(ctx, query)
@@ -673,9 +657,14 @@ func (e *Exporter) generatePrometheusMetrics(d *Database, parse func(row map[str
 }
 
 func (e *Exporter) initCache() {
+	e.metricsCaches = make(map[*db.Database]*MetricsCache, len(e.databases))
 	for _, d := range e.databases {
-		d.initCache(e.metricsToScrape)
+		e.metricsCaches[d] = NewMetricsCache(e.metricsToScrape)
 	}
+}
+
+func (e *Exporter) metricsCache(d *db.Database) *MetricsCache {
+	return e.metricsCaches[d]
 }
 
 func duplicatedLabels(constLabels map[string]string, labels []string) bool {

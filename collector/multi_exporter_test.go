@@ -114,7 +114,7 @@ func newTestExporterWithCustomMetrics(customMetricsPath string) *Exporter {
 		Metrics: config.MetricsFilesConfig{
 			Custom: []string{customMetricsPath},
 		},
-	})
+	}, nil)
 }
 
 func writeCustomMetricsFixture(t *testing.T, contents string) string {

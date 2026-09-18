@@ -10,12 +10,13 @@ import (
 	"time"
 
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
+	"github.com/oracle/oracle-db-appdev-monitoring/db"
 )
 
 // isScrapeMetric returns true if a metric should be scraped. Metrics may not be scraped if they have a custom scrape interval,
 // and the time since the last scrape is less than the custom scrape interval.
 // If there is no tick time or last known tick, the metric is always scraped.
-func isScrapeMetric(logger *slog.Logger, tick *time.Time, metric *config.Metric, d *Database) bool {
+func (e *Exporter) isScrapeMetric(logger *slog.Logger, tick *time.Time, metric *config.Metric, d *db.Database) bool {
 	// If the metric isn't enabled for the database, don't scrape it.
 	if !metric.IsEnabledForDatabase(d.Name) {
 		return false
@@ -30,7 +31,7 @@ func isScrapeMetric(logger *slog.Logger, tick *time.Time, metric *config.Metric,
 	if !ok {
 		return true
 	}
-	lastScraped := d.MetricsCache.GetLastScraped(metric)
+	lastScraped := e.metricsCache(d).GetLastScraped(metric)
 	shouldScrape := lastScraped == nil ||
 		// If the metric's scrape interval is less than the time elapsed since the last scrape,
 		// we should scrape the metric.
@@ -50,7 +51,7 @@ func getScrapeInterval(logger *slog.Logger, context, scrapeInterval string) (tim
 	return 0, false
 }
 
-func getQueryTimeout(logger *slog.Logger, metric *config.Metric, d *Database) time.Duration {
+func getQueryTimeout(logger *slog.Logger, metric *config.Metric, d *db.Database) time.Duration {
 	if len(metric.QueryTimeout) > 0 {
 		qt, err := time.ParseDuration(metric.QueryTimeout)
 		if err != nil {

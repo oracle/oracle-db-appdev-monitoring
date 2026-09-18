@@ -14,7 +14,7 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/collector"
+	"github.com/oracle/oracle-db-appdev-monitoring/db"
 )
 
 func TestNullStringValue(t *testing.T) {
@@ -221,7 +221,7 @@ func TestRetryTrackerRecordSuccessResetsState(t *testing.T) {
 func TestUpdateLogSkipsWhenStartupNotReady(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	logPath := filepath.Join(t.TempDir(), "alert.log")
-	db := &collector.Database{Name: "db1"}
+	db := &db.Database{Name: "db1"}
 
 	UpdateLog(logPath, false, false, logger, db)
 

@@ -1,24 +1,25 @@
-// Copyright (c) 2025, Oracle and/or its affiliates.
+// Copyright (c) 2025, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
 //go:build goora
 
-package collector
+package db
 
 import (
 	"database/sql"
 	"errors"
 	"fmt"
-	_ "github.com/sijms/go-ora/v2"
-	"github.com/sijms/go-ora/v2/network"
 	"log/slog"
 	"net/url"
+
+	_ "github.com/sijms/go-ora/v2"
+	"github.com/sijms/go-ora/v2/network"
 
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
 )
 
 func connect(logger *slog.Logger, dbname string, dbconfig config.DatabaseConfig) (*sql.DB, error) {
-	logger.Debug("Launching connection to "+maskDsn(dbconfig.URL), "database", dbname)
+	logger.Debug("Launching connection to "+MaskDSN(dbconfig.URL), "database", dbname)
 
 	password, err := dbconfig.GetPassword()
 	if err != nil {

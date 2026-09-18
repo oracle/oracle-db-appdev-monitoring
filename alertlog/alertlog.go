@@ -16,17 +16,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/collector"
+	"github.com/oracle/oracle-db-appdev-monitoring/db"
 )
 
 const (
 	alertLogReadChunkSize = 4096
 	maxAlertLogLineBytes  = 1 << 20
-	unknownLevel = "UNKNOWN"
-	warningLevel = "WARNING"
-	traceLevel   = "TRACE"
-	infoLevel = "INFO"
-	errorLevel = "ERROR"
+	unknownLevel          = "UNKNOWN"
+	warningLevel          = "WARNING"
+	traceLevel            = "TRACE"
+	infoLevel             = "INFO"
+	errorLevel            = "ERROR"
 )
 
 type LogRecord struct {
@@ -42,8 +42,6 @@ var defaultLastLogRecord = LogRecord{
 	Timestamp: "1900-01-01T01:01:01.001Z",
 }
 
-
-
 var levelMap = map[int64]string{
 	1: unknownLevel,
 	2: errorLevel,
@@ -56,7 +54,6 @@ var levelMap = map[int64]string{
 const alertLogQuery = `select originating_timestamp, module_id, execution_context_id, message_text, message_type
 		from v$diag_alert_ext
 		where originating_timestamp > to_utc_timestamp_tz(:1)`
-
 
 func toLogLevel(messageLevel int64) string {
 	if v, ok := levelMap[messageLevel]; ok {
@@ -188,7 +185,7 @@ func buildAlertLogQuery(lastTimestamp string) (string, []interface{}) {
 }
 
 // UpdateLog appends newly queried alert log records for a database to the configured log destination.
-func UpdateLog(logDestination string, perDatabaseFiles bool, logLevelEnabled bool, logger *slog.Logger, d *collector.Database) {
+func UpdateLog(logDestination string, perDatabaseFiles bool, logLevelEnabled bool, logger *slog.Logger, d *db.Database) {
 	if !d.StartupReady() {
 		return
 	}
@@ -242,10 +239,10 @@ func UpdateLog(logDestination string, perDatabaseFiles bool, logLevelEnabled boo
 
 	for rows.Next() {
 		var (
-			timestamp string
-			moduleID  sql.NullString
-			ecid      sql.NullString
-			message   sql.NullString
+			timestamp    string
+			moduleID     sql.NullString
+			ecid         sql.NullString
+			message      sql.NullString
 			messageLevel sql.NullInt64
 		)
 		if err := rows.Scan(&timestamp, &moduleID, &ecid, &message, &messageLevel); err != nil {

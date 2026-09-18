@@ -1,7 +1,7 @@
 // Copyright (c) 2025, 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
-package collector
+package db
 
 import (
 	"context"
@@ -11,10 +11,10 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
@@ -38,52 +38,38 @@ func isTemporaryConnectionErrorCode(code int) bool {
 
 var errDatabaseSessionNotInitialized = errors.New("database session is not initialized")
 
-func (d *Database) UpMetric(exporterLabels map[string]string) prometheus.Metric {
-	desc := prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "up"),
-		"Whether the Oracle AI Database server is up.",
-		nil,
-		d.constLabels(exporterLabels),
-	)
-	return prometheus.MustNewConstMetric(desc,
-		prometheus.GaugeValue,
-		d.getUp(),
-	)
+// Database owns an Oracle SQL session and its connection lifecycle.
+type Database struct {
+	Name          string
+	Session       *sql.DB
+	Config        config.DatabaseConfig
+	DatabaseLabel string
+
+	connectErr error
+	up         float64
+
+	invalidUntil       *time.Time
+	startupReady       atomic.Bool
+	reconnectMU        sync.RWMutex
+	reconnectAttemptMU sync.Mutex
 }
 
-func (d *Database) constLabels(labels map[string]string) map[string]string {
-	labels[d.DatabaseLabel] = d.Name
-
-	// configured per-database labels added to constLabels
-	for label, value := range d.Config.Labels {
-		labels[label] = value
-	}
-	return labels
-}
-
-func NewDatabase(logger *slog.Logger, dblabel, dbname string, dbconfig config.DatabaseConfig) *Database {
-	db, err := connect(logger, dbname, dbconfig)
+func NewDatabase(logger *slog.Logger, databaseLabel, name string, databaseConfig config.DatabaseConfig) *Database {
+	db, err := connect(logger, name, databaseConfig)
 	if err != nil {
-		logger.Error("Failed to initialize database session", "error", err, "database", dbname)
+		logger.Error("Failed to initialize database session", "error", err, "database", name)
 	}
 	return &Database{
-		Name:          dbname,
-		Up:            0,
+		Name:          name,
 		Session:       db,
-		Config:        dbconfig,
+		Config:        databaseConfig,
 		connectErr:    err,
-		DatabaseLabel: dblabel,
-		reconnectMU:   sync.RWMutex{},
+		DatabaseLabel: databaseLabel,
 	}
 }
 
 func (d *Database) StartupReady() bool {
 	return d.startupReady.Load()
-}
-
-// initCache resets the metrics cached. Used on startup and when metrics are reloaded.
-func (d *Database) initCache(metrics map[string]*config.Metric) {
-	d.MetricsCache = NewMetricsCache(metrics)
 }
 
 // WarmupConnectionPool serially acquires connections to "warm up" the connection pool.
@@ -172,7 +158,7 @@ func (d *Database) reconnect(logger *slog.Logger, backoff time.Duration) error {
 	if err != nil {
 		d.reconnectMU.Lock()
 		d.connectErr = err
-		d.Up = 0
+		d.up = 0
 		d.invalidateLocked(backoff)
 		d.reconnectMU.Unlock()
 		return err
@@ -183,7 +169,7 @@ func (d *Database) reconnect(logger *slog.Logger, backoff time.Duration) error {
 		}
 		d.reconnectMU.Lock()
 		d.connectErr = err
-		d.Up = 0
+		d.up = 0
 		d.invalidateLocked(backoff)
 		d.reconnectMU.Unlock()
 		return err
@@ -193,7 +179,7 @@ func (d *Database) reconnect(logger *slog.Logger, backoff time.Duration) error {
 	oldSession := d.Session
 	d.Session = session
 	d.connectErr = nil
-	d.Up = 1
+	d.up = 1
 	d.clearInvalidLocked()
 	if oldSession != nil && oldSession != session {
 		_ = oldSession.Close()
@@ -202,9 +188,9 @@ func (d *Database) reconnect(logger *slog.Logger, backoff time.Duration) error {
 	return nil
 }
 
-// ping the database. If the database is disconnected, try to reconnect.
+// Ping the database. If the database is disconnected, try to reconnect.
 // If the database type is unknown, try to reload it.
-func (d *Database) ping(logger *slog.Logger, backoff time.Duration) error {
+func (d *Database) Ping(logger *slog.Logger, backoff time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -267,13 +253,13 @@ func (d *Database) clearInvalidLocked() {
 func (d *Database) getUp() float64 {
 	d.reconnectMU.RLock()
 	defer d.reconnectMU.RUnlock()
-	return d.Up
+	return d.up
 }
 
 func (d *Database) setUp(up float64) {
 	d.reconnectMU.Lock()
 	defer d.reconnectMU.Unlock()
-	d.Up = up
+	d.up = up
 }
 
 func (d *Database) Query(query string, args ...interface{}) (*sql.Rows, func(), error) {
@@ -323,6 +309,11 @@ func (d *Database) PingContext(ctx context.Context) error {
 	return d.Session.PingContext(ctx)
 }
 
+// Up reports whether the most recent connection check succeeded.
+func (d *Database) Up() float64 {
+	return d.getUp()
+}
+
 func isClosedDatabaseError(err error) bool {
 	return errors.Is(err, sql.ErrConnDone) || strings.Contains(err.Error(), "sql: database is closed")
 }
@@ -331,7 +322,7 @@ func initdb(logger *slog.Logger, dbname string, dbconfig config.DatabaseConfig, 
 	configureSQLConnectionPool(logger, dbname, dbconfig, db)
 	logger.Debug(fmt.Sprintf("set connection max lifetime to %s", dbconfig.GetConnMaxLifetime()), "database", dbname)
 	db.SetConnMaxLifetime(dbconfig.GetConnMaxLifetime())
-	logger.Debug(fmt.Sprintf("Successfully configured connection to %s", maskDsn(dbconfig.URL)), "database", dbname)
+	logger.Debug(fmt.Sprintf("Successfully configured connection to %s", MaskDSN(dbconfig.URL)), "database", dbname)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
@@ -355,4 +346,13 @@ func configureSQLConnectionPool(logger *slog.Logger, dbname string, dbconfig con
 	db.SetMaxIdleConns(maxIdleConns)
 	logger.Debug(fmt.Sprintf("set max open connections to %d", maxOpenConns), "database", dbname)
 	db.SetMaxOpenConns(maxOpenConns)
+}
+
+// MaskDSN removes credentials from a connection string before it is logged.
+func MaskDSN(dsn string) string {
+	parts := strings.Split(dsn, "@")
+	if len(parts) > 1 {
+		return "***@" + parts[1]
+	}
+	return dsn
 }
