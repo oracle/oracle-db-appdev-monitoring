@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/config"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/config"
 )
 
 // Run against a disposable database with ORACLEDB_TEST_URL, ORACLEDB_TEST_USER,

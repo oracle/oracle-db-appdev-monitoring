@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/config"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/config"
 )
 
 func TestOracleDBConnectorConfiguration(t *testing.T) {

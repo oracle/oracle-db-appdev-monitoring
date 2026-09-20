@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/config"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/config"
 )
 
 type credentialFailureConnector struct{ err error }

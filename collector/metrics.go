@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/config"
-	"github.com/oracle/oracle-db-appdev-monitoring/db"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/config"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/db"
 )
 
 // scrapeIntervalTolerance absorbs clock jitter between scrapes. Scheduled ticks are aligned to

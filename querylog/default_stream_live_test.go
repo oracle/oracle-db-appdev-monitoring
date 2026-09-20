@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/config"
-	"github.com/oracle/oracle-db-appdev-monitoring/db"
-	"github.com/oracle/oracle-db-appdev-monitoring/querylog"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/config"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/db"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/querylog"
 )
 
 // These opt-in tests only read diagnostic data. Session NLS changes are confined

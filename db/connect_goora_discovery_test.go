@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/config"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/config"
 	"github.com/sijms/go-ora/v3/configurations"
 )
 
