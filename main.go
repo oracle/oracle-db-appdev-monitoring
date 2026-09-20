@@ -19,7 +19,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/restart"
 	"github.com/prometheus/common/promslog"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -31,11 +30,12 @@ import (
 	// Required for debugging
 	// _ "net/http/pprof"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/alertlog"
-	"github.com/oracle/oracle-db-appdev-monitoring/collector"
-	"github.com/oracle/oracle-db-appdev-monitoring/config"
-	"github.com/oracle/oracle-db-appdev-monitoring/db"
-	"github.com/oracle/oracle-db-appdev-monitoring/otlp"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/alertlog"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/collector"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/config"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/db"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/otlp"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/restart"
 )
 
 var (

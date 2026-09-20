@@ -14,7 +14,7 @@ import (
 
 	"github.com/godror/godror"
 	"github.com/godror/godror/dsn"
-	"github.com/oracle/oracle-db-appdev-monitoring/config"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/config"
 )
 
 func connect(logger *slog.Logger, dbname string, dbconfig config.DatabaseConfig) (*sql.DB, error) {

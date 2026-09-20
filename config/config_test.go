@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/oci"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/oci"
 )
 
 func TestConnectConfigGetConnMaxLifetime(t *testing.T) {
