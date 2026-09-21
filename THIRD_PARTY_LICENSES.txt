@@ -91,6 +91,16 @@ Copyright 2017 Microsoft Corporation. All rights reserved.
 pkg:golang/github.com/azure/azure-sdk-for-go/sdk/azidentity
 pkg:golang/github.com/azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets
 pkg:golang/github.com/azure/azure-sdk-for-go/sdk/security/keyvault/internal
+
+== License Type
+SPDX:MIT
+
+== Copyright
+Copyright (c) Microsoft Corporation.
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+--------------------------------- (separator) ----------------------------------
+== Dependency
 pkg:golang/github.com/azuread/microsoft-authentication-library-for-go
 
 == License Type
@@ -134,6 +144,7 @@ Copyright (C) 2013 Blake Mizerany
 --------------------------------- (separator) ----------------------------------
 == Dependency
 pkg:golang/github.com/cenkalti/backoff/v4
+pkg:golang/github.com/cenkalti/backoff/v5
 
 == License Type
 SPDX:MIT
@@ -161,8 +172,21 @@ SPDX:Apache-2.0
 == Copyright
 Copyright (C) 2004, 2006 The Linux Foundation and its contributors.
 Copyright 2014 Docker, Inc.
+Copyright 2015 Red Hat, Inc.
 Copyright 2022 CoreOS, Inc.
 Copyright 2026 RedHat, Inc.
+
+--------------------------------- (separator) ----------------------------------
+== Dependency
+pkg:golang/github.com/fsnotify/fsnotify
+
+== License Type
+SPDX:BSD-3-Clause
+
+== Copyright
+Copyright (c) 2013, Patrick Mezard All rights reserved.
+Copyright © 2012 The Go Authors. All rights reserved.
+Copyright © fsnotify Authors. All rights reserved.
 
 --------------------------------- (separator) ----------------------------------
 == Dependency
@@ -189,11 +213,35 @@ Copyright 2010 The Go Authors. All rights reserved.
 
 --------------------------------- (separator) ----------------------------------
 == Dependency
+pkg:golang/github.com/go-logr/logr
+
+== License Type
+SPDX:Apache-2.0
+
+== Copyright
+Copyright 2020 The Kubernetes Authors.
+Copyright 2023 The logr Authors.
+
+--------------------------------- (separator) ----------------------------------
+== Dependency
+pkg:golang/github.com/go-logr/stdr
+
+== License Type
+SPDX:Apache-2.0
+
+== Copyright
+Copyright 2020 The Kubernetes Authors.
+Copyright 2021 The logr Authors.
+
+--------------------------------- (separator) ----------------------------------
+== Dependency
 pkg:golang/github.com/godror/godror
 
 == License Type
 SPDX:Apache-2.0
 SPDX:UPL-1.0
+SPDX:MIT
+SPDX:BSD-3-Clause
 
 godror
 ========
@@ -406,15 +454,54 @@ Copyright 2023 Google Inc.  All rights reserved.
 
 --------------------------------- (separator) ----------------------------------
 == Dependency
+pkg:golang/github.com/grpc-ecosystem/grpc-gateway/v2
+
+== License Type
+SPDX:BSD-3-Clause
+
+== Copyright
+Copyright (c) 2015, Gengo, Inc. All rights reserved.
+Copyright 2010, 2019 The Go Authors.  All rights reserved.
+
+--------------------------------- (separator) ----------------------------------
+== Dependency
 pkg:golang/github.com/hashicorp/errwrap
 pkg:golang/github.com/hashicorp/go-cleanhttp
 pkg:golang/github.com/hashicorp/go-multierror
-pkg:golang/github.com/hashicorp/go-retryablehttp
 pkg:golang/github.com/hashicorp/go-rootcerts
-pkg:golang/github.com/hashicorp/go-secure-stdlib/parseutil
 pkg:golang/github.com/hashicorp/go-secure-stdlib/strutil
-pkg:golang/github.com/hashicorp/go-sockaddr
 pkg:golang/github.com/hashicorp/hcl
+
+== License Type
+SPDX:MPL-2.0
+
+
+== Copyright
+(none found)
+
+--------------------------------- (separator) ----------------------------------
+== Dependency
+pkg:golang/github.com/hashicorp/go-retryablehttp
+
+== License Type
+SPDX:MPL-2.0
+
+== Copyright
+Copyright (c) 2015 HashiCorp, Inc.
+
+--------------------------------- (separator) ----------------------------------
+== Dependency
+pkg:golang/github.com/hashicorp/go-secure-stdlib/parseutil
+
+== License Type
+SPDX:MPL-2.0
+
+== Copyright
+Copyright (c) 2020 HashiCorp, Inc.
+
+--------------------------------- (separator) ----------------------------------
+== Dependency
+pkg:golang/github.com/hashicorp/go-sockaddr
 
 == License Type
 SPDX:MPL-2.0
@@ -422,14 +509,12 @@ SPDX:MPL-2.0
 == Copyright
 Copyright (c) 2016 HashiCorp, Inc.
 
-
 --------------------------------- (separator) ----------------------------------
 == Dependency
 pkg:golang/github.com/hashicorp/vault/api
 
 == License Type
 SPDX:MPL-2.0
-Copyright IBM Corp. 2016, 2025
 
 Other/unknown license
 License text copyright (c) 2020 MariaDB Corporation Ab, All Rights Reserved.
@@ -573,15 +658,6 @@ Copyright 2016 The Go Authors. All rights reserved.
 --------------------------------- (separator) ----------------------------------
 == Dependency
 pkg:golang/github.com/mitchellh/go-homedir
-
-== License Type
-SPDX:MIT
-
-== Copyright
-Copyright (c) 2013 Mitchell Hashimoto
-
---------------------------------- (separator) ----------------------------------
-== Dependency
 pkg:golang/github.com/mitchellh/mapstructure
 
 == License Type
@@ -722,7 +798,6 @@ Copyright 2009 The Go Authors. All rights reserved.
 
 --------------------------------- (separator) ----------------------------------
 == Dependency
-pkg:golang/github.com/sony/gobreaker
 pkg:golang/github.com/sony/gobreaker/v2
 
 == License Type
@@ -740,6 +815,54 @@ SPDX:MIT
 
 == Copyright
 Copyright (c) 2014 youmark
+
+--------------------------------- (separator) ----------------------------------
+== Dependency
+pkg:golang/go.opentelemetry.io/auto/sdk
+
+== License Type
+SPDX:Apache-2.0
+
+== Copyright
+Copyright The OpenTelemetry Authors
+
+--------------------------------- (separator) ----------------------------------
+== Dependency
+pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc
+pkg:golang/go.opentelemetry.io/otel/metric
+pkg:golang/go.opentelemetry.io/otel/sdk/metric
+pkg:golang/go.opentelemetry.io/otel/trace
+
+== License Type
+SPDX:Apache-2.0
+
+== Copyright
+Copyright 2009 The Go Authors.
+Copyright The OpenTelemetry Authors
+
+--------------------------------- (separator) ----------------------------------
+== Dependency
+pkg:golang/go.opentelemetry.io/otel
+pkg:golang/go.opentelemetry.io/otel/sdk
+
+== License Type
+SPDX:Apache-2.0
+
+== Copyright
+Copyright 2009 The Go Authors.
+Copyright 2009 The Go Authors. All rights reserved.
+Copyright The OpenTelemetry Authors
+
+--------------------------------- (separator) ----------------------------------
+== Dependency
+pkg:golang/go.opentelemetry.io/proto/otlp
+
+== License Type
+SPDX:Apache-2.0
+
+== Copyright
+Copyright 2016 Google Inc. All Rights Reserved.
+Copyright 2023, OpenTelemetry Authors
 
 --------------------------------- (separator) ----------------------------------
 == Dependency
@@ -847,6 +970,28 @@ Copyright 2022 The Go Authors. All rights reserved.
 
 --------------------------------- (separator) ----------------------------------
 == Dependency
+pkg:golang/google.golang.org/genproto/googleapis/api
+pkg:golang/google.golang.org/genproto/googleapis/rpc
+
+== License Type
+SPDX:Apache-2.0
+
+== Copyright
+Copyright 2026 Google LLC
+
+--------------------------------- (separator) ----------------------------------
+== Dependency
+pkg:golang/google.golang.org/grpc
+
+== License Type
+SPDX:Apache-2.0
+
+== Copyright
+Copyright 2018 The gRPC Authors All rights reserved.
+Copyright 2026 gRPC authors.
+
+--------------------------------- (separator) ----------------------------------
+== Dependency
 pkg:golang/google.golang.org/protobuf
 
 == License Type
@@ -861,12 +1006,15 @@ Copyright 2025 The Go Authors. All rights reserved.
 pkg:maven/ch.qos.logback/logback-classic
 
 == License Type
-Other/unknown license
+SPDX:EPL-2.0
+SPDX:GPL-2.1-only
+
+NOTE: We elect to use this software under the terms of the EPL-2.0 license.
+
 Logback LICENSE
 ---------------
 
 Logback: the reliable, generic, fast and flexible logging framework.
-Copyright (C) 1999-2024, QOS.ch. All rights reserved.
 
 This program and the accompanying materials are dual-licensed under
 either the terms of the Eclipse Public License v2.0 as published by
@@ -886,13 +1034,16 @@ Copyright (c) 1998-2002 W3C (MIT, INRIA, Keio), All Rights Reserved.
 pkg:maven/ch.qos.logback/logback-core
 
 == License Type
-Other/unknown license
+SPDX:EPL-2.0
+SPDX:GPL-2.1-only
+
+NOTE: We elect to use this software under the terms of the EPL-2.0 license.
+
 Logback LICENSE
 ---------------
 
-
 Logback: the reliable, generic, fast and flexible logging framework.
-Copyright (C) 1999-2024, QOS.ch. All rights reserved.
+Copyright (C) 1999-2026, QOS.ch. All rights reserved.
 
 This program and the accompanying materials are dual-licensed under
 either the terms of the Eclipse Public License v2.0 as published by
@@ -917,6 +1068,39 @@ SPDX:Apache-2.0
 == Copyright
 Copyright 2007-, Tatu Saloranta (tatu.saloranta@iki.fi)
 Copyright 2007-present the original author or authors.
+
+--------------------------------- (separator) ----------------------------------
+== Dependency
+pkg:maven/com.oracle.database.ha/ons
+pkg:maven/com.oracle.database.jdbc/ojdbc11
+pkg:maven/com.oracle.database.jdbc/ucp
+pkg:maven/com.oracle.database.messaging/aqapi-jakarta
+
+== License Type
+Oracle Free Use Terms and Conditions
+
+== Copyright
+Copyright Oracle Corporation and/or its affiliates.
+
+--------------------------------- (separator) ----------------------------------
+== Dependency
+pkg:maven/com.oracle.database.spring/oracle-spring-boot-starter-aqjms
+
+== License Type
+SPDX:UPL-1.0
+
+== Copyright
+Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+
+--------------------------------- (separator) ----------------------------------
+== Dependency
+pkg:maven/com.oracle.database.spring/oracle-spring-boot-starter-ucp
+
+== License Type
+SPDX:UPL-1.0
+
+== Copyright
+Copyright (c) 2024, Oracle and/or its affiliates.
 
 --------------------------------- (separator) ----------------------------------
 == Dependency
@@ -976,8 +1160,7 @@ pkg:maven/jakarta.annotation/jakarta.annotation-api
 
 == License Type
 SPDX:EPL-2.0
-SPDX:GPL-2.0-only WITH Classpath-exception-2.0
-
+SPDX:GPL-2.0-only WITH Classpath-Exception-1.0
 
 == Copyright
 Copyright (C) 1989, 1991 Free Software Foundation, Inc.
@@ -989,7 +1172,8 @@ Copyright © 2019, 2024 Eclipse Foundation. All rights reserved.
 pkg:maven/jakarta.jms/jakarta.jms-api
 
 == License Type
-(none found)
+SPDX:EPL-2.0
+SPDX:GPL-2.0-only WITH Classpath-Exception-1.0
 
 == Copyright
 Copyright (C) 1989, 1991 Free Software Foundation, Inc.
@@ -1003,7 +1187,7 @@ pkg:maven/jakarta.management.j2ee/jakarta.management.j2ee-api
 
 == License Type
 SPDX:EPL-2.0
-SPDX:GPL-2.0-only WITH Classpath-exception-2.0
+SPDX:GPL-2.0-only WITH Classpath-Exception-1.0
 
 == Copyright
 Copyright (C) 1989, 1991 Free Software Foundation, Inc.
@@ -1016,8 +1200,7 @@ pkg:maven/jakarta.transaction/jakarta.transaction-api
 
 == License Type
 SPDX:EPL-2.0
-SPDX:GPL-2.0-only WITH Classpath-exception-2.0
-
+SPDX:GPL-2.0-only WITH Classpath-Exception-1.0
 
 == Copyright
 Copyright (C) 1989, 1991 Free Software Foundation, Inc.
@@ -1044,7 +1227,7 @@ Copyright 2017 Remko Popma
 pkg:maven/org.apache.tomcat.embed/tomcat-embed-core
 
 == License Type
-(none found)
+SPDX:Apache-2.0
 
 == Copyright
 (C) Copyright International Business Machines Corporation 2002
@@ -1057,7 +1240,7 @@ Copyright 2003-2009 Sun Microsystems, Inc. All rights reserved.
 pkg:maven/org.apache.tomcat.embed/tomcat-embed-el
 
 == License Type
-(none found)
+SPDX:Apache-2.0
 
 == Copyright
 Copyright 1999-2026 The Apache Software Foundation
@@ -1067,7 +1250,7 @@ Copyright 1999-2026 The Apache Software Foundation
 pkg:maven/org.apache.tomcat.embed/tomcat-embed-websocket
 
 == License Type
-(none found)
+SPDX:Apache-2.0
 
 == Copyright
 Copyright 1999-2026 The Apache Software Foundation
@@ -1093,26 +1276,8 @@ SPDX:MIT
 SPDX:BSD-3-Clause
 
 == Copyright
-Copyright (C) 2009- The Project Lombok Authors.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the &quot;Software&quot;), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-
+Copyright (C) 2009-@YEAR@ The Project Lombok Authors.
+Copyright (C) 2009-@YEAR@ The Project Lombok Authors.
 Copyright (C) 2026 The Project Lombok Authors.
 Copyright (c) 2000-2011 INRIA, France Telecom All rights reserved.
 Copyright (c) 2003, 2017, Oracle and/or its affiliates. All rights reserved.
@@ -1277,6 +1442,8 @@ pkg:maven/tools.jackson.core/jackson-databind
 SPDX:Apache-2.0
 
 == Copyright
+(c) 1-argument "fromString()" AND takes {@code String} as the argument
+(c) per-property override (from annotation on specific property or
 Copyright 2007-, Tatu Saloranta (tatu.saloranta@iki.fi)
 Copyright 2011 Google Inc. All Rights Reserved.
 Copyright 2013 FasterXML.com
@@ -1885,8 +2052,8 @@ Exhibit B - “Incompatible With Secondary Licenses” Notice
       With Secondary Licenses”, as defined by
       the Mozilla Public License, v. 2.0.
 
-
 == SPDX:EPL-2.0
+
 # Eclipse Public License - v 2.0
 
         THE ACCOMPANYING PROGRAM IS PROVIDED UNDER THE TERMS OF THIS ECLIPSE
@@ -2165,8 +2332,9 @@ Exhibit B - “Incompatible With Secondary Licenses” Notice
 
       You may add additional accurate notices of copyright ownership.
 
+---
 
-== SPDX:GPL-2.0-only WITH Classpath-exception-2.0
+== SPDX:GPL-2.0-only WITH Classpath-Exception-1.0
 
 ##    The GNU General Public License (GPL) Version 2, June 1991
 
@@ -2527,5 +2695,4 @@ Exhibit B - “Incompatible With Secondary Licenses” Notice
     from your version.
 
 
-=== Report produced by yaah version 0.3.0-SNAPSHOT commit 730b481-dirty
-=== all dependencies were scanned for vulnerabilities at 2026-08-10T17:06:31.105294255Z using trivy version 0.72.0 and vulnerability database version 2 updated at 2026-08-10 12:59:55.699818665 +0000 UTC
+=== Report produced by yaah version 0.3.0-SNAPSHOT commit 27b876b-dirty
