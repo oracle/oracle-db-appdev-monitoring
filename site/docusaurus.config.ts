@@ -50,6 +50,21 @@ const config: Config = {
         },
         docs: {
           sidebarPath: './sidebars.ts',
+          versions: {
+            // The current docs are work in progress and should not be indexed.
+            current: {noIndex: true},
+            // Set noIndex: false only on the latest stable release.
+            '2.5.0': {noIndex: false},
+            '2.4.2': {noIndex: true},
+            '2.4.1': {noIndex: true},
+            '2.4.0': {noIndex: true},
+            '2.3.1': {noIndex: true},
+            '2.3.0': {noIndex: true},
+            '2.2.2': {noIndex: true},
+            '2.2.1': {noIndex: true},
+            '2.2.0': {noIndex: true},
+            '2.1.0': {noIndex: true},
+          },
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
