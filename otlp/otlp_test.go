@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/config"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/config"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"

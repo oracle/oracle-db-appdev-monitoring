@@ -3,7 +3,7 @@
 
 package collector
 
-import "github.com/oracle/oracle-db-appdev-monitoring/config"
+import "github.com/oracle/oracle-db-appdev-monitoring/v2/config"
 
 func (e *Exporter) reloadMetrics() bool {
 	metricsToScrape, err := config.LoadMetrics(e.logger, e.MetricsConfiguration)

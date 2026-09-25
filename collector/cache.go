@@ -6,7 +6,7 @@ package collector
 import (
 	"time"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/config"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/config"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

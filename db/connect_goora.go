@@ -15,7 +15,7 @@ import (
 	_ "github.com/sijms/go-ora/v2"
 	"github.com/sijms/go-ora/v2/network"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/config"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/config"
 )
 
 func connect(logger *slog.Logger, dbname string, dbconfig config.DatabaseConfig) (*sql.DB, error) {
