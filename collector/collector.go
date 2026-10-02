@@ -612,15 +612,14 @@ func (e *Exporter) generatePrometheusMetrics(d *db.Database, parse func(row map[
 	defer cancel()
 	rows, unlock, err := d.QueryContext(ctx, query)
 
-	if ctx.Err() == context.DeadlineExceeded {
-		return errors.New("Oracle query timed out")
-	}
-
 	if err != nil {
 		return err
 	}
 	defer unlock()
 	defer rows.Close()
+	if ctx.Err() == context.DeadlineExceeded {
+		return fmt.Errorf("Oracle query timed out: %w", ctx.Err())
+	}
 
 	cols, err := rows.Columns()
 	if err != nil {

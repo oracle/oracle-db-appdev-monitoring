@@ -4,6 +4,8 @@
 package collector
 
 import (
+	"context"
+	"database/sql"
 	"database/sql/driver"
 	"errors"
 	"io"
@@ -131,5 +133,42 @@ func TestGeneratePrometheusMetricsReturnsRowsErr(t *testing.T) {
 	}
 	if parseCalls != 1 {
 		t.Fatalf("expected parse to be called once before iteration error, got %d", parseCalls)
+	}
+}
+
+// deadlineConnector models a driver returning rows as the query deadline expires.
+type deadlineConnector struct{}
+
+func (deadlineConnector) Connect(context.Context) (driver.Conn, error) {
+	return deadlineConn{}, nil
+}
+
+func (deadlineConnector) Driver() driver.Driver { return testQueryDriver{} }
+
+type deadlineConn struct{ testQueryConn }
+
+func (deadlineConn) QueryContext(ctx context.Context, _ string, _ []driver.NamedValue) (driver.Rows, error) {
+	<-ctx.Done()
+	return &testQueryRows{}, nil
+}
+
+func TestQueryDeadlineReleasesLifecycleLock(t *testing.T) {
+	pool := sql.OpenDB(deadlineConnector{})
+	defer pool.Close()
+	database := &db.Database{Session: pool}
+	err := (&Exporter{}).generatePrometheusMetrics(database, func(map[string]string) error { return nil }, "select 1", time.Millisecond)
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("expected query deadline, got %v", err)
+	}
+	done := make(chan struct{})
+	go func() {
+		// Ping updates lifecycle state under the write lock, so it must finish.
+		_ = database.Ping(testLogger(), time.Minute)
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("query deadline leaked lifecycle lock")
 	}
 }
