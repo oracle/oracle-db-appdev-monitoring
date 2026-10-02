@@ -17,7 +17,7 @@ func NewDatabases(logger *slog.Logger, m *config.MetricsConfiguration) []*Databa
 	databaseLabel := m.DatabaseLabel()
 	for name, databaseConfig := range m.Databases {
 		logger.Info("Registering database", "database", name)
-		databases = append(databases, NewDatabase(logger, databaseLabel, name, databaseConfig))
+		databases = append(databases, NewDatabase(logger, databaseLabel, name, databaseConfig, m.Metrics.ClientInfo))
 	}
 	return databases
 }

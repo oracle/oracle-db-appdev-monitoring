@@ -20,7 +20,7 @@ func TestWarmupConnectionPoolWithConfigurationLookupErrorUsesBackoff(t *testing.
 	db := NewDatabase(logger, "database", "db1", config.DatabaseConfig{
 		URL:          "dbhost/service",
 		PasswordFile: filepath.Join(t.TempDir(), "missing-password"),
-	})
+	}, config.ClientInfoConfig{})
 
 	if db.Session != nil {
 		t.Fatal("expected session initialization to fail when configuration lookup fails")

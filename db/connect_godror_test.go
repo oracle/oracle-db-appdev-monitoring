@@ -6,10 +6,40 @@
 package db
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
 )
+
+func TestConnectionParamsInitializeExporterSessions(t *testing.T) {
+	poolMax := 4
+	for _, role := range []string{"", "SYSDBA"} {
+		for _, maximum := range []*int{nil, &poolMax} {
+			params := connectionParams(config.DatabaseConfig{ConnectConfig: config.ConnectConfig{
+				Role: role, PoolMaxConnections: maximum,
+			}}, "scott", "tiger", config.ClientInfoConfig{})
+			if !slices.Equal(params.OnInitStmts, []string{clientInfoSQL(config.DefaultClientInfoLabel)}) {
+				t.Fatalf("role=%q pool=%v: missing session marker: %v", role, maximum, params.OnInitStmts)
+			}
+			if params.OnInit != nil || params.InitOnNewConn {
+				t.Fatal("expected session statements to run for both new and acquired Oracle sessions")
+			}
+		}
+	}
+}
+
+func TestConnectionParamsClientInfoConfiguration(t *testing.T) {
+	disabled := false
+	params := connectionParams(config.DatabaseConfig{}, "scott", "tiger", config.ClientInfoConfig{Enabled: &disabled})
+	if len(params.OnInitStmts) != 0 || params.OnInit != nil {
+		t.Fatal("disabled client info must not initialize sessions")
+	}
+	params = connectionParams(config.DatabaseConfig{}, "scott", "tiger", config.ClientInfoConfig{Label: "team's exporter"})
+	if !slices.Equal(params.OnInitStmts, []string{"BEGIN DBMS_APPLICATION_INFO.SET_CLIENT_INFO('team''s exporter'); END;"}) {
+		t.Fatalf("expected safely quoted custom label, got %v", params.OnInitStmts)
+	}
+}
 
 func TestConnectionParamsUsePoolWhenConfigured(t *testing.T) {
 	zero := 0
@@ -24,7 +54,7 @@ func TestConnectionParamsUsePoolWhenConfigured(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			params := connectionParams(config.DatabaseConfig{ConnectConfig: tt.config}, "scott", "tiger")
+			params := connectionParams(config.DatabaseConfig{ConnectConfig: tt.config}, "scott", "tiger", config.ClientInfoConfig{})
 			if params.IsStandalone() {
 				t.Fatal("expected an explicit pool setting to enable ODPI-C pooling")
 			}
@@ -36,7 +66,7 @@ func TestConnectionParamsUsePoolWhenConfigured(t *testing.T) {
 }
 
 func TestConnectionParamsDefaultsToStandalone(t *testing.T) {
-	params := connectionParams(config.DatabaseConfig{}, "scott", "tiger")
+	params := connectionParams(config.DatabaseConfig{}, "scott", "tiger", config.ClientInfoConfig{})
 	if !params.IsStandalone() {
 		t.Fatal("expected no pool settings to retain godror's standalone default")
 	}
@@ -50,14 +80,14 @@ func TestConnectionParamsKeepAdministrativeRolesStandalone(t *testing.T) {
 	params := connectionParams(config.DatabaseConfig{ConnectConfig: config.ConnectConfig{
 		Role:               "SYSDBA",
 		PoolMaxConnections: &poolMaxConnections,
-	}}, "sys", "tiger")
+	}}, "sys", "tiger", config.ClientInfoConfig{})
 	if !params.IsStandalone() {
 		t.Fatal("expected SYSDBA connections to remain standalone")
 	}
 }
 
 func TestConnectionParamsClearUsernameForExternalAuth(t *testing.T) {
-	params := connectionParams(config.DatabaseConfig{Username: "scott"}, "scott", "")
+	params := connectionParams(config.DatabaseConfig{Username: "scott"}, "scott", "", config.ClientInfoConfig{})
 	if params.Username != "" {
 		t.Fatalf("expected external authentication to clear username, got %q", params.Username)
 	}

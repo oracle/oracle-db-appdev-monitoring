@@ -36,6 +36,32 @@ func TestConnectConfigGetConnMaxLifetime(t *testing.T) {
 	})
 }
 
+func TestLoadMetricsConfigurationClientInfo(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		metrics string
+		label   string
+		enabled bool
+	}{
+		{name: "omitted", label: DefaultClientInfoLabel, enabled: true},
+		{name: "custom label", metrics: "metrics:\n  clientInfo:\n    label: custom_exporter\n", label: "custom_exporter", enabled: true},
+		{name: "disabled", metrics: "metrics:\n  clientInfo:\n    enabled: false\n", label: DefaultClientInfoLabel},
+		{name: "explicit defaults", metrics: "metrics:\n  clientInfo:\n    label: oracledb_exporter\n    enabled: true\n", label: DefaultClientInfoLabel, enabled: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			path := writeExporterConfig(t, "databases:\n  default:\n    username: scott\n    password: tiger\n    url: localhost:1521/freepdb1\n"+tt.metrics)
+			cfg, err := LoadMetricsConfiguration(testLogger(), &Config{ConfigFile: path})
+			if err != nil {
+				t.Fatal(err)
+			}
+			info := cfg.Metrics.ClientInfo
+			if info.Enabled == nil || *info.Enabled != tt.enabled || info.Label != tt.label {
+				t.Fatalf("unexpected client info defaults: %+v", info)
+			}
+		})
+	}
+}
+
 func TestDatabaseConfigGetPasswordReturnsPasswordFileError(t *testing.T) {
 	cfg := DatabaseConfig{
 		PasswordFile: filepath.Join(t.TempDir(), "missing-password"),
