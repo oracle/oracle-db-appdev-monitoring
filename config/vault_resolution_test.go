@@ -8,7 +8,7 @@ import (
 	"log/slog"
 	"testing"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/oci"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/oci"
 )
 
 func TestDatabaseConfigReturnsOCIVaultLookupError(t *testing.T) {
