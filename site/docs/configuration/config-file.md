@@ -71,6 +71,11 @@ databases:
     #   label_name2: label_value2
 
 metrics:
+  ## Identify every exporter session in V$SESSION.CLIENT_INFO.
+  ## Set enabled to false to leave CLIENT_INFO unchanged (both drivers).
+  clientInfo:
+    label: oracledb_exporter
+    enabled: true
   ## The name of the database label applied to each metric. "database" by default.
   # databaseLabel: database
   ## How often to scrape metrics. If not provided, metrics will be scraped on request.
@@ -111,6 +116,12 @@ log:
 ```
 
 From the exporter configuration file, you may optionally load database credentials from [OCI Vault](./oci-vault.md), [Azure Vault](./azure-vault.md), or [HashiCorp Vault](./hashicorp-vault.md).
+
+### Database session identification
+
+By default, the exporter sets `V$SESSION.CLIENT_INFO` to `oracledb_exporter` on every session for all configured databases, including replacement connections. This works with both godror and go-ora.
+
+Use `metrics.clientInfo.label` to customize the marker. Set `metrics.clientInfo.enabled: false` to skip setting `CLIENT_INFO`. Omitting these settings uses the defaults shown above. When enabled, a session initialization error prevents that connection from entering service.
 
 ### Logging configuration
 

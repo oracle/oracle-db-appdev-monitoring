@@ -17,7 +17,7 @@ import (
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
 )
 
-func connect(logger *slog.Logger, dbname string, dbconfig config.DatabaseConfig) (*sql.DB, error) {
+func connect(logger *slog.Logger, dbname string, dbconfig config.DatabaseConfig, clientInfo config.ClientInfoConfig) (*sql.DB, error) {
 	logger.Debug("Launching connection to "+MaskDSN(dbconfig.URL), "database", dbname)
 
 	password, err := dbconfig.GetPassword()
@@ -47,7 +47,7 @@ func connect(logger *slog.Logger, dbname string, dbconfig config.DatabaseConfig)
 		logger.Debug(fmt.Sprintf("set pool min connections to %d", dbconfig.PoolMinConnections), "database", dbname)
 	}
 
-	P := connectionParams(dbconfig, username, password)
+	P := connectionParams(dbconfig, username, password, clientInfo)
 
 	// note that this just configures the connection, it does not actually connect until later
 	// when we call db.Ping()
@@ -55,8 +55,11 @@ func connect(logger *slog.Logger, dbname string, dbconfig config.DatabaseConfig)
 	return db, nil
 }
 
-func connectionParams(dbconfig config.DatabaseConfig, username, password string) godror.ConnectionParams {
+func connectionParams(dbconfig config.DatabaseConfig, username, password string, clientInfo config.ClientInfoConfig) godror.ConnectionParams {
 	var P godror.ConnectionParams
+	if clientInfo.IsEnabled() {
+		P.OnInitStmts = []string{clientInfoSQL(clientInfo.GetLabel())}
+	}
 	externalAuth := password == ""
 	if externalAuth {
 		username = ""

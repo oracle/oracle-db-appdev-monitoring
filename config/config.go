@@ -133,8 +133,28 @@ type HashiCorpVault struct {
 	fetchedSecert map[string]string
 }
 
+const DefaultClientInfoLabel = "oracledb_exporter"
+
+// ClientInfoConfig identifies exporter sessions in Oracle's V$SESSION.CLIENT_INFO.
+type ClientInfoConfig struct {
+	Label   string `yaml:"label"`
+	Enabled *bool  `yaml:"enabled"`
+}
+
+func (c ClientInfoConfig) IsEnabled() bool {
+	return c.Enabled == nil || *c.Enabled
+}
+
+func (c ClientInfoConfig) GetLabel() string {
+	if c.Label == "" {
+		return DefaultClientInfoLabel
+	}
+	return c.Label
+}
+
 type MetricsFilesConfig struct {
-	DatabaseLabel           string `yaml:"databaseLabel"`
+	ClientInfo              ClientInfoConfig `yaml:"clientInfo"`
+	DatabaseLabel           string           `yaml:"databaseLabel"`
 	Default                 string
 	Custom                  []string
 	ScrapeInterval          *time.Duration                `yaml:"scrapeInterval"`
@@ -458,6 +478,11 @@ func (m *MetricsConfiguration) mergeLoggingConfig() {
 }
 
 func (m *MetricsConfiguration) mergeMetricsConfig() {
+	if m.Metrics.ClientInfo.Enabled == nil {
+		enabled := true
+		m.Metrics.ClientInfo.Enabled = &enabled
+	}
+	m.Metrics.ClientInfo.Label = m.Metrics.ClientInfo.GetLabel()
 	if len(m.Metrics.Default) == 0 {
 		m.Metrics.Default = "default-metrics.toml"
 	}

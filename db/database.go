@@ -44,6 +44,7 @@ type Database struct {
 	Session       *sql.DB
 	Config        config.DatabaseConfig
 	DatabaseLabel string
+	ClientInfo    config.ClientInfoConfig
 
 	connectErr error
 	up         float64
@@ -54,8 +55,8 @@ type Database struct {
 	reconnectAttemptMU sync.Mutex
 }
 
-func NewDatabase(logger *slog.Logger, databaseLabel, name string, databaseConfig config.DatabaseConfig) *Database {
-	db, err := connect(logger, name, databaseConfig)
+func NewDatabase(logger *slog.Logger, databaseLabel, name string, databaseConfig config.DatabaseConfig, clientInfo config.ClientInfoConfig) *Database {
+	db, err := connect(logger, name, databaseConfig, clientInfo)
 	if err != nil {
 		logger.Error("Failed to initialize database session", "error", err, "database", name)
 	}
@@ -65,6 +66,7 @@ func NewDatabase(logger *slog.Logger, databaseLabel, name string, databaseConfig
 		Config:        databaseConfig,
 		connectErr:    err,
 		DatabaseLabel: databaseLabel,
+		ClientInfo:    clientInfo,
 	}
 }
 
@@ -154,7 +156,7 @@ func (d *Database) reconnect(logger *slog.Logger, backoff time.Duration) error {
 
 	logger.Info("Reconnecting database session", "database", d.Name)
 
-	session, err := connect(logger, d.Name, d.Config)
+	session, err := connect(logger, d.Name, d.Config, d.ClientInfo)
 	if err != nil {
 		d.reconnectMU.Lock()
 		d.connectErr = err
@@ -326,13 +328,6 @@ func initdb(logger *slog.Logger, dbname string, dbconfig config.DatabaseConfig, 
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	if _, err := db.ExecContext(ctx, `
-			begin
-	       		dbms_application_info.set_client_info('oracledb_exporter');
-			end;`); err != nil {
-		logger.Info("Could not set CLIENT_INFO.", "database", dbname)
-	}
-
 	var sysdba string
 	if err := db.QueryRowContext(ctx, "select sys_context('USERENV', 'ISDBA') from dual").Scan(&sysdba); err != nil {
 		logger.Error("error checking my database role", "error", err, "database", dbname)
