@@ -32,11 +32,18 @@
   },
   "overrides": {
     "brace-expansion": "1.1.21",
+    "compression": "1.8.2",
     "fast-uri": "3.1.8",
     "follow-redirects": "1.16.0",
+    "http-cache-semantics": "4.3.0",
+    "postcss-selector-parser": "7.1.6",
+    "proxy-addr": "2.0.8",
     "qs": "6.16.0",
     "serialize-javascript": "7.0.6",
+    "shell-quote": "1.11.0",
+    "source-map-js": "1.2.2",
     "terser-webpack-plugin": "5.6.1",
+    "tinypool": "2.1.2",
     "uuid": "14.0.1"
   },
   "browserslist": {
@@ -52,6 +59,6 @@
     ]
   },
   "engines": {
-    "node": ">=18.0"
+    "node": "^20.0.0 || >=22.0.0"
   }
 }
