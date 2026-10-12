@@ -125,7 +125,15 @@ func NewExporter(logger *slog.Logger, m *config.MetricsConfiguration, databases 
 }
 
 func (e *Exporter) InitializeDatabases() {
+	e.InitializeDatabasesContext(context.Background())
+}
+
+// InitializeDatabasesContext stops starting new warmups when shutdown begins.
+func (e *Exporter) InitializeDatabasesContext(ctx context.Context) {
 	for _, database := range e.databases {
+		if ctx.Err() != nil {
+			return
+		}
 		e.logger.Info("Starting database connection warmup", "database", database.Name)
 		if err := database.WarmupConnectionPool(e.logger, e.MetricsConfiguration.ConnectionBackoff()); err != nil {
 			e.logger.Error("Database startup warmup failed", "error", err, "database", database.Name)
@@ -210,7 +218,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 // rather than letting it be per Collect call
 func (e *Exporter) RunScheduledScrapes(ctx context.Context) {
 	interval := e.scrapeInterval()
-	if interval == 0 {
+	if interval == 0 || ctx.Err() != nil {
 		return
 	}
 
@@ -223,9 +231,13 @@ func (e *Exporter) RunScheduledScrapes(ctx context.Context) {
 		select {
 		case tick := <-ticker.C:
 
-			e.doScrape(tick)
+			if ctx.Err() == nil {
+				e.doScrape(tick)
+			}
 		case <-e.scrapeRequests:
-			e.doScrape(time.Now())
+			if ctx.Err() == nil {
+				e.doScrape(time.Now())
+			}
 		case <-ctx.Done():
 			return
 		}
