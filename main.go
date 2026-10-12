@@ -14,9 +14,12 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/oracle/oracle-db-appdev-monitoring/restart"
@@ -130,10 +133,15 @@ func main() {
 	}
 	logger := promslog.New(promLogConfig)
 
+	signalCtx, stopSignals := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stopSignals()
+	workCtx, cancelWork := context.WithCancel(signalCtx)
+	defer cancelWork()
+	var workers sync.WaitGroup
+
 	// Restart exporter on config file changes
 	restartRequests := make(chan restart.Request, 1)
-	go restart.RunRestartCoordinator(context.Background(), logger, restartRequests, restart.Process)
-	if err := restart.WatchConfigFile(context.Background(), logger, configFile, func() error {
+	if err := restart.WatchConfigFile(workCtx, logger, configFile, func() error {
 		_, err := config.LoadMetricsConfiguration(logger, exporterConfig)
 		return err
 	}, func() {
@@ -161,6 +169,7 @@ func main() {
 	prometheus.MustRegister(exporter)
 	prometheus.MustRegister(cversion.NewCollector("oracledb_exporter"))
 
+	var shutdownOTLP func(context.Context) error
 	// If OTLP is enabled, connect the collector snapshots to the SDK metric pipeline.
 	if m.OTLP != nil {
 		logger.Info("Starting OTLP exporter")
@@ -169,16 +178,10 @@ func main() {
 			logger.Error("unable to create OTLP metric pipeline", "error", err)
 			os.Exit(1)
 		}
-		defer func() {
-			if err := otlpPipeline.Shutdown(context.Background()); err != nil {
-				logger.Error("unable to shut down OTLP metric pipeline", "error", err)
-			}
-		}()
+		shutdownOTLP = otlpPipeline.Shutdown
 	}
 	if exporter.ScrapeInterval() != 0 {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		go exporter.RunScheduledScrapes(ctx)
+		workers.Go(func() { exporter.RunScheduledScrapes(workCtx) })
 	}
 
 	logger.Info("Starting oracledb_exporter", "version", Version)
@@ -202,10 +205,13 @@ func main() {
 			ticker := time.NewTicker(duration)
 			defer ticker.Stop()
 
-			go func() {
-				<-ticker.C
-				restart.RequestRestart(restartRequests, "RESTART_INTERVAL elapsed")
-			}()
+			workers.Go(func() {
+				select {
+				case <-ticker.C:
+					restart.RequestRestart(restartRequests, "RESTART_INTERVAL elapsed")
+				case <-workCtx.Done():
+				}
+			})
 		}
 	}
 
@@ -220,13 +226,17 @@ func main() {
 			memTicker := time.NewTicker(duration)
 			defer memTicker.Stop()
 
-			go func() {
+			workers.Go(func() {
 				for {
-					<-memTicker.C
-					logger.Info("attempting to free OS memory")
-					debug.FreeOSMemory()
+					select {
+					case <-memTicker.C:
+						logger.Info("attempting to free OS memory")
+						debug.FreeOSMemory()
+					case <-workCtx.Done():
+						return
+					}
 				}
-			}()
+			})
 		}
 
 	}
@@ -243,16 +253,22 @@ func main() {
 		logTicker := time.NewTicker(m.LogInterval())
 		defer logTicker.Stop()
 
-		go func() {
+		workers.Go(func() {
 			for {
-				<-logTicker.C
-				logger.Debug("updating alert log")
-				for _, db := range exporter.GetDBs() {
-					alertlog.UpdateLog(m.LogDestination(), m.LogPerDatabaseFiles(), m.LogMessageLevelEnabled(), logger, db)
+				select {
+				case <-workCtx.Done():
+					return
+				case <-logTicker.C:
+					logger.Debug("updating alert log")
+					for _, database := range exporter.GetDBs() {
+						if workCtx.Err() != nil {
+							return
+						}
+						alertlog.UpdateLog(m.LogDestination(), m.LogPerDatabaseFiles(), m.LogMessageLevelEnabled(), logger, database)
+					}
 				}
-
 			}
-		}()
+		})
 	}
 
 	server := &http.Server{
@@ -265,12 +281,66 @@ func main() {
 		serverErr <- web.ListenAndServe(server, m.Web.Flags(), logger)
 	}()
 
-	go exporter.InitializeDatabases()
+	workers.Go(func() { exporter.InitializeDatabasesContext(workCtx) })
 
-	// start the main server thread
-	if err := <-serverErr; err != nil {
-		logger.Error("Listening error", "error", err)
-		os.Exit(1)
+	// Own restart and shutdown here: HTTP shutdown unblocks ListenAndServe,
+	// but must not let another goroutine exit before database cleanup finishes.
+	shouldRestart := false
+	var serveErr error
+	select {
+	case reason := <-restartRequests:
+		logger.Info("Restarting the process", "reason", reason)
+		shouldRestart = true
+	case serveErr = <-serverErr:
+	case <-signalCtx.Done():
+		logger.Info("Shutting down the process")
 	}
 
+	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancelShutdown()
+	if err := shutdownExporter(shutdownCtx, cancelWork, server.Shutdown, shutdownOTLP, &workers, func() error {
+		return db.CloseDatabases(databases)
+	}); err != nil {
+		logger.Error("Exporter shutdown failed; terminating the process", "error", err)
+		os.Exit(1)
+	}
+	if shouldRestart && signalCtx.Err() == nil {
+		if err := restart.Process(); err != nil {
+			logger.Error("Could not restart the process after shutdown", "error", err)
+			os.Exit(1)
+		}
+	}
+	if serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {
+		logger.Error("Listening error", "error", serveErr)
+		os.Exit(1)
+	}
+}
+
+const shutdownTimeout = 30 * time.Second
+
+// shutdownExporter bounds even non-context-aware database and native driver
+// cleanup. On error the caller must terminate, never re-exec or resume service.
+func shutdownExporter(ctx context.Context, cancelWork func(), shutdownHTTP, shutdownOTLP func(context.Context) error, workers *sync.WaitGroup, closeDatabases func() error) error {
+	cancelWork()
+	done := make(chan error, 1)
+	go func() {
+		httpErr := shutdownHTTP(ctx)
+		var otlpErr error
+		if shutdownOTLP != nil {
+			otlpErr = shutdownOTLP(ctx)
+		}
+		workers.Wait()
+		// An unsuccessful drain may leave collectors accessing native pools.
+		if err := errors.Join(httpErr, otlpErr, ctx.Err()); err != nil {
+			done <- err
+			return
+		}
+		done <- closeDatabases()
+	}()
+	select {
+	case err := <-done:
+		return errors.Join(err, ctx.Err())
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }

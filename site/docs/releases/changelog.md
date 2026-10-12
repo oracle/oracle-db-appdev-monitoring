@@ -9,11 +9,12 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
+- Drain database work and close SQL connections and godror native pools before configuration-triggered or periodic process restarts.
 - Set `CLIENT_INFO` to `oracledb_exporter` on every new database session for both godror and go-ora, including replacement connections, and fail connection initialization if the marker cannot be set. Configure the label or opt out with `metrics.clientInfo` (defaults: `label: oracledb_exporter`, `enabled: true`).
 - Add descriptive SEO metadata to docs pages and exclude Next and retired docs versions from search indexing.
 - Add the optional `oracledb_exporter_last_metric_scrape_duration_seconds` metric, reporting how long the last scrape of each individual metric took, per database, so slow queries can be identified without enabling debug logging. Disabled by default; enable it with `metrics.perMetricScrapeDuration.enabled`.
 - Update third party dependencies
-- Update the Go runtime to 1.26.8
+- Update the Go runtime and Docker build toolchain to 1.26.9
 
 ### 2.5.0, August 31st, 2026
 
