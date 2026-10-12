@@ -36,7 +36,10 @@ func isTemporaryConnectionErrorCode(code int) bool {
 	}
 }
 
-var errDatabaseSessionNotInitialized = errors.New("database session is not initialized")
+var (
+	errDatabaseSessionNotInitialized = errors.New("database session is not initialized")
+	errDatabaseClosed                = errors.New("database is shut down")
+)
 
 // Database owns an Oracle SQL session and its connection lifecycle.
 type Database struct {
@@ -46,6 +49,7 @@ type Database struct {
 	DatabaseLabel string
 	ClientInfo    config.ClientInfoConfig
 
+	closed     bool
 	connectErr error
 	up         float64
 
@@ -70,6 +74,28 @@ func NewDatabase(logger *slog.Logger, databaseLabel, name string, databaseConfig
 	}
 }
 
+// Close permanently shuts down this database handle. Native pools may be shared
+// by multiple handles and are closed separately by CloseDatabases.
+func (d *Database) Close() error {
+	d.reconnectAttemptMU.Lock()
+	defer d.reconnectAttemptMU.Unlock()
+	d.reconnectMU.Lock()
+	defer d.reconnectMU.Unlock()
+	if d.closed {
+		return nil
+	}
+	d.closed = true
+	d.startupReady.Store(false)
+	d.up = 0
+	d.connectErr = errDatabaseClosed
+	session := d.Session
+	d.Session = nil
+	if session != nil {
+		return session.Close()
+	}
+	return nil
+}
+
 func (d *Database) StartupReady() bool {
 	return d.startupReady.Load()
 }
@@ -78,6 +104,11 @@ func (d *Database) StartupReady() bool {
 // This is a workaround for a perceived bug in ODPI_C where rapid acquisition of connections
 // results in a SIGABRT.
 func (d *Database) WarmupConnectionPool(logger *slog.Logger, backoff time.Duration) error {
+	d.reconnectAttemptMU.Lock()
+	defer d.reconnectAttemptMU.Unlock()
+	if d.closed {
+		return errDatabaseClosed
+	}
 	defer d.startupReady.Store(true)
 
 	d.reconnectMU.RLock()
@@ -154,6 +185,10 @@ func (d *Database) reconnect(logger *slog.Logger, backoff time.Duration) error {
 	d.reconnectAttemptMU.Lock()
 	defer d.reconnectAttemptMU.Unlock()
 
+	if d.closed {
+		return errDatabaseClosed
+	}
+
 	logger.Info("Reconnecting database session", "database", d.Name)
 
 	session, err := connect(logger, d.Name, d.Config, d.ClientInfo)
@@ -197,6 +232,9 @@ func (d *Database) Ping(logger *slog.Logger, backoff time.Duration) error {
 	defer cancel()
 
 	err := d.PingContext(ctx)
+	if errors.Is(err, errDatabaseClosed) {
+		return err
+	}
 	if errors.Is(err, errDatabaseSessionNotInitialized) {
 		return d.reconnect(logger, backoff)
 	}
@@ -305,6 +343,9 @@ func (d *Database) QueryContext(ctx context.Context, query string, args ...inter
 func (d *Database) PingContext(ctx context.Context) error {
 	d.reconnectMU.RLock()
 	defer d.reconnectMU.RUnlock()
+	if d.closed {
+		return errDatabaseClosed
+	}
 	if d.Session == nil {
 		return errDatabaseSessionNotInitialized
 	}
