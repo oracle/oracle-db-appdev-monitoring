@@ -54,7 +54,8 @@ const config: Config = {
             // The current docs are work in progress and should not be indexed.
             current: {noIndex: true},
             // Set noIndex: false only on the latest stable release.
-            '2.5.0': {noIndex: false},
+            '2.5.1': {noIndex: false},
+            '2.5.0': {noIndex: true},
             '2.4.2': {noIndex: true},
             '2.4.1': {noIndex: true},
             '2.4.0': {noIndex: true},
@@ -95,7 +96,7 @@ const config: Config = {
         },
         {
           type: 'docsVersionDropdown',
-          versions: ['current', '2.5.0', '2.4.2', '2.4.1', '2.4.0', '2.3.1', '2.3.0', '2.2.2', '2.2.1', '2.2.0', '2.1.0', ]
+          versions: ['current', '2.5.1', '2.5.0', '2.4.2', '2.4.1', '2.4.0', '2.3.1', '2.3.0', '2.2.2', '2.2.1', '2.2.0', '2.1.0', ]
         },
         {
           href: 'https://github.com/oracle/oracle-db-appdev-monitoring',

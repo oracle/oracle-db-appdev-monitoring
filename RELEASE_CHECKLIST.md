@@ -6,18 +6,20 @@ actual release date in the changelog.
 
 Complete steps 1 and 2 before creating the documentation snapshot in step 3.
 
-## 1. Update Next documentation image references
+## 1. Update documentation and Compose image references
 
 - [ ] Update exporter image tags in the current **Next** documentation under
   [`site/docs/`](site/docs/) to `<VERSION>`, including `docker pull`, `docker run`,
   Dockerfile `FROM` instructions, and other exporter image commands or examples.
+- [ ] Update the exporter service image tag in
+  [`docker-compose/compose.yaml`](docker-compose/compose.yaml) to `<VERSION>`.
 - [ ] Keep unrelated image tags (such as Oracle Database, Prometheus, or Grafana)
   unchanged unless the release also requires their update.
 
 From the repository root, locate exporter image references with:
 
 ```bash
-rg -n 'container-registry.oracle.com/database/observability-exporter:' site/docs
+rg -n 'container-registry.oracle.com/database/observability-exporter:' site/docs docker-compose/compose.yaml
 ```
 
 Replace discovered tags with `<VERSION>`.
