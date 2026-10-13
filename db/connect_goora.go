@@ -14,8 +14,8 @@ import (
 	"log/slog"
 	"net/url"
 
-	go_ora "github.com/sijms/go-ora/v2"
-	"github.com/sijms/go-ora/v2/network"
+	go_ora "github.com/sijms/go-ora/v3"
+	"github.com/sijms/go-ora/v3/network"
 
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
 )

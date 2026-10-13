@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
-	go_ora "github.com/sijms/go-ora/v2"
+	go_ora "github.com/sijms/go-ora/v3"
 )
 
 var _ driver.ExecerContext = (*go_ora.Connection)(nil)
