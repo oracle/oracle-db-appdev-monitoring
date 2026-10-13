@@ -1,0 +1,8 @@
+{
+  "label": "Releases",
+  "position": 5,
+  "link": {
+    "type": "generated-index",
+    "description": "Information on the exporter releases, changelog, and roadmap."
+  }
+}
