@@ -82,7 +82,7 @@ docker run -it --rm \
     -e DB_CONNECT_STRING=devdb_tp \
     -v ./wallet:/wallet \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:2.5.0
+    container-registry.oracle.com/database/observability-exporter:2.5.1
 ```
 
 :::tip Troubleshooting ORA-01017 with Wallet Authentication

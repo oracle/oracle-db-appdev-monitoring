@@ -23,7 +23,7 @@ Download pre-built binaries from the metrics exporter [GitHub Releases page](htt
 ### Container images
 
 ```bash
-docker pull container-registry.oracle.com/database/observability-exporter:${VERSION}
+docker pull container-registry.oracle.com/database/observability-exporter:2.5.1
 ```
 
 ### Build the Oracle AI Database Metrics Exporter

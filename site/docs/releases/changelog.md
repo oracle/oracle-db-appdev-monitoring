@@ -9,6 +9,8 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
+### 2.5.1, October 12th, 2026
+
 - Drain database work and close SQL connections and godror native pools before configuration-triggered or periodic process restarts.
 - Set `CLIENT_INFO` to `oracledb_exporter` on every new database session for both godror and go-ora, including replacement connections, and fail connection initialization if the marker cannot be set. Configure the label or opt out with `metrics.clientInfo` (defaults: `label: oracledb_exporter`, `enabled: true`).
 - Add descriptive SEO metadata to docs pages and exclude Next and retired docs versions from search indexing.
