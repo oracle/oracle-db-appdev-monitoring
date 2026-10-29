@@ -13,6 +13,12 @@ import (
 	"github.com/oracle/oracle-db-appdev-monitoring/db"
 )
 
+// scrapeIntervalTolerance absorbs clock jitter between scrapes. Scheduled ticks are aligned to
+// metrics.scrapeInterval, but their timestamps vary by a few microseconds either way. Without a
+// tolerance, a metric whose custom scrape interval is a multiple of the tick often waits one
+// extra tick, for example refreshing every 70s instead of every 60s with a 10s tick.
+const scrapeIntervalTolerance = 100 * time.Millisecond
+
 // isScrapeMetric returns true if a metric should be scraped. Metrics may not be scraped if they have a custom scrape interval,
 // and the time since the last scrape is less than the custom scrape interval.
 // If there is no tick time or last known tick, the metric is always scraped.
@@ -33,9 +39,8 @@ func (e *Exporter) isScrapeMetric(logger *slog.Logger, tick *time.Time, metric *
 	}
 	lastScraped := e.metricsCache(d).GetLastScraped(metric)
 	shouldScrape := lastScraped == nil ||
-		// If the metric's scrape interval is less than the time elapsed since the last scrape,
-		// we should scrape the metric.
-		interval < tick.Sub(*lastScraped)
+		// Scrape the metric once its scrape interval has elapsed since the last scrape.
+		tick.Sub(*lastScraped) >= interval-scrapeIntervalTolerance
 	return shouldScrape
 }
 
