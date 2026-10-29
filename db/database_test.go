@@ -331,6 +331,34 @@ func TestDatabaseStateAccessIsRaceSafe(t *testing.T) {
 	wg.Wait()
 }
 
+// A query holds the lifecycle read lock until its rows are released. Recording a successful ping must
+// not wait for it, or a scrape waits for every query that is still running.
+func TestPingDoesNotWaitForRunningQueries(t *testing.T) {
+	db := &Database{
+		Session: openTestQueryDB(t),
+	}
+	rows, unlock, err := db.QueryContext(context.Background(), "select 1 from dual")
+	if err != nil {
+		t.Fatalf("expected query to succeed, got %v", err)
+	}
+	defer unlock()
+	defer rows.Close()
+
+	pinged := make(chan error, 1)
+	go func() { pinged <- db.Ping(testLogger(), time.Minute) }()
+	select {
+	case err := <-pinged:
+		if err != nil {
+			t.Fatalf("expected ping to succeed, got %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("ping waited for a running query")
+	}
+	if got := db.Up(); got != 1 {
+		t.Fatalf("expected the database to be up after the ping, got %v", got)
+	}
+}
+
 func TestQueryContextHoldsReadLockUntilUnlock(t *testing.T) {
 	db := &Database{
 		Session: openTestQueryDB(t),

@@ -51,9 +51,14 @@ type Database struct {
 
 	closed     bool
 	connectErr error
-	up         float64
 
-	invalidUntil       *time.Time
+	// stateMU guards the health state, up and invalidUntil. It is separate from reconnectMU, which
+	// running queries hold for their whole duration, so recording the result of a ping never waits
+	// for a query. stateMU may be taken while holding reconnectMU, never the other way around.
+	stateMU      sync.Mutex
+	up           float64
+	invalidUntil *time.Time
+
 	startupReady       atomic.Bool
 	reconnectMU        sync.RWMutex
 	reconnectAttemptMU sync.Mutex
@@ -86,7 +91,7 @@ func (d *Database) Close() error {
 	}
 	d.closed = true
 	d.startupReady.Store(false)
-	d.up = 0
+	d.setUp(0)
 	d.connectErr = errDatabaseClosed
 	session := d.Session
 	d.Session = nil
@@ -195,8 +200,8 @@ func (d *Database) reconnect(logger *slog.Logger, backoff time.Duration) error {
 	if err != nil {
 		d.reconnectMU.Lock()
 		d.connectErr = err
-		d.up = 0
-		d.invalidateLocked(backoff)
+		d.setUp(0)
+		d.invalidate(backoff)
 		d.reconnectMU.Unlock()
 		return err
 	}
@@ -206,8 +211,8 @@ func (d *Database) reconnect(logger *slog.Logger, backoff time.Duration) error {
 		}
 		d.reconnectMU.Lock()
 		d.connectErr = err
-		d.up = 0
-		d.invalidateLocked(backoff)
+		d.setUp(0)
+		d.invalidate(backoff)
 		d.reconnectMU.Unlock()
 		return err
 	}
@@ -216,8 +221,8 @@ func (d *Database) reconnect(logger *slog.Logger, backoff time.Duration) error {
 	oldSession := d.Session
 	d.Session = session
 	d.connectErr = nil
-	d.up = 1
-	d.clearInvalidLocked()
+	d.setUp(1)
+	d.clearInvalid()
 	if oldSession != nil && oldSession != session {
 		_ = oldSession.Close()
 	}
@@ -256,8 +261,8 @@ func (d *Database) Ping(logger *slog.Logger, backoff time.Duration) error {
 }
 
 func (d *Database) IsValid() *time.Duration {
-	d.reconnectMU.RLock()
-	defer d.reconnectMU.RUnlock()
+	d.stateMU.Lock()
+	defer d.stateMU.Unlock()
 
 	if d.invalidUntil == nil {
 		return nil
@@ -270,35 +275,27 @@ func (d *Database) IsValid() *time.Duration {
 }
 
 func (d *Database) invalidate(backoff time.Duration) {
-	d.reconnectMU.Lock()
-	defer d.reconnectMU.Unlock()
-	d.invalidateLocked(backoff)
-}
-
-func (d *Database) invalidateLocked(backoff time.Duration) {
+	d.stateMU.Lock()
+	defer d.stateMU.Unlock()
 	until := time.Now().Add(backoff)
 	d.invalidUntil = &until
 }
 
 func (d *Database) clearInvalid() {
-	d.reconnectMU.Lock()
-	defer d.reconnectMU.Unlock()
-	d.clearInvalidLocked()
-}
-
-func (d *Database) clearInvalidLocked() {
+	d.stateMU.Lock()
+	defer d.stateMU.Unlock()
 	d.invalidUntil = nil
 }
 
 func (d *Database) getUp() float64 {
-	d.reconnectMU.RLock()
-	defer d.reconnectMU.RUnlock()
+	d.stateMU.Lock()
+	defer d.stateMU.Unlock()
 	return d.up
 }
 
 func (d *Database) setUp(up float64) {
-	d.reconnectMU.Lock()
-	defer d.reconnectMU.Unlock()
+	d.stateMU.Lock()
+	defer d.stateMU.Unlock()
 	d.up = up
 }
 
