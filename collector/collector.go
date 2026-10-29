@@ -187,12 +187,10 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	// they are running scheduled scrapes we should only scrape new data
 	// on the interval
 	if e.scrapeInterval() != 0 {
-		// read access must be checked
-		e.mu.Lock()
-		for _, r := range e.scrapeResults {
+		// Serve the last completed snapshot without waiting for a scrape in progress.
+		for _, r := range e.latestScrapeResults() {
 			ch <- r
 		}
-		e.mu.Unlock()
 		return
 	}
 
@@ -273,15 +271,15 @@ func (e *Exporter) doScrape(tick time.Time) {
 func (e *Exporter) scheduledScrape(tick *time.Time) {
 	metricCh := make(chan prometheus.Metric, 5)
 
+	results := []prometheus.Metric{}
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		e.scrapeResults = []prometheus.Metric{}
 		for {
 			scrapeResult, more := <-metricCh
 			if more {
-				e.scrapeResults = append(e.scrapeResults, scrapeResult)
+				results = append(results, scrapeResult)
 				continue
 			}
 			return
@@ -303,6 +301,22 @@ func (e *Exporter) scheduledScrape(tick *time.Time) {
 	}
 	close(metricCh)
 	wg.Wait()
+	// Publish the complete snapshot at once, so Collect never sees a partial scrape.
+	e.setScrapeResults(results)
+}
+
+// latestScrapeResults returns the last completed scheduled scrape snapshot. A published
+// snapshot is never modified, so callers may read it after the lock is released.
+func (e *Exporter) latestScrapeResults() []prometheus.Metric {
+	e.resultsMu.RLock()
+	defer e.resultsMu.RUnlock()
+	return e.scrapeResults
+}
+
+func (e *Exporter) setScrapeResults(results []prometheus.Metric) {
+	e.resultsMu.Lock()
+	defer e.resultsMu.Unlock()
+	e.scrapeResults = results
 }
 
 func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- error, d *db.Database, tick *time.Time) {

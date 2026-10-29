@@ -15,7 +15,11 @@ import (
 // Exporter collects Oracle DB metrics. It implements prometheus.Collector.
 type Exporter struct {
 	*config.MetricsConfiguration
-	mu                  *sync.Mutex
+	// mu serializes scrapes. Collect must not take it in scheduled mode, as a scrape may hold it
+	// for as long as its slowest query.
+	mu *sync.Mutex
+	// resultsMu guards scrapeResults, the last completed scheduled scrape snapshot.
+	resultsMu           sync.RWMutex
 	metricsToScrape     map[string]*config.Metric
 	customMetricsHashes map[string][]byte
 	duration, error     prometheus.Gauge

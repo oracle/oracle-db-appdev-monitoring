@@ -9,6 +9,8 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
+- With scheduled scrapes (`metrics.scrapeInterval`), serve the last completed scrape from `/metrics` without waiting for a scrape in progress. Previously, `/metrics` requests blocked until the slowest query of the current scrape finished, which could exceed the Prometheus scrape timeout and leave gaps in every series of the target.
+
 ### 2.5.1, October 12th, 2026
 
 - Drain database work and close SQL connections and godror native pools before configuration-triggered or periodic process restarts.
