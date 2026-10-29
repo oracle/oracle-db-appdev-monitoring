@@ -179,6 +179,61 @@ databases:
 	if cfg.PerMetricScrapeDurationEnabled() {
 		t.Fatal("expected the per-metric scrape duration metric to be disabled by default")
 	}
+	if cfg.BackgroundRefreshEnabled() {
+		t.Fatal("expected background refresh to be disabled by default")
+	}
+}
+
+func TestLoadMetricsConfigurationReadsBackgroundRefresh(t *testing.T) {
+	tests := []struct {
+		name    string
+		metrics string
+		want    bool
+	}{
+		{
+			name: "enabled",
+			metrics: `
+metrics:
+  backgroundRefresh:
+    enabled: true
+`,
+			want: true,
+		},
+		{
+			name: "explicitly disabled",
+			metrics: `
+metrics:
+  backgroundRefresh:
+    enabled: false
+`,
+			want: false,
+		},
+		{
+			name:    "not configured",
+			metrics: "",
+			want:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configPath := writeExporterConfig(t, `
+databases:
+  default:
+    username: scott
+    password: tiger
+    url: localhost:1521/freepdb1
+`+tt.metrics)
+
+			cfg, err := LoadMetricsConfiguration(testLogger(), &Config{ConfigFile: configPath})
+			if err != nil {
+				t.Fatalf("expected config to load, got %v", err)
+			}
+			if got := cfg.BackgroundRefreshEnabled(); got != tt.want {
+				t.Fatalf("expected BackgroundRefreshEnabled() to be %t, got %t", tt.want, got)
+			}
+		})
+	}
 }
 
 func TestLoadMetricsConfigurationReadsPerMetricScrapeDuration(t *testing.T) {

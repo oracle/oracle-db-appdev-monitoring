@@ -7,6 +7,7 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"errors"
 	"io"
 	"strings"
 	"sync"
@@ -19,6 +20,8 @@ import (
 )
 
 const scheduledTestMetricName = "oracledb_test_value"
+
+var errTestQueryFailed = errors.New("query failed")
 
 // A scheduled scrape holds the scrape lock for as long as its slowest query runs. Collect must keep
 // serving the last completed snapshot meanwhile; otherwise /metrics requests exceed the Prometheus
@@ -126,6 +129,8 @@ func fqNameOf(desc *prometheus.Desc) string {
 // queryGate lets a test hold database queries open, simulating a slow scheduled scrape.
 type queryGate struct {
 	hold        atomic.Bool
+	fail        atomic.Bool
+	queries     atomic.Int64
 	value       atomic.Value
 	started     chan struct{}
 	release     chan struct{}
@@ -159,6 +164,7 @@ type gatedQueryConn struct {
 }
 
 func (c gatedQueryConn) QueryContext(ctx context.Context, _ string, _ []driver.NamedValue) (driver.Rows, error) {
+	c.gate.queries.Add(1)
 	if c.gate.hold.Load() {
 		select {
 		case c.gate.started <- struct{}{}:
@@ -169,6 +175,9 @@ func (c gatedQueryConn) QueryContext(ctx context.Context, _ string, _ []driver.N
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}
+	}
+	if c.gate.fail.Load() {
+		return nil, errTestQueryFailed
 	}
 	value, _ := c.gate.value.Load().(string)
 	return &valueRows{value: value}, nil

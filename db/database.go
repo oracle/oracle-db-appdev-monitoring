@@ -105,6 +105,16 @@ func (d *Database) StartupReady() bool {
 	return d.startupReady.Load()
 }
 
+// MaxOpenConnections returns the maximum number of open connections to the database, or 0 if the
+// number is unlimited.
+func (d *Database) MaxOpenConnections() int {
+	maxOpenConns, _ := effectiveSQLPoolLimits(d.Config)
+	if maxOpenConns < 0 {
+		return 0
+	}
+	return maxOpenConns
+}
+
 // WarmupConnectionPool serially acquires connections to "warm up" the connection pool.
 // This is a workaround for a perceived bug in ODPI_C where rapid acquisition of connections
 // results in a SIGABRT.

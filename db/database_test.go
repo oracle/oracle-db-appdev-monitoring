@@ -163,6 +163,28 @@ func (partialWarmupFailureConn) QueryContext(context.Context, string, []driver.N
 	return &testQueryRows{}, nil
 }
 
+func TestMaxOpenConnections(t *testing.T) {
+	three, unlimited := 3, 0
+	tests := []struct {
+		name         string
+		maxOpenConns *int
+		want         int
+	}{
+		{name: "default", maxOpenConns: nil, want: 10},
+		{name: "configured", maxOpenConns: &three, want: 3},
+		{name: "unlimited", maxOpenConns: &unlimited, want: 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := &Database{Config: config.DatabaseConfig{ConnectConfig: config.ConnectConfig{MaxOpenConns: tt.maxOpenConns}}}
+			if got := d.MaxOpenConnections(); got != tt.want {
+				t.Fatalf("expected %d max open connections, got %d", tt.want, got)
+			}
+		})
+	}
+}
+
 func TestIsValid(t *testing.T) {
 	tests := []struct {
 		name         string

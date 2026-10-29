@@ -160,11 +160,18 @@ type MetricsFilesConfig struct {
 	ScrapeInterval          *time.Duration                `yaml:"scrapeInterval"`
 	ConnectionBackoff       *time.Duration                `yaml:"connectionBackoff"`
 	PerMetricScrapeDuration PerMetricScrapeDurationConfig `yaml:"perMetricScrapeDuration"`
+	BackgroundRefresh       BackgroundRefreshConfig       `yaml:"backgroundRefresh"`
 }
 
 // PerMetricScrapeDurationConfig configures the optional per-metric scrape duration metric.
 // The metric is disabled by default, as it adds one series per metric definition and database.
 type PerMetricScrapeDurationConfig struct {
+	Enabled *bool `yaml:"enabled"`
+}
+
+// BackgroundRefreshConfig configures refreshing metrics with a custom scrape interval in the
+// background. Disabled by default.
+type BackgroundRefreshConfig struct {
 	Enabled *bool `yaml:"enabled"`
 }
 
@@ -192,6 +199,16 @@ func (m *MetricsConfiguration) PerMetricScrapeDurationEnabled() bool {
 		return false
 	}
 	return *m.Metrics.PerMetricScrapeDuration.Enabled
+}
+
+// BackgroundRefreshEnabled reports whether metrics with a custom scrape interval are refreshed in
+// the background: a scrape serves their cached values instead of waiting for their queries.
+// Disabled by default.
+func (m *MetricsConfiguration) BackgroundRefreshEnabled() bool {
+	if m.Metrics.BackgroundRefresh.Enabled == nil {
+		return false
+	}
+	return *m.Metrics.BackgroundRefresh.Enabled
 }
 
 func (m *MetricsConfiguration) LogDestination() string {
@@ -489,6 +506,10 @@ func (m *MetricsConfiguration) mergeMetricsConfig() {
 	if m.Metrics.PerMetricScrapeDuration.Enabled == nil {
 		perMetricScrapeDuration := false
 		m.Metrics.PerMetricScrapeDuration.Enabled = &perMetricScrapeDuration
+	}
+	if m.Metrics.BackgroundRefresh.Enabled == nil {
+		backgroundRefresh := false
+		m.Metrics.BackgroundRefresh.Enabled = &backgroundRefresh
 	}
 }
 
