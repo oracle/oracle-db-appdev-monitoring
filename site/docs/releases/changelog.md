@@ -10,6 +10,7 @@ List of upcoming and historic changes to the exporter.
 ### Next, TBD
 
 - With scheduled scrapes (`metrics.scrapeInterval`), serve the last completed scrape from `/metrics` without waiting for a scrape in progress. Previously, `/metrics` requests blocked until the slowest query of the current scrape finished, which could exceed the Prometheus scrape timeout and leave gaps in every series of the target.
+- Refresh metrics with a custom `scrapeinterval` as soon as the interval has elapsed. Previously, clock jitter between scrapes often delayed the refresh by one scrape, for example to every 70s instead of every 60s with a 10s `metrics.scrapeInterval`.
 
 ### 2.5.1, October 12th, 2026
 
