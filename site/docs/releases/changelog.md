@@ -11,6 +11,8 @@ List of upcoming and historic changes to the exporter.
 
 - With scheduled scrapes (`metrics.scrapeInterval`), serve the last completed scrape from `/metrics` without waiting for a scrape in progress. Previously, `/metrics` requests blocked until the slowest query of the current scrape finished, which could exceed the Prometheus scrape timeout and leave gaps in every series of the target.
 - Refresh metrics with a custom `scrapeinterval` as soon as the interval has elapsed. Previously, clock jitter between scrapes often delayed the refresh by one scrape, for example to every 70s instead of every 60s with a 10s `metrics.scrapeInterval`.
+- Add the optional `metrics.backgroundRefresh.enabled` setting. When enabled, metrics with a custom `scrapeinterval` are refreshed in the background: a scrape returns their cached values instead of waiting for their queries, so slow queries no longer make `/metrics` exceed the Prometheus scrape timeout. Works with both scraping modes. Disabled by default.
+- Record the result of a database ping without waiting for queries that are still running.
 
 ### 2.5.1, October 12th, 2026
 

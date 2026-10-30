@@ -120,7 +120,7 @@ func TestGeneratePrometheusMetricsReturnsRowsErr(t *testing.T) {
 	}
 	parseCalls := 0
 
-	err := exporter.generatePrometheusMetrics(db, func(row map[string]string) error {
+	err := exporter.generatePrometheusMetrics(context.Background(), db, func(row map[string]string) error {
 		parseCalls++
 		if row["value"] != "1" {
 			t.Fatalf("expected row value to be scanned before iteration error, got %q", row["value"])
@@ -156,7 +156,7 @@ func TestQueryDeadlineReleasesLifecycleLock(t *testing.T) {
 	pool := sql.OpenDB(deadlineConnector{})
 	defer pool.Close()
 	database := &db.Database{Session: pool}
-	err := (&Exporter{}).generatePrometheusMetrics(database, func(map[string]string) error { return nil }, "select 1", time.Millisecond)
+	err := (&Exporter{}).generatePrometheusMetrics(context.Background(), database, func(map[string]string) error { return nil }, "select 1", time.Millisecond)
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("expected query deadline, got %v", err)
 	}

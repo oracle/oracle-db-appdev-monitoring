@@ -87,6 +87,10 @@ metrics:
   ## Disabled by default; adds one series per metric definition and database.
   # perMetricScrapeDuration:
   #   enabled: false
+  ## Refresh metrics with a custom scrapeinterval in the background, serving their cached values
+  ## instead of waiting for their queries. Disabled by default.
+  # backgroundRefresh:
+  #   enabled: false
   ## Path to default metrics file.
   default: default-metrics.toml
   ## Paths to any custom metrics files
@@ -174,6 +178,28 @@ metrics:
 ```
 
 An individual metric may have its own scrape interval separate from the exporter's scrape interval. See the [metric schema](custom-metrics.md#metric-schema) for details on configuring per-metric scrape intervals.
+
+### Background refresh
+
+By default, a scrape waits for the query of every metric that is due, including metrics with their own `scrapeinterval`. A slow query can then make `/metrics` respond slower than the Prometheus scrape timeout. Prometheus treats that as a failed scrape, and every series of the exporter shows a gap.
+
+Set `metrics.backgroundRefresh.enabled` to refresh metrics with their own `scrapeinterval` in the background instead:
+
+```yaml
+metrics:
+  backgroundRefresh:
+    enabled: true
+```
+
+When such a metric is due, the scrape returns its cached values and starts its query in the background. Once the query completes, the following scrapes return the new values. This works in both scraping modes. Metrics without their own `scrapeinterval` are still queried during the scrape.
+
+With background refresh enabled:
+
+- The values of a metric with its own `scrapeinterval` can be up to that interval, plus the duration of its query, old.
+- After the exporter starts, such a metric is reported once its first query completes.
+- A failed refresh is reported in `oracledb_exporter_last_scrape_error` and `oracledb_exporter_scrape_errors_total`, and is retried by the next scrape.
+- Background refreshes use at most all but one of a database's connections, so a scrape can always ping the database and run its other queries.
+- `oracledb_exporter_last_scrape_duration_seconds` and `oracledb_exporter_last_database_scrape_duration_seconds` only measure the scrape itself. Use [`oracledb_exporter_last_metric_scrape_duration_seconds`](../getting-started/default-metrics.md#per-metric-scrape-duration) to see how long background queries take.
 
 ### Config file in a container image
 
