@@ -9,6 +9,7 @@ require (
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/godror/godror v0.51.5
 	github.com/hashicorp/vault/api v1.23.0
+	github.com/oracle/go-oracledb/v26 v26.4.0
 	github.com/oracle/oci-go-sdk/v65 v65.128.0
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/client_model v0.6.3

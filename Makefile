@@ -88,7 +88,7 @@ build: docker
 deps:
 	go get
 
-go-test-all: go-test go-test-godror
+go-test-all: go-test go-test-godror go-test-oracledb
 
 go-test:
 	@echo "Run tests with go-ora"
@@ -97,6 +97,10 @@ go-test:
 go-test-godror:
 	@echo "Run tests with godror"
 	GOOS=$(OS_TYPE) GOARCH=$(ARCH_TYPE) go test --tags godror -coverprofile="test-coverage.out" $$(go list ./... | grep -v /vendor/)
+
+go-test-oracledb:
+	@echo "Run tests with experimental go-oracledb"
+	CGO_ENABLED=0 GOOS=$(OS_TYPE) GOARCH=$(ARCH_TYPE) go test --tags oracledb ./...
 
 clean:
 	rm -rf ./dist glibc-*.apk oracle-*.rpm
@@ -144,5 +148,5 @@ podman-push:
 
 podman-release: podman-build podman-push
 
-.PHONY: version build deps go-test go-test-godror go-test-all clean docker-compose-up docker-compose-down docker docker-arm docker-platform docker-amd \
+.PHONY: version build deps go-test go-test-godror go-test-oracledb go-test-all clean docker-compose-up docker-compose-down docker docker-arm docker-platform docker-amd \
         podman-build podman-push podman-release govulncheck
