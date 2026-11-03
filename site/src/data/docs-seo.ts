@@ -16,6 +16,11 @@ const docsSeo: Record<string, DocSeoMetadata> = {
       'Compile and run the exporter with the go-ora Oracle database driver without Oracle Instant Client or CGO.',
     keywords: ['go-ora', 'Oracle database driver', 'CGO', 'Oracle AI Database Metrics Exporter'],
   },
+  'advanced/go-oracledb': {
+    description:
+      'Build and configure experimental go-oracledb driver support without Oracle Instant Client or CGO.',
+    keywords: ['go-oracledb', 'Oracle database driver', 'CGO', 'Oracle AI Database Metrics Exporter'],
+  },
   'advanced/go-runtime': {
     description:
       'Control the exporter Go runtime resource limits for deployments with constrained memory or many exporter instances.',

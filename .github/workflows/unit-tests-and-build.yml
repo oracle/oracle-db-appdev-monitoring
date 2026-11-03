@@ -39,3 +39,9 @@ jobs:
 
       - name: Run tests
         run: make go-test
+
+      - name: Build experimental go-oracledb exporter
+        run: CGO_ENABLED=0 go build -tags oracledb ./...
+
+      - name: Test experimental go-oracledb driver
+        run: make go-test-oracledb

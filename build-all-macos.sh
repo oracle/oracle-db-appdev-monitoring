@@ -6,7 +6,7 @@ set -euo pipefail
 # It is designed to run on MacOS aarch64, creating the darwin-arm64 on the local host.
 # Artifacts for linux-arm64, linux-amd64 are built in containers.
 
-# The following artifacts are created on a successful build in the 'dist' directory for the selected database driver target (godror or goora):
+# The following artifacts are created on a successful build in the 'dist' directory for the selected database driver target (godror, goora, or oracledb):
 # - linux/arm64 and linux/amd64 container images
 # - linux/arm64 and linux/amd64 binary tarballs for glibc 2.28 extracted from the container images
 # - linux/arm64 and linux/amd64 binary tarballs built on the latest Ubuntu distribution
@@ -27,7 +27,7 @@ IMAGE_NAME="${IMAGE_NAME:-container-registry.oracle.com/database/observability-e
 while getopts "v:t:cmu" opt; do
   case ${opt} in
     v ) VERSION=$OPTARG;; # Exporter version
-    t ) TARGET=$OPTARG;;  # Target database driver, may be "godror" or "goora"
+    t ) TARGET=$OPTARG;;  # Target database driver, may be "godror", "goora", or "oracledb"
     c ) BUILD_CONTAINERS=true;; # Build exporter containers and extract OL8/glibc binary tarballs
     m ) BUILD_DARWIN=true;; # Build darwin/macos binary
     u ) BUILD_UBUNTU=true;; # Build binaries on latest Ubuntu
@@ -49,6 +49,11 @@ case "${TARGET}" in
     TAGS="goora"
     CGO_ENABLED=0
     DOCKER_TARGET="exporter-goora"
+    ;;
+  oracledb)
+    TAGS="oracledb"
+    CGO_ENABLED=0
+    DOCKER_TARGET="exporter-oracledb"
     ;;
   godror)
     TAGS="godror"

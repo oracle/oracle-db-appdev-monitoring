@@ -94,3 +94,6 @@ EXPOSE 9161
 USER 1000
 
 ENTRYPOINT ["/oracledb_exporter"]
+
+# Shares the no-Instant-Client runtime with go-ora. Build with TAGS=oracledb and CGO_ENABLED=0.
+FROM exporter-goora AS exporter-oracledb
