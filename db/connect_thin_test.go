@@ -1,7 +1,7 @@
 // Copyright (c) 2026, Oracle and/or its affiliates.
 // Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 
-//go:build goora
+//go:build goora || oracledb
 
 package db
 
@@ -13,12 +13,9 @@ import (
 	"testing"
 
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
-	go_ora "github.com/sijms/go-ora/v3"
 )
 
-var _ driver.ExecerContext = (*go_ora.Connection)(nil)
-
-func TestGooraClientInfoConfiguration(t *testing.T) {
+func TestThinDriverClientInfoConfiguration(t *testing.T) {
 	disabled := false
 	for _, tt := range []struct {
 		name   string
@@ -83,7 +80,7 @@ func (c *sessionTestConn) ExecContext(ctx context.Context, query string, args []
 	return driver.RowsAffected(0), c.initErr
 }
 
-func TestGooraInitializesEveryPoolConnection(t *testing.T) {
+func TestThinDriverInitializesEveryPoolConnection(t *testing.T) {
 	connector := &sessionTestConnector{}
 	pool := sql.OpenDB(initializingConnector{Connector: connector, label: config.DefaultClientInfoLabel})
 	t.Cleanup(func() { pool.Close() })
@@ -125,7 +122,7 @@ func TestGooraInitializesEveryPoolConnection(t *testing.T) {
 	}
 }
 
-func TestGooraInitializationFailureClosesConnection(t *testing.T) {
+func TestThinDriverInitializationFailureClosesConnection(t *testing.T) {
 	wantErr := errors.New("cannot set client info")
 	connector := &sessionTestConnector{initErr: wantErr}
 	conn, err := (initializingConnector{Connector: connector, label: config.DefaultClientInfoLabel}).Connect(context.Background())
@@ -137,7 +134,7 @@ func TestGooraInitializationFailureClosesConnection(t *testing.T) {
 	}
 }
 
-func TestGooraConnectFailureSkipsInitialization(t *testing.T) {
+func TestThinDriverConnectFailureSkipsInitialization(t *testing.T) {
 	wantErr := errors.New("cannot connect")
 	connector := &sessionTestConnector{connectErr: wantErr}
 	conn, err := (initializingConnector{Connector: connector, label: config.DefaultClientInfoLabel}).Connect(context.Background())
@@ -149,7 +146,7 @@ func TestGooraConnectFailureSkipsInitialization(t *testing.T) {
 	}
 }
 
-func TestGooraInitializationHonorsContext(t *testing.T) {
+func TestThinDriverInitializationHonorsContext(t *testing.T) {
 	connector := &sessionTestConnector{}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -162,7 +159,7 @@ func TestGooraInitializationHonorsContext(t *testing.T) {
 	}
 }
 
-func TestEffectiveSQLPoolLimitsPreferGooraPoolSettings(t *testing.T) {
+func TestEffectiveSQLPoolLimitsPreferThinDriverPoolSettings(t *testing.T) {
 	maxOpenConns := 10
 	maxIdleConns := 6
 	poolMaxConnections := 4
@@ -186,7 +183,7 @@ func TestEffectiveSQLPoolLimitsPreferGooraPoolSettings(t *testing.T) {
 	}
 }
 
-func TestEffectiveSQLPoolLimitsFallbackToSQLSettingsForGoora(t *testing.T) {
+func TestEffectiveSQLPoolLimitsFallbackToSQLSettingsForThinDriver(t *testing.T) {
 	maxOpenConns := 8
 	maxIdleConns := 3
 	dbconfig := config.DatabaseConfig{ConnectConfig: config.ConnectConfig{
@@ -203,7 +200,7 @@ func TestEffectiveSQLPoolLimitsFallbackToSQLSettingsForGoora(t *testing.T) {
 	}
 }
 
-func TestInitDBKeepsGooraPoolMaxConnections(t *testing.T) {
+func TestInitDBKeepsThinDriverPoolMaxConnections(t *testing.T) {
 	maxOpenConns := 10
 	poolMaxConnections := 4
 	dbconfig := config.DatabaseConfig{ConnectConfig: config.ConnectConfig{

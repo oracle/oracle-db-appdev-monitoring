@@ -119,7 +119,7 @@ From the exporter configuration file, you may optionally load database credentia
 
 ### Database session identification
 
-By default, the exporter sets `V$SESSION.CLIENT_INFO` to `oracledb_exporter` on every session for all configured databases, including replacement connections. This works with both godror and go-ora.
+By default, the exporter sets `V$SESSION.CLIENT_INFO` to `oracledb_exporter` on every session for all configured databases, including replacement connections. This works with godror, go-ora, and the experimental go-oracledb driver.
 
 Use `metrics.clientInfo.label` to customize the marker. Set `metrics.clientInfo.enabled: false` to skip setting `CLIENT_INFO`. Omitting these settings uses the defaults shown above. When enabled, a session initialization error prevents that connection from entering service.
 
