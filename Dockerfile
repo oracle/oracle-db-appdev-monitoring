@@ -13,7 +13,7 @@ ENV TAGS=${TAGS:-godror}
 ARG CGO_ENABLED
 ENV CGO_ENABLED=${CGO_ENABLED:-1}
 
-ARG GO_VERSION=1.27.2
+ARG GO_VERSION=1.27.3
 ENV GO_VERSION=${GO_VERSION}
 
 RUN microdnf update -y && \
@@ -53,7 +53,7 @@ ENV GOARCH=${GOARCH:-amd64}
 RUN microdnf update -y && \
     microdnf install --setopt=install_weak_deps=0 -y oracle-instantclient-release-23ai-el8 && \
     microdnf install -y oracle-instantclient-basic glibc && \
-    microdnf update -y expat gnutls glibc && \
+    microdnf update -y && \
     rpm -e --nodeps platform-python-setuptools && \
     microdnf clean all
 
