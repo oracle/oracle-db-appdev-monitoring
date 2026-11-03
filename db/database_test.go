@@ -163,6 +163,28 @@ func (partialWarmupFailureConn) QueryContext(context.Context, string, []driver.N
 	return &testQueryRows{}, nil
 }
 
+func TestMaxOpenConnections(t *testing.T) {
+	three, unlimited := 3, 0
+	tests := []struct {
+		name         string
+		maxOpenConns *int
+		want         int
+	}{
+		{name: "default", maxOpenConns: nil, want: 10},
+		{name: "configured", maxOpenConns: &three, want: 3},
+		{name: "unlimited", maxOpenConns: &unlimited, want: 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := &Database{Config: config.DatabaseConfig{ConnectConfig: config.ConnectConfig{MaxOpenConns: tt.maxOpenConns}}}
+			if got := d.MaxOpenConnections(); got != tt.want {
+				t.Fatalf("expected %d max open connections, got %d", tt.want, got)
+			}
+		})
+	}
+}
+
 func TestIsValid(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -329,6 +351,34 @@ func TestDatabaseStateAccessIsRaceSafe(t *testing.T) {
 	}
 
 	wg.Wait()
+}
+
+// A query holds the lifecycle read lock until its rows are released. Recording a successful ping must
+// not wait for it, or a scrape waits for every query that is still running.
+func TestPingDoesNotWaitForRunningQueries(t *testing.T) {
+	db := &Database{
+		Session: openTestQueryDB(t),
+	}
+	rows, unlock, err := db.QueryContext(context.Background(), "select 1 from dual")
+	if err != nil {
+		t.Fatalf("expected query to succeed, got %v", err)
+	}
+	defer unlock()
+	defer rows.Close()
+
+	pinged := make(chan error, 1)
+	go func() { pinged <- db.Ping(testLogger(), time.Minute) }()
+	select {
+	case err := <-pinged:
+		if err != nil {
+			t.Fatalf("expected ping to succeed, got %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("ping waited for a running query")
+	}
+	if got := db.Up(); got != 1 {
+		t.Fatalf("expected the database to be up after the ping, got %v", got)
+	}
 }
 
 func TestQueryContextHoldsReadLockUntilUnlock(t *testing.T) {

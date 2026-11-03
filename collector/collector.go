@@ -347,6 +347,8 @@ func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- er
 	}
 	e.logger.Debug("Successfully pinged Oracle AI Database: "+db.MaskDSN(d.Config.URL), "database", d.Name)
 
+	cache := e.metricsCache(d)
+	generation := e.currentCacheGeneration()
 	metricsToScrape := 0
 	for _, metric := range e.metricsToScrape {
 		metric := metric //https://golang.org/doc/faq#closures_and_goroutines
@@ -357,70 +359,91 @@ func (e *Exporter) scrapeDatabase(ch chan<- prometheus.Metric, errChan chan<- er
 			defer wg.Done()
 			// If the metric doesn't need to be scraped, send the cached values
 			if !isScrapeMetric {
-				e.metricsCache(d).SendAll(ch, metric)
+				cache.SendAll(ch, metric)
 				errChan <- nil
 				return
 			}
-			e.logger.Debug("About to scrape metric",
-				"Context", metric.Context,
-				"MetricsDesc", fmt.Sprint(metric.MetricsDesc),
-				"MetricsType", fmt.Sprint(metric.MetricsType),
-				"MetricsBuckets", fmt.Sprint(metric.MetricsBuckets), // ignored unless histogram
-				"Labels", fmt.Sprint(metric.Labels),
-				"FieldToAppend", metric.FieldToAppend,
-				"IgnoreZeroResult", metric.IgnoreZeroResult,
-				"Request", metric.Request,
-				"database", d.Name)
-
-			if len(metric.Request) == 0 {
-				errChan <- errors.New("scrape request not found")
-				e.logger.Error("Error scraping for "+fmt.Sprint(metric.MetricsDesc)+". Did you forget to define request in your toml file?", "database", d.Name)
+			// Serve the cached values of a metric with a custom scrape interval while it refreshes in
+			// the background, so a slow query does not hold up the scrape.
+			if e.refreshesInBackground(metric) {
+				e.startBackgroundRefresh(d, cache, generation, metric, tick)
+				cache.SendAll(ch, metric)
+				errChan <- cache.LastRefreshError(metric)
 				return
 			}
-
-			if len(metric.MetricsDesc) == 0 {
-				errChan <- errors.New("metricsdesc not found")
-				e.logger.Error("Error scraping for query"+fmt.Sprint(metric.Request)+". Did you forget to define metricsdesc in your toml file?", "database", d.Name)
-				return
-			}
-
-			for column, metricType := range metric.MetricsType {
-				if metricType == "histogram" {
-					_, ok := metric.MetricsBuckets[column]
-					if !ok {
-						errChan <- errors.New("metricsbuckets not found")
-						e.logger.Error("Unable to find MetricsBuckets configuration key for metric. (metric="+column+")", "database", d.Name)
-						return
-					}
-				}
-			}
-
-			scrapeStart := time.Now()
-			scrapeError := e.ScrapeMetric(d, ch, metric)
-			elapsed := time.Since(scrapeStart)
+			scrapeError := e.scrapeAndRecordMetric(context.Background(), d, cache, generation, ch, metric)
 			errChan <- scrapeError
-			if scrapeError != nil {
-				e.observeMetricScrapeDuration(d, metric, scrapeResultError, elapsed)
-				if shouldLogScrapeError(scrapeError, metric.IgnoreZeroResult) {
-					e.logger.Error("Error scraping metric",
-						"Context", metric.Context,
-						"MetricsDesc", fmt.Sprint(metric.MetricsDesc),
-						"duration", elapsed,
-						"error", scrapeError,
-						"database", d.Name)
-				}
-				e.scrapeErrors.WithLabelValues(metric.Context, d.Name).Inc()
-			} else {
-				e.observeMetricScrapeDuration(d, metric, scrapeResultSuccess, elapsed)
-				e.metricsCache(d).SetLastScraped(metric, tick)
-				e.logger.Debug("Successfully scraped metric",
-					"Context", metric.Context,
-					"MetricDesc", fmt.Sprint(metric.MetricsDesc),
-					"duration", elapsed,
-					"database", d.Name)
+			if scrapeError == nil {
+				cache.SetLastScraped(metric, tick)
 			}
 		}()
 	}
+}
+
+// scrapeAndRecordMetric scrapes a single metric and records its duration and errors. The results are
+// sent to ch, unless it is nil, and replace the cached values of the metric.
+func (e *Exporter) scrapeAndRecordMetric(ctx context.Context, d *db.Database, cache *MetricsCache, generation uint64, ch chan<- prometheus.Metric, metric *config.Metric) error {
+	e.logger.Debug("About to scrape metric",
+		"Context", metric.Context,
+		"MetricsDesc", fmt.Sprint(metric.MetricsDesc),
+		"MetricsType", fmt.Sprint(metric.MetricsType),
+		"MetricsBuckets", fmt.Sprint(metric.MetricsBuckets), // ignored unless histogram
+		"Labels", fmt.Sprint(metric.Labels),
+		"FieldToAppend", metric.FieldToAppend,
+		"IgnoreZeroResult", metric.IgnoreZeroResult,
+		"Request", metric.Request,
+		"database", d.Name)
+
+	if err := e.validateMetric(d, metric); err != nil {
+		return err
+	}
+
+	scrapeStart := time.Now()
+	scrapeError := e.scrapeMetric(ctx, d, cache, ch, metric)
+	elapsed := time.Since(scrapeStart)
+	if scrapeError != nil {
+		e.observeCurrentMetricScrapeDuration(generation, d, metric, scrapeResultError, elapsed)
+		if shouldLogScrapeError(scrapeError, metric.IgnoreZeroResult) {
+			e.logger.Error("Error scraping metric",
+				"Context", metric.Context,
+				"MetricsDesc", fmt.Sprint(metric.MetricsDesc),
+				"duration", elapsed,
+				"error", scrapeError,
+				"database", d.Name)
+		}
+		e.scrapeErrors.WithLabelValues(metric.Context, d.Name).Inc()
+		return scrapeError
+	}
+	e.observeCurrentMetricScrapeDuration(generation, d, metric, scrapeResultSuccess, elapsed)
+	e.logger.Debug("Successfully scraped metric",
+		"Context", metric.Context,
+		"MetricDesc", fmt.Sprint(metric.MetricsDesc),
+		"duration", elapsed,
+		"database", d.Name)
+	return nil
+}
+
+// validateMetric checks that a metric definition can be scraped.
+func (e *Exporter) validateMetric(d *db.Database, metric *config.Metric) error {
+	if len(metric.Request) == 0 {
+		e.logger.Error("Error scraping for "+fmt.Sprint(metric.MetricsDesc)+". Did you forget to define request in your toml file?", "database", d.Name)
+		return errors.New("scrape request not found")
+	}
+
+	if len(metric.MetricsDesc) == 0 {
+		e.logger.Error("Error scraping for query"+fmt.Sprint(metric.Request)+". Did you forget to define metricsdesc in your toml file?", "database", d.Name)
+		return errors.New("metricsdesc not found")
+	}
+
+	for column, metricType := range metric.MetricsType {
+		if metricType == "histogram" {
+			if _, ok := metric.MetricsBuckets[column]; !ok {
+				e.logger.Error("Unable to find MetricsBuckets configuration key for metric. (metric="+column+")", "database", d.Name)
+				return errors.New("metricsbuckets not found")
+			}
+		}
+	}
+	return nil
 }
 
 func (e *Exporter) scrape(ch chan<- prometheus.Metric, tick *time.Time) {
@@ -540,13 +563,25 @@ func hashFile(h hash.Hash, fn string) error {
 
 // ScrapeMetric is an interface method to call scrapeGenericValues using Metric struct values
 func (e *Exporter) ScrapeMetric(d *db.Database, ch chan<- prometheus.Metric, m *config.Metric) error {
-	e.logger.Debug("Calling function ScrapeGenericValues()")
-	return e.scrapeGenericValues(d, ch, m)
+	return e.scrapeMetric(context.Background(), d, e.metricsCache(d), ch, m)
 }
 
-// generic method for retrieving metrics.
-func (e *Exporter) scrapeGenericValues(d *db.Database, ch chan<- prometheus.Metric, m *config.Metric) error {
+func (e *Exporter) scrapeMetric(ctx context.Context, d *db.Database, cache *MetricsCache, ch chan<- prometheus.Metric, m *config.Metric) error {
+	e.logger.Debug("Calling function ScrapeGenericValues()")
+	return e.scrapeGenericValues(ctx, d, cache, ch, m)
+}
+
+// generic method for retrieving metrics. The results are sent to ch, unless it is nil, and replace the
+// cached values of the metric once the query has completed.
+func (e *Exporter) scrapeGenericValues(ctx context.Context, d *db.Database, cache *MetricsCache, ch chan<- prometheus.Metric, m *config.Metric) error {
 	metricsCount := 0
+	var results []prometheus.Metric
+	emit := func(metric prometheus.Metric) {
+		results = append(results, metric)
+		if ch != nil {
+			ch <- metric
+		}
+	}
 	constLabels := databaseConstLabels(e.constLabels(), d)
 
 	if duplicatedLabels(constLabels, m.GetLabels()) {
@@ -608,17 +643,18 @@ func (e *Exporter) scrapeGenericValues(d *db.Database, ch chan<- prometheus.Metr
 					}
 					buckets[lelimit] = counter
 				}
-				e.metricsCache(d).CacheAndSend(ch, m, prometheus.MustNewConstHistogram(desc, count, value, buckets, labelsValues...))
+				emit(prometheus.MustNewConstHistogram(desc, count, value, buckets, labelsValues...))
 			} else {
-				e.metricsCache(d).CacheAndSend(ch, m, prometheus.MustNewConstMetric(desc, getMetricType(e.logger, metric, m.MetricsType), value, labelsValues...))
+				emit(prometheus.MustNewConstMetric(desc, getMetricType(e.logger, metric, m.MetricsType), value, labelsValues...))
 			}
 			metricsCount++
 		}
 		return nil
 	}
 	e.logger.Debug("Calling function GeneratePrometheusMetrics()")
-	e.metricsCache(d).Reset(m)
-	err := e.generatePrometheusMetrics(d, genericParser, m.Request, getQueryTimeout(e.logger, m, d))
+	err := e.generatePrometheusMetrics(ctx, d, genericParser, m.Request, getQueryTimeout(e.logger, m, d))
+	// Replace the cached values at once, so concurrent readers never see a partial result.
+	cache.Store(m, results)
 	e.logger.Debug("ScrapeGenericValues() - metricsCount: " + strconv.Itoa(metricsCount))
 	if err != nil {
 		return err
@@ -633,8 +669,8 @@ func (e *Exporter) scrapeGenericValues(d *db.Database, ch chan<- prometheus.Metr
 
 // inspired by https://kylewbanks.com/blog/query-result-to-map-in-golang
 // Parse SQL result and call parsing function to each row
-func (e *Exporter) generatePrometheusMetrics(d *db.Database, parse func(row map[string]string) error, query string, queryTimeout time.Duration) error {
-	ctx, cancel := context.WithTimeout(context.Background(), queryTimeout)
+func (e *Exporter) generatePrometheusMetrics(ctx context.Context, d *db.Database, parse func(row map[string]string) error, query string, queryTimeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
 	defer cancel()
 	rows, unlock, err := d.QueryContext(ctx, query)
 
@@ -682,6 +718,9 @@ func (e *Exporter) generatePrometheusMetrics(d *db.Database, parse func(row map[
 }
 
 func (e *Exporter) initCache() {
+	e.generationMu.Lock()
+	defer e.generationMu.Unlock()
+	e.cacheGeneration++
 	e.metricsCaches = make(map[*db.Database]*MetricsCache, len(e.databases))
 	for _, d := range e.databases {
 		e.metricsCaches[d] = NewMetricsCache(e.metricsToScrape)

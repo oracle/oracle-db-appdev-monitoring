@@ -56,6 +56,15 @@ func getScrapeInterval(logger *slog.Logger, context, scrapeInterval string) (tim
 	return 0, false
 }
 
+// hasCustomScrapeInterval reports whether a metric has a valid custom scrape interval.
+func hasCustomScrapeInterval(metric *config.Metric) bool {
+	if len(metric.ScrapeInterval) == 0 {
+		return false
+	}
+	_, err := time.ParseDuration(metric.ScrapeInterval)
+	return err == nil
+}
+
 func getQueryTimeout(logger *slog.Logger, metric *config.Metric, d *db.Database) time.Duration {
 	if len(metric.QueryTimeout) > 0 {
 		qt, err := time.ParseDuration(metric.QueryTimeout)

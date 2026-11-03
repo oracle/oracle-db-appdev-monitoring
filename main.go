@@ -299,6 +299,10 @@ func main() {
 	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancelShutdown()
 	if err := shutdownExporter(shutdownCtx, cancelWork, server.Shutdown, shutdownOTLP, &workers, func() error {
+		// Background metric refreshes still use the database connections.
+		if err := exporter.StopRefreshes(shutdownCtx); err != nil {
+			return fmt.Errorf("stop background metric refreshes: %w", err)
+		}
 		return db.CloseDatabases(databases)
 	}); err != nil {
 		logger.Error("Exporter shutdown failed; terminating the process", "error", err)
