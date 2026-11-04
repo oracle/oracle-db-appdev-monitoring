@@ -76,7 +76,7 @@ The exporter selects structured OCI connection profiles by consumer group and TL
 
 `LOW` is the default for monitoring. You can select any of the five groups when the database returns a compatible profile. The exporter does not switch to another service when the requested service is unavailable. See [Oracle's service guidance](https://docs.oracle.com/en-us/iaas/autonomous-database-serverless/doc/predefined-database-services-names.html).
 
-OCI's actual `isMtlsConnectionRequired` metadata is respected. If no transport preference is specified and only mutual profiles are available, discovery can select mTLS. A tag cannot enable walletless TLS on a database that requires mTLS. A supplied wallet secret or `tnsAdmin` also requests a mutual profile.
+OCI's actual `isMtlsConnectionRequired` metadata is respected. If the metadata does not require mTLS, discovery selects walletless TLS unless a tag or wallet explicitly requests mTLS. Missing compatible profiles skip the target; discovery does not switch transport modes. A tag cannot enable walletless TLS on a database that requires mTLS. A supplied wallet secret or `tnsAdmin` also requests a mutual profile.
 
 An explicit `url` configuration tag is supported only as a full TCPS descriptor with server identity verification. An explicit `connect-service` takes precedence over `url`.
 

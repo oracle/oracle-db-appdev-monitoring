@@ -41,7 +41,7 @@ func TestOCIDiscoveryLiveScrape(t *testing.T) {
 			t.Error(err)
 		}
 	}()
-	if err := m.DiscoverDatabases(ctx, logger); err != nil {
+	if err := config.NewDiscoveryMonitor(m).Initialize(ctx, logger); err != nil {
 		t.Fatal(err)
 	}
 	if len(m.Databases) == 0 {

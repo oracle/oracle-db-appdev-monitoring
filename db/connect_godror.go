@@ -6,11 +6,9 @@
 package db
 
 import (
-	"context"
 	"database/sql"
+	"database/sql/driver"
 	"errors"
-	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/godror/godror"
@@ -18,39 +16,10 @@ import (
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
 )
 
-func connectContext(ctx context.Context, logger *slog.Logger, dbname string, dbconfig config.DatabaseConfig, clientInfo config.ClientInfoConfig) (*sql.DB, error) {
-	logger.Debug("Launching connection to "+MaskDSN(dbconfig.URL), "database", dbname)
+const driverName = "godror"
 
-	credentials, err := dbconfig.ResolveCredentialsContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-	username, password := credentials.Username, credentials.Password
-	// If password is not specified, externalAuth will be true, and we'll ignore user input
-	dbconfig.ExternalAuth = password == ""
-	logger.Debug(fmt.Sprintf("external authentication set to %t", dbconfig.ExternalAuth), "database", dbname)
-	msg := "Using Username/Password Authentication."
-	if dbconfig.ExternalAuth {
-		msg = "Database Password not specified; will attempt to use external authentication (ignoring user input)."
-		dbconfig.Username = ""
-	}
-	logger.Info(msg, "database", dbname)
-	if dbconfig.GetPoolIncrement() > 0 {
-		logger.Debug(fmt.Sprintf("set pool increment to %d", dbconfig.PoolIncrement), "database", dbname)
-	}
-	if dbconfig.GetPoolMaxConnections() > 0 {
-		logger.Debug(fmt.Sprintf("set pool max connections to %d", dbconfig.PoolMaxConnections), "database", dbname)
-	}
-	if dbconfig.GetPoolMinConnections() > 0 {
-		logger.Debug(fmt.Sprintf("set pool min connections to %d", dbconfig.PoolMinConnections), "database", dbname)
-	}
-
-	P := connectionParams(dbconfig, username, password, clientInfo)
-
-	// note that this just configures the connection, it does not actually connect until later
-	// when we call db.Ping()
-	db := sql.OpenDB(godror.NewConnector(P))
-	return db, nil
+func newConnector(dbconfig config.DatabaseConfig, credentials config.DatabaseCredentials, clientInfo config.ClientInfoConfig) (driver.Connector, error) {
+	return godror.NewConnector(connectionParams(dbconfig, credentials.Username, credentials.Password, clientInfo)), nil
 }
 
 func connectionParams(dbconfig config.DatabaseConfig, username, password string, clientInfo config.ClientInfoConfig) godror.ConnectionParams {
@@ -122,18 +91,10 @@ func warmupConnectionPoolSize(dbconfig config.DatabaseConfig) int {
 	return poolSize
 }
 
-func isInvalidCredentialsError(err error) bool {
+func oracleErrorCode(err error) int {
 	var oraErr *godror.OraErr
 	if !errors.As(err, &oraErr) {
-		return false
+		return 0
 	}
-	return oraErr.Code() == ora01017code || oraErr.Code() == ora28000code
-}
-
-func isTemporaryConnectionError(err error) bool {
-	var oraErr *godror.OraErr
-	if !errors.As(err, &oraErr) {
-		return false
-	}
-	return isTemporaryConnectionErrorCode(oraErr.Code())
+	return oraErr.Code()
 }

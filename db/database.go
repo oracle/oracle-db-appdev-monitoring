@@ -17,25 +17,6 @@ import (
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
 )
 
-const (
-	ora01017code = 1017
-	ora01033code = 1033
-	ora28000code = 28000
-	ora03113code = 3113
-	ora03114code = 3114
-	ora12537code = 12537
-	ora12541code = 12541
-)
-
-func isTemporaryConnectionErrorCode(code int) bool {
-	switch code {
-	case ora01033code, ora03113code, ora03114code, ora12537code, ora12541code:
-		return true
-	default:
-		return false
-	}
-}
-
 var (
 	errDatabaseSessionNotInitialized = errors.New("database session is not initialized")
 	errDatabaseClosed                = errors.New("database is shut down")
@@ -209,18 +190,13 @@ func (d *Database) reconnect(logger *slog.Logger, backoff time.Duration) error {
 
 	ctx := d.operationContext()
 	session, err := connectContext(ctx, logger, d.Name, d.Config, d.ClientInfo)
-	if err != nil {
-		d.reconnectMU.Lock()
-		d.connectErr = err
-		d.up = 0
-		d.invalidateLocked(backoff)
-		d.reconnectMU.Unlock()
-		return err
-	}
-	if err := d.warmupSession(logger, session); err != nil {
-		if session != nil {
+	if err == nil {
+		err = d.warmupSession(logger, session)
+		if err != nil && session != nil {
 			_ = session.Close()
 		}
+	}
+	if err != nil {
 		d.reconnectMU.Lock()
 		d.connectErr = err
 		d.up = 0

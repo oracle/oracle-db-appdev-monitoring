@@ -6,11 +6,9 @@
 package db
 
 import (
-	"context"
-	"database/sql"
+	"database/sql/driver"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/url"
 	"regexp"
 	"strings"
@@ -21,31 +19,10 @@ import (
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
 )
 
-func connectContext(ctx context.Context, logger *slog.Logger, dbname string, dbconfig config.DatabaseConfig, clientInfo config.ClientInfoConfig) (*sql.DB, error) {
-	logger.Debug("Launching connection to "+MaskDSN(dbconfig.URL), "database", dbname)
+const driverName = "go-ora"
 
-	credentials, err := dbconfig.ResolveCredentialsContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-	username, password := credentials.Username, credentials.Password
-	dbconfig.ExternalAuth = password == ""
-
-	logger.Debug(fmt.Sprintf("external authentication set to %t", dbconfig.ExternalAuth), "database", dbname)
-
-	msg := "Using Username/Password Authentication."
-	if dbconfig.ExternalAuth {
-		msg = "Database Password not specified; will attempt to use external authentication (ignoring user input)."
-		dbconfig.Username = ""
-	}
-	logger.Info(msg, "database", dbname)
-
-	dsn := gooraDSN(dbconfig, username, password)
-
-	// open connection (lazy until first use)
-	db := sql.OpenDB(withClientInfo(go_ora.NewConnector(dsn), clientInfo))
-
-	return db, nil
+func newConnector(dbconfig config.DatabaseConfig, credentials config.DatabaseCredentials, clientInfo config.ClientInfoConfig) (driver.Connector, error) {
+	return withClientInfo(go_ora.NewConnector(gooraDSN(dbconfig, credentials.Username, credentials.Password)), clientInfo), nil
 }
 
 var gooraTCPSProtocol = regexp.MustCompile(`(?i)\(\s*protocol\s*=\s*tcps\s*\)`)
@@ -90,26 +67,10 @@ func gooraDSN(dbconfig config.DatabaseConfig, username, password string) string 
 	return dsn
 }
 
-func isInvalidCredentialsError(err error) bool {
-	if err == nil {
-		return false
-	}
+func oracleErrorCode(err error) int {
 	var oraErr *network.OracleError
-	ok := errors.As(err, &oraErr)
-	if !ok {
-		return false
+	if !errors.As(err, &oraErr) {
+		return 0
 	}
-	return oraErr.ErrCode == ora01017code || oraErr.ErrCode == ora28000code
-}
-
-func isTemporaryConnectionError(err error) bool {
-	if err == nil {
-		return false
-	}
-	var oraErr *network.OracleError
-	ok := errors.As(err, &oraErr)
-	if !ok {
-		return false
-	}
-	return isTemporaryConnectionErrorCode(oraErr.ErrCode)
+	return oraErr.ErrCode
 }

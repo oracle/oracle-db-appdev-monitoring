@@ -101,13 +101,6 @@ func databaseConfigFromAutonomousDatabase(autonomousDatabase adb.AutonomousDatab
 	}
 	if database.URL == "" || tags[tagKeyConnectService] != "" {
 		connectionString, err := connectionProfileForService(autonomousDatabase.ConnectionStrings, service, mutual)
-		// If OCI only advertises mutual profiles, prefer a working wallet-based
-		// connection unless the user explicitly requested walletless TLS.
-		if err != nil && !mutual && !explicitMutual {
-			if fallback, fallbackErr := connectionProfileForService(autonomousDatabase.ConnectionStrings, service, true); fallbackErr == nil {
-				connectionString, err, mutual = fallback, nil, true
-			}
-		}
 		if err != nil {
 			return DatabaseConfig{}, err
 		}

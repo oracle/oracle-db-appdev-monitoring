@@ -20,7 +20,7 @@ type DiscoveryMonitor struct {
 	configuration   *MetricsConfiguration
 	static          map[string]DatabaseConfig
 	baseline        map[string]DatabaseConfig
-	snapshot        func(context.Context, *slog.Logger, *DatabasesFromConfig) (DiscoverySnapshot, error)
+	snapshot        func(context.Context, *slog.Logger, *OCIDatabasesFromConfig) (discoverySnapshot, error)
 	mu              sync.Mutex
 	success         float64
 	duration        float64
@@ -45,7 +45,7 @@ func NewDiscoveryMonitor(configuration *MetricsConfiguration) *DiscoveryMonitor 
 	return &DiscoveryMonitor{
 		configuration:   configuration,
 		static:          copyDatabaseTargets(configuration.Databases),
-		snapshot:        DiscoverDatabaseSnapshotWithStats,
+		snapshot:        discoverOCIDatabases,
 		successDesc:     prometheus.NewDesc("oracledb_exporter_discovery_success", "Whether the last OCI discovery attempt succeeded.", nil, nil),
 		durationDesc:    prometheus.NewDesc("oracledb_exporter_discovery_duration_seconds", "Duration of the last OCI discovery attempt.", nil, nil),
 		lastSuccessDesc: prometheus.NewDesc("oracledb_exporter_discovery_last_success_timestamp_seconds", "Unix time of the last successful OCI discovery.", nil, nil),
@@ -104,14 +104,16 @@ func (m *DiscoveryMonitor) record(start time.Time, err error, accepted, matched,
 }
 
 // Initialize runs the materializing discovery once, before database registration.
-// On error it restores static targets so callers may continue serving them.
+// Failed discovery leaves static targets intact; merging commits atomically.
 func (m *DiscoveryMonitor) Initialize(ctx context.Context, logger *slog.Logger) error {
 	started := time.Now()
 	discoveryCtx, cancel := context.WithTimeout(ctx, m.configuration.DatabasesFrom.DiscoveryTimeout())
 	defer cancel()
-	snapshot, err := m.configuration.DiscoverDatabasesWithStats(discoveryCtx, logger)
-	if err != nil {
-		m.configuration.Databases = copyDatabaseTargets(m.static)
+	snapshot, err := m.snapshot(discoveryCtx, logger, m.configuration.DatabasesFrom.OCI)
+	if err == nil {
+		var collisions int
+		collisions, err = m.configuration.mergeDiscoveredDatabases(discoveryCtx, logger, snapshot.Databases)
+		snapshot.Skipped += collisions
 	}
 	m.baseline = normalizedDiscoveryTargets(m.configuration.Databases)
 	accepted := len(m.configuration.Databases) - len(m.static)
@@ -133,7 +135,7 @@ func (m *DiscoveryMonitor) Poll(ctx context.Context, logger *slog.Logger) (bool,
 	started := time.Now()
 	discoveryCtx, cancel := context.WithTimeout(ctx, m.configuration.DatabasesFrom.DiscoveryTimeout())
 	defer cancel()
-	snapshot, err := m.snapshot(discoveryCtx, logger, m.configuration.DatabasesFrom)
+	snapshot, err := m.snapshot(discoveryCtx, logger, m.configuration.DatabasesFrom.OCI)
 	if err != nil {
 		m.record(started, err, 0, 0, 0)
 		return false, err
@@ -180,49 +182,47 @@ func (m *DiscoveryMonitor) Run(ctx context.Context, logger *slog.Logger, request
 		return
 	}
 	for {
+		var renewal bool
 		select {
 		case <-ctx.Done():
 			return
 		case <-renew:
-			// Avoid deliberately discarding known-good targets during a known OCI
-			// outage. Probe metadata without generating wallets before restarting.
-			if _, err := m.Poll(ctx, logger); err != nil {
-				if ctx.Err() != nil {
-					return
-				}
+			renewal = true
+		case <-refresh:
+		}
+		// Renewal also probes metadata before restarting so known OCI outages
+		// retain active targets. Neither kind of poll generates wallets.
+		changed, err := m.Poll(ctx, logger)
+		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			if renewal {
 				logger.Warn("OCI wallet renewal discovery failed; retaining active targets and retrying", "error", err)
 				retry := interval
 				if retry <= 0 {
 					retry = 5 * time.Minute
 				}
 				renewalTimer.Reset(retry)
-				continue
-			}
-			logger.Info("OCI discovery wallet refresh interval elapsed; requesting controlled restart")
-			requestRestart()
-			return
-		case <-refresh:
-			changed, err := m.Poll(ctx, logger)
-			if err != nil {
-				if ctx.Err() != nil {
-					return
-				}
+			} else {
 				logger.Warn("OCI discovery refresh failed; retaining active database targets", "error", err)
-				continue
 			}
-			if changed {
-				logger.Info("OCI database targets changed; requesting controlled restart")
-				requestRestart()
-				return
-			}
+			continue
 		}
+		if renewal {
+			logger.Info("OCI discovery wallet refresh interval elapsed; requesting controlled restart")
+		} else if changed {
+			logger.Info("OCI database targets changed; requesting controlled restart")
+		} else {
+			continue
+		}
+		requestRestart()
+		return
 	}
 }
 
 func (m *DiscoveryMonitor) Describe(out chan<- *prometheus.Desc) {
-	for _, desc := range []*prometheus.Desc{m.successDesc, m.durationDesc, m.lastSuccessDesc, m.targetsDesc, m.matchedDesc, m.skippedDesc} {
-		out <- desc
-	}
+	prometheus.DescribeByCollect(m, out)
 }
 
 func (m *DiscoveryMonitor) Collect(out chan<- prometheus.Metric) {

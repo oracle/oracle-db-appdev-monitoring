@@ -68,7 +68,7 @@ func TestDiscoverOCIThroughSDKHTTP(t *testing.T) {
 		t.Fatal(err)
 	}
 	client.Host = server.URL
-	snapshot, err := discoverOCIWithClientStats(context.Background(), testLogger(), &OCIDatabasesFromConfig{
+	snapshot, err := discoverOCIWithClient(context.Background(), testLogger(), &OCIDatabasesFromConfig{
 		Auth: oci.AuthModeConfigFile, Compartments: []string{"compartment-1", "compartment-2"},
 		Filters: OCIDatabasesFromFiltersConfig{LifecycleState: adb.AutonomousDatabaseLifecycleStateAvailable, RequiredTags: map[string]string{tagKeyExporterEnabled: "true"}},
 	}, client)

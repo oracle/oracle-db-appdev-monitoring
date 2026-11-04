@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 	"sort"
 	"strings"
 
@@ -23,48 +24,33 @@ type DiscoveryWalletConfig struct {
 	SecretName string
 }
 
-// DiscoverySnapshot reports resource matches and conversion outcomes. Matched is
+// discoverySnapshot reports resource matches and conversion outcomes. Matched is
 // counted after lifecycle/tag filtering; Skipped includes invalid/duplicate names.
-type DiscoverySnapshot struct {
+type discoverySnapshot struct {
 	Databases map[string]DatabaseConfig
 	Matched   int
 	Skipped   int
 }
 
-var discoverOCIStats = discoverOCIDatabasesWithStats
-
-func DiscoverDatabaseSnapshotWithStats(ctx context.Context, logger *slog.Logger, cfg *DatabasesFromConfig) (DiscoverySnapshot, error) {
-	if cfg == nil || cfg.OCI == nil {
-		return DiscoverySnapshot{Databases: make(map[string]DatabaseConfig)}, nil
-	}
-	return discoverOCIStats(ctx, logger, cfg.OCI)
-}
-
-// DiscoverDatabaseSnapshot resolves metadata without materializing wallets.
-func DiscoverDatabaseSnapshot(ctx context.Context, logger *slog.Logger, cfg *DatabasesFromConfig) (map[string]DatabaseConfig, error) {
-	snapshot, err := DiscoverDatabaseSnapshotWithStats(ctx, logger, cfg)
-	return snapshot.Databases, err
-}
-
-func discoverOCIDatabasesWithStats(ctx context.Context, logger *slog.Logger, cfg *OCIDatabasesFromConfig) (DiscoverySnapshot, error) {
+func discoverOCIDatabases(ctx context.Context, logger *slog.Logger, cfg *OCIDatabasesFromConfig) (discoverySnapshot, error) {
 	configProvider, err := oci.ConfigurationProviderForAuthMode(cfg.Auth)
 	if err != nil {
-		return DiscoverySnapshot{}, err
+		return discoverySnapshot{}, err
 	}
 	adbClient, err := adb.NewDatabaseClientWithConfigurationProvider(configProvider)
 	if err != nil {
-		return DiscoverySnapshot{}, err
+		return discoverySnapshot{}, err
 	}
-	return discoverOCIWithClientStats(ctx, logger, cfg, adbClient)
+	return discoverOCIWithClient(ctx, logger, cfg, adbClient)
 }
 
-func discoverOCIWithClientStats(ctx context.Context, logger *slog.Logger, cfg *OCIDatabasesFromConfig, adbClient oci.AutonomousDatabaseLister) (DiscoverySnapshot, error) {
+func discoverOCIWithClient(ctx context.Context, logger *slog.Logger, cfg *OCIDatabasesFromConfig, adbClient oci.AutonomousDatabaseLister) (discoverySnapshot, error) {
 	databases := make(map[string]DatabaseConfig)
 	var autonomousDatabases []adb.AutonomousDatabaseSummary
 	for _, compartment := range cfg.Compartments {
 		results, err := oci.ListAllDatabases(ctx, adbClient, compartment, cfg.Filters.RequiredTags, cfg.Filters.LifecycleState)
 		if err != nil {
-			return DiscoverySnapshot{}, fmt.Errorf("list Autonomous Databases in compartment %q: %w", compartment, err)
+			return discoverySnapshot{}, fmt.Errorf("list Autonomous Databases in compartment %q: %w", compartment, err)
 		}
 		autonomousDatabases = append(autonomousDatabases, results...)
 	}
@@ -76,7 +62,7 @@ func discoverOCIWithClientStats(ctx context.Context, logger *slog.Logger, cfg *O
 	for _, database := range autonomousDatabases {
 		addAutonomousDatabase(databases, database, cfg.Auth, logger)
 	}
-	return DiscoverySnapshot{Databases: databases, Matched: len(autonomousDatabases), Skipped: len(autonomousDatabases) - len(databases)}, nil
+	return discoverySnapshot{Databases: databases, Matched: len(autonomousDatabases), Skipped: len(autonomousDatabases) - len(databases)}, nil
 }
 
 func addAutonomousDatabase(databases map[string]DatabaseConfig, autonomousDatabase adb.AutonomousDatabaseSummary, auth oci.AuthMode, logger *slog.Logger) {
@@ -112,35 +98,9 @@ func stringValue(value *string) string {
 	return *value
 }
 
-// DiscoverDatabases resolves configured discovery sources and merges them into
-// the static targets. Call once at startup, after configuration validation.
-// Config-file reloads restart the process and run discovery again.
-func (m *MetricsConfiguration) DiscoverDatabases(ctx context.Context, logger *slog.Logger) error {
-	_, err := m.DiscoverDatabasesWithStats(ctx, logger)
-	return err
-}
-
-// DiscoverDatabasesWithStats materializes the accepted targets atomically and
-// reports conversion skips plus collisions with static target names.
-func (m *MetricsConfiguration) DiscoverDatabasesWithStats(ctx context.Context, logger *slog.Logger) (DiscoverySnapshot, error) {
-	snapshot, err := DiscoverDatabaseSnapshotWithStats(ctx, logger, m.DatabasesFrom)
-	if err != nil {
-		return DiscoverySnapshot{}, fmt.Errorf("discover databases: %w", err)
-	}
-	collisions, err := m.mergeDiscoveredDatabases(ctx, logger, snapshot.Databases)
-	if err != nil {
-		return DiscoverySnapshot{}, err
-	}
-	snapshot.Skipped += collisions
-	snapshot.Databases = m.Databases
-	return snapshot, nil
-}
-
 func (m *MetricsConfiguration) mergeDiscoveredDatabases(ctx context.Context, logger *slog.Logger, discovered map[string]DatabaseConfig) (int, error) {
 	next := make(map[string]DatabaseConfig, len(m.Databases)+len(discovered))
-	for name, database := range m.Databases {
-		next[name] = database
-	}
+	maps.Copy(next, m.Databases)
 	collisions := 0
 	for name, database := range discovered {
 		if _, exists := next[name]; exists {

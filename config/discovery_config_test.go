@@ -5,7 +5,6 @@ package config
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"testing"
 	"time"
@@ -38,50 +37,32 @@ func TestDiscoveryConfigurationDefaultsAndValidation(t *testing.T) {
 }
 
 func TestDiscoverDatabasesMergesStaticTargets(t *testing.T) {
-	original := discoverOCIStats
-	t.Cleanup(func() { discoverOCIStats = original })
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	discoverOCIStats = func(got context.Context, _ *slog.Logger, cfg *OCIDatabasesFromConfig) (DiscoverySnapshot, error) {
-		if got != ctx || cfg.Auth != oci.AuthModeWorkloadIdentity {
-			t.Fatal("discovery configuration or context not passed through")
+	cfg := monitorConfiguration()
+	cfg.Databases = map[string]DatabaseConfig{"orders": {URL: "static"}}
+	cfg.DatabasesFrom.OCI.Auth = oci.AuthModeWorkloadIdentity
+	m := NewDiscoveryMonitor(cfg)
+	m.snapshot = func(ctx context.Context, _ *slog.Logger, source *OCIDatabasesFromConfig) (discoverySnapshot, error) {
+		if _, ok := ctx.Deadline(); !ok || source.Auth != oci.AuthModeWorkloadIdentity {
+			t.Fatal("discovery timeout or configuration not passed through")
 		}
-		return DiscoverySnapshot{Databases: map[string]DatabaseConfig{"orders": {URL: "discovered"}, "inventory": {URL: "inventory"}}, Matched: 2}, nil
+		return discoverySnapshot{Databases: map[string]DatabaseConfig{"orders": {URL: "discovered"}, "inventory": {URL: "inventory"}}, Matched: 2}, nil
 	}
-	m := &MetricsConfiguration{Databases: map[string]DatabaseConfig{"orders": {URL: "static"}}, DatabasesFrom: &DatabasesFromConfig{OCI: &OCIDatabasesFromConfig{Auth: oci.AuthModeWorkloadIdentity}}}
-	if err := m.DiscoverDatabases(ctx, testLogger()); err != nil {
+	if err := m.Initialize(context.Background(), testLogger()); err != nil {
 		t.Fatal(err)
 	}
-	if len(m.Databases) != 2 || m.Databases["orders"].URL != "static" || m.Databases["inventory"].URL != "inventory" {
-		t.Fatalf("unexpected targets: %#v", m.Databases)
-	}
-}
-
-func TestDiscoveryFailurePreservesStaticTargets(t *testing.T) {
-	original := discoverOCIStats
-	t.Cleanup(func() { discoverOCIStats = original })
-	want := errors.New("OCI unavailable")
-	discoverOCIStats = func(context.Context, *slog.Logger, *OCIDatabasesFromConfig) (DiscoverySnapshot, error) {
-		return DiscoverySnapshot{}, want
-	}
-	m := &MetricsConfiguration{Databases: map[string]DatabaseConfig{"orders": {URL: "static"}}, DatabasesFrom: &DatabasesFromConfig{OCI: &OCIDatabasesFromConfig{}}}
-	if err := m.DiscoverDatabases(context.Background(), testLogger()); !errors.Is(err, want) {
-		t.Fatalf("unexpected discovery error: %v", err)
-	}
-	if len(m.Databases) != 1 || m.Databases["orders"].URL != "static" {
-		t.Fatalf("static targets changed: %#v", m.Databases)
+	if len(cfg.Databases) != 2 || cfg.Databases["orders"].URL != "static" || cfg.Databases["inventory"].URL != "inventory" {
+		t.Fatalf("unexpected targets: %#v", cfg.Databases)
 	}
 }
 
 func TestDiscoverySupportsNoStaticTargets(t *testing.T) {
-	original := discoverOCIStats
-	t.Cleanup(func() { discoverOCIStats = original })
-	discoverOCIStats = func(context.Context, *slog.Logger, *OCIDatabasesFromConfig) (DiscoverySnapshot, error) {
-		return DiscoverySnapshot{Databases: map[string]DatabaseConfig{"orders": {URL: "orders"}}, Matched: 1}, nil
+	cfg := monitorConfiguration()
+	m := NewDiscoveryMonitor(cfg)
+	m.snapshot = func(context.Context, *slog.Logger, *OCIDatabasesFromConfig) (discoverySnapshot, error) {
+		return discoverySnapshot{Databases: map[string]DatabaseConfig{"orders": {URL: "orders"}}, Matched: 1}, nil
 	}
-	m := &MetricsConfiguration{DatabasesFrom: &DatabasesFromConfig{OCI: &OCIDatabasesFromConfig{}}}
-	if err := m.DiscoverDatabases(context.Background(), testLogger()); err != nil || m.Databases["orders"].URL != "orders" {
-		t.Fatalf("unexpected targets: %#v, %v", m.Databases, err)
+	if err := m.Initialize(context.Background(), testLogger()); err != nil || cfg.Databases["orders"].URL != "orders" {
+		t.Fatalf("unexpected targets: %#v, %v", cfg.Databases, err)
 	}
 }
 
