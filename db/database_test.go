@@ -11,6 +11,7 @@ import (
 	"io"
 	"log/slog"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -363,5 +364,33 @@ func TestQueryContextHoldsReadLockUntilUnlock(t *testing.T) {
 	case <-locked:
 	case <-time.After(time.Second):
 		t.Fatal("expected reconnect write lock to proceed after query reader released lock")
+	}
+}
+
+func TestRetireCredentialsClosesFailedPoolAndRetainsReplacement(t *testing.T) {
+	failed := openTestQueryDB(t)
+	replacement := openTestQueryDB(t)
+	d := &Database{Session: failed, up: 1}
+	d.retireCredentials(failed, time.Minute)
+	if d.Session != nil || d.Up() != 0 || d.IsValid() == nil {
+		t.Fatal("failed credential pool was not retired with backoff")
+	}
+	if err := failed.Ping(); err == nil {
+		t.Fatal("failed pool remains open")
+	}
+	d.Session = replacement
+	d.clearInvalid()
+	d.setUp(1)
+	d.retireCredentials(failed, time.Minute)
+	if d.Session != replacement || d.Up() != 1 || d.IsValid() != nil {
+		t.Fatal("stale authentication failure retired the replacement pool")
+	}
+}
+
+func TestReconnectHonorsBackoffWithoutResolvingCredentials(t *testing.T) {
+	d := &Database{}
+	d.invalidate(time.Minute)
+	if err := d.reconnect(testLogger(), time.Minute); err == nil || !strings.Contains(err.Error(), "reconnect delayed") {
+		t.Fatalf("expected backoff before connection attempt, got %v", err)
 	}
 }

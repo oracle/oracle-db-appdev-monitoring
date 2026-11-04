@@ -56,6 +56,16 @@ const docsSeo: Record<string, DocSeoMetadata> = {
       'Define Oracle Database queries and custom metrics in YAML or TOML for the exporter to collect.',
     keywords: ['custom metrics', 'Oracle SQL', 'YAML', 'TOML', 'Prometheus exporter'],
   },
+  'configuration/dynamic/intro': {
+    description:
+      'Discover database monitoring targets from control-plane metadata alongside static exporter configuration.',
+    keywords: ['database discovery', 'dynamic targets', 'Oracle AI Database Metrics Exporter'],
+  },
+  'configuration/dynamic/oci-adb': {
+    description:
+      'Discover OCI Autonomous Databases using compartment, lifecycle, and freeform tag filters with OCI Vault credentials.',
+    keywords: ['OCI', 'Autonomous Database', 'tag-based discovery', 'OCI Vault'],
+  },
   'configuration/hashicorp-vault': {
     description:
       'Configure HashiCorp Vault so the exporter can retrieve Oracle Database credentials securely.',

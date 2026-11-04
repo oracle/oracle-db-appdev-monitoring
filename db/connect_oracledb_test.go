@@ -127,3 +127,15 @@ func TestOracleDBDoesNotReparseExporterFlags(t *testing.T) {
 		t.Fatalf("unexpected driver arguments: %v", flag.Args())
 	}
 }
+
+func TestOracleDBDiscoverySecureDescriptor(t *testing.T) {
+	descriptor := `(DESCRIPTION=(ADDRESS=(PROTOCOL=TCPS)(HOST=adb.example.com)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=orders_low))(SECURITY=(SSL_SERVER_DN_MATCH=YES)))`
+	connector, err := newOracleDBConnector(config.DatabaseConfig{URL: descriptor}, "exporter", "password")
+	if err != nil || connector == nil {
+		t.Fatalf("secure descriptor rejected: %v", err)
+	}
+	connector, err = newOracleDBConnector(config.DatabaseConfig{URL: descriptor, DiscoveryWallet: &config.DiscoveryWalletConfig{DatabaseID: "database"}}, "exporter", "password")
+	if err == nil || connector != nil || !strings.Contains(err.Error(), "automatic mTLS") {
+		t.Fatalf("expected explicit unsupported automatic wallet error, got %v", err)
+	}
+}

@@ -6,6 +6,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"database/sql/driver"
 	"errors"
@@ -21,14 +22,15 @@ import (
 )
 
 func connect(logger *slog.Logger, dbname string, dbconfig config.DatabaseConfig, clientInfo config.ClientInfoConfig) (*sql.DB, error) {
-	password, err := dbconfig.GetPassword()
+	return connectContext(context.Background(), logger, dbname, dbconfig, clientInfo)
+}
+
+func connectContext(ctx context.Context, logger *slog.Logger, dbname string, dbconfig config.DatabaseConfig, clientInfo config.ClientInfoConfig) (*sql.DB, error) {
+	credentials, err := dbconfig.ResolveCredentialsContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	username, err := dbconfig.GetUsername()
-	if err != nil {
-		return nil, err
-	}
+	username, password := credentials.Username, credentials.Password
 	connector, err := newOracleDBConnector(dbconfig, username, password)
 	if err != nil {
 		return nil, err
@@ -52,6 +54,9 @@ func prepareOracleDBFlags() {
 func newOracleDBConnector(dbconfig config.DatabaseConfig, username, password string) (driver.Connector, error) {
 	if dbconfig.ExternalAuth || username == "" || password == "" {
 		return nil, errors.New("go-oracledb requires username/password authentication; external authentication is not supported")
+	}
+	if dbconfig.DiscoveryWallet != nil {
+		return nil, errors.New("go-oracledb automatic mTLS wallets are not supported; use godror or go-ora for wallet-based OCI discovery")
 	}
 	if dbconfig.TNSAdmin != "" {
 		return nil, errors.New("go-oracledb does not support tnsAdmin; use an Easy Connect string or full connect descriptor in database.url")

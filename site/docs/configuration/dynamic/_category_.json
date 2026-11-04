@@ -1,0 +1,8 @@
+{
+  "label": "Dynamic Database Discovery",
+  "position": 1,
+  "link": {
+    "type": "generated-index",
+    "description": "Dynamically discover databases for monitoring."
+  }
+}

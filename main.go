@@ -38,6 +38,7 @@ import (
 	"github.com/oracle/oracle-db-appdev-monitoring/collector"
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
 	"github.com/oracle/oracle-db-appdev-monitoring/db"
+	"github.com/oracle/oracle-db-appdev-monitoring/oci"
 	"github.com/oracle/oracle-db-appdev-monitoring/otlp"
 )
 
@@ -164,7 +165,25 @@ func main() {
 		logger.Info("RESTART_INTERVAL env var is not present, so will not restart myself periodically")
 	}
 
-	databases := db.NewDatabases(logger, m)
+	discoveryMonitor := config.NewDiscoveryMonitor(m)
+	if discoveryMonitor != nil {
+		prometheus.MustRegister(discoveryMonitor)
+		if err := discoveryMonitor.Initialize(workCtx, logger); err != nil {
+			if len(m.Databases) == 0 {
+				logger.Error("unable to discover databases and no static targets are configured", "error", err)
+				if cleanupErr := oci.CleanupWallets(); cleanupErr != nil {
+					logger.Error("unable to clean up discovery wallets", "error", cleanupErr)
+				}
+				os.Exit(1)
+			}
+			logger.Warn("unable to discover OCI databases; continuing with static targets", "error", err)
+		}
+		workers.Go(func() {
+			discoveryMonitor.Run(workCtx, logger, func() { restart.RequestRestart(restartRequests, "OCI database targets changed") })
+		})
+	}
+
+	databases := db.NewDatabasesContext(workCtx, logger, m)
 	exporter := collector.NewExporter(logger, m, databases)
 	prometheus.MustRegister(exporter)
 	prometheus.MustRegister(cversion.NewCollector("oracledb_exporter"))
@@ -176,6 +195,16 @@ func main() {
 		otlpPipeline, err := otlp.New(context.Background(), m.OTLP, Version, exporter.ScrapeInterval(), prometheus.DefaultGatherer)
 		if err != nil {
 			logger.Error("unable to create OTLP metric pipeline", "error", err)
+			cleanupCtx, cancelCleanup := context.WithTimeout(context.Background(), shutdownTimeout)
+			if cleanupErr := shutdownExporter(cleanupCtx, cancelWork, func(context.Context) error { return nil }, nil, &workers, func() error {
+				if closeErr := db.CloseDatabases(databases); closeErr != nil {
+					return closeErr
+				}
+				return oci.CleanupWallets()
+			}); cleanupErr != nil {
+				logger.Error("unable to clean up exporter after OTLP initialization failure", "error", cleanupErr)
+			}
+			cancelCleanup()
 			os.Exit(1)
 		}
 		shutdownOTLP = otlpPipeline.Shutdown
@@ -299,7 +328,10 @@ func main() {
 	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancelShutdown()
 	if err := shutdownExporter(shutdownCtx, cancelWork, server.Shutdown, shutdownOTLP, &workers, func() error {
-		return db.CloseDatabases(databases)
+		if err := db.CloseDatabases(databases); err != nil {
+			return err
+		}
+		return oci.CleanupWallets()
 	}); err != nil {
 		logger.Error("Exporter shutdown failed; terminating the process", "error", err)
 		os.Exit(1)

@@ -154,3 +154,24 @@ Allow dynamic-group metrics-exporter-instances to read secret-bundles in compart
 ```
 
 Replace the compartment, group, dynamic group, namespace, service account, cluster OCID, vault OCID, and secret name with values from your environment.
+
+## Combined username/password secret
+
+Use `vault.oci.usernamePasswordSecret` to fetch both credentials in one OCI Vault request per connection attempt. The secret value must be JSON with non-empty `username` and `password` fields:
+
+```json
+{"username":"exporter","password":"example"}
+```
+
+```yaml
+databases:
+  orders:
+    url: orders_high
+    vault:
+      oci:
+        id: ocid1.vault.oc1..example
+        auth: workload_identity
+        usernamePasswordSecret: orders-credentials
+```
+
+When configured, this combined secret takes precedence over separate credential secrets, inline credentials, and `passwordFile`. See [OCI Autonomous Database discovery](./dynamic/oci-adb.md) to configure this using database freeform tags.

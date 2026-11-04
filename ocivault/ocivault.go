@@ -6,20 +6,45 @@ package ocivault
 import (
 	"context"
 	b64 "encoding/base64"
+	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/secrets"
 	"github.com/oracle/oracle-db-appdev-monitoring/oci"
 )
 
+type secretBundleGetter interface {
+	GetSecretBundleByName(context.Context, secrets.GetSecretBundleByNameRequest) (secrets.GetSecretBundleByNameResponse, error)
+}
+
+var newSecretClient = func(provider common.ConfigurationProvider) (secretBundleGetter, error) {
+	return secrets.NewSecretsClientWithConfigurationProvider(provider)
+}
+
+type usernamePasswordSecret struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 func GetVaultSecret(vaultId string, secretName string, authMode oci.AuthMode) (string, error) {
-	configProvider, err := configurationProviderForAuthMode(authMode)
+	return GetVaultSecretContext(context.Background(), vaultId, secretName, authMode)
+}
+
+// GetVaultSecretContext retrieves the current secret version with a bounded deadline.
+func GetVaultSecretContext(ctx context.Context, vaultId string, secretName string, authMode oci.AuthMode) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	configProvider, err := oci.ConfigurationProviderForAuthMode(authMode)
 	if err != nil {
 		return "", err
 	}
-	client, err := secrets.NewSecretsClientWithConfigurationProvider(configProvider)
+	client, err := newSecretClient(configProvider)
 	if err != nil {
 		return "", fmt.Errorf("create OCI Vault client: %w", err)
 	}
@@ -27,7 +52,7 @@ func GetVaultSecret(vaultId string, secretName string, authMode oci.AuthMode) (s
 	req := secrets.GetSecretBundleByNameRequest{
 		SecretName: common.String(secretName),
 		VaultId:    common.String(vaultId)}
-	resp, err := client.GetSecretBundleByName(context.Background(), req)
+	resp, err := client.GetSecretBundleByName(ctx, req)
 	if err != nil {
 		return "", fmt.Errorf("fetch OCI Vault secret %q from vault %q: %w", secretName, vaultId, err)
 	}
@@ -38,9 +63,31 @@ func GetVaultSecret(vaultId string, secretName string, authMode oci.AuthMode) (s
 	return strings.TrimRight(rawSecret, "\r\n"), nil // make sure a \r and/or \n didn't make it into the secret
 }
 
-func configurationProviderForAuthMode(authMode oci.AuthMode) (common.ConfigurationProvider, error) {
-	configProvider, err := oci.ConfigurationProviderForAuthMode(authMode)
-	return configProvider, err
+func GetUsernamePasswordSecret(vaultID string, secretName string, authMode oci.AuthMode) (string, string, error) {
+	return GetUsernamePasswordSecretContext(context.Background(), vaultID, secretName, authMode)
+}
+
+func GetUsernamePasswordSecretContext(ctx context.Context, vaultID string, secretName string, authMode oci.AuthMode) (string, string, error) {
+	secret, err := GetVaultSecretContext(ctx, vaultID, secretName, authMode)
+	if err != nil {
+		return "", "", err
+	}
+	credentials, err := parseUsernamePasswordSecret(secret)
+	if err != nil {
+		return "", "", err
+	}
+	return credentials.Username, credentials.Password, nil
+}
+
+func parseUsernamePasswordSecret(secret string) (usernamePasswordSecret, error) {
+	credentials := usernamePasswordSecret{}
+	if err := json.Unmarshal([]byte(secret), &credentials); err != nil {
+		return usernamePasswordSecret{}, fmt.Errorf("decode OCI Vault username/password secret: %w", err)
+	}
+	if credentials.Username == "" || credentials.Password == "" {
+		return usernamePasswordSecret{}, fmt.Errorf("OCI Vault username/password secret must include non-empty username and password")
+	}
+	return credentials, nil
 }
 
 func getSecretFromBase64(resp secrets.GetSecretBundleByNameResponse) (string, error) {

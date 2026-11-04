@@ -6,6 +6,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -18,16 +19,17 @@ import (
 )
 
 func connect(logger *slog.Logger, dbname string, dbconfig config.DatabaseConfig, clientInfo config.ClientInfoConfig) (*sql.DB, error) {
+	return connectContext(context.Background(), logger, dbname, dbconfig, clientInfo)
+}
+
+func connectContext(ctx context.Context, logger *slog.Logger, dbname string, dbconfig config.DatabaseConfig, clientInfo config.ClientInfoConfig) (*sql.DB, error) {
 	logger.Debug("Launching connection to "+MaskDSN(dbconfig.URL), "database", dbname)
 
-	password, err := dbconfig.GetPassword()
+	credentials, err := dbconfig.ResolveCredentialsContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	username, err := dbconfig.GetUsername()
-	if err != nil {
-		return nil, err
-	}
+	username, password := credentials.Username, credentials.Password
 	// If password is not specified, externalAuth will be true, and we'll ignore user input
 	dbconfig.ExternalAuth = password == ""
 	logger.Debug(fmt.Sprintf("external authentication set to %t", dbconfig.ExternalAuth), "database", dbname)
@@ -125,24 +127,16 @@ func warmupConnectionPoolSize(dbconfig config.DatabaseConfig) int {
 }
 
 func isInvalidCredentialsError(err error) bool {
-	err = errors.Unwrap(err)
-	if err == nil {
-		return false
-	}
-	oraErr, ok := err.(*godror.OraErr)
-	if !ok {
+	var oraErr *godror.OraErr
+	if !errors.As(err, &oraErr) {
 		return false
 	}
 	return oraErr.Code() == ora01017code || oraErr.Code() == ora28000code
 }
 
 func isTemporaryConnectionError(err error) bool {
-	err = errors.Unwrap(err)
-	if err == nil {
-		return false
-	}
-	oraErr, ok := err.(*godror.OraErr)
-	if !ok {
+	var oraErr *godror.OraErr
+	if !errors.As(err, &oraErr) {
 		return false
 	}
 	return isTemporaryConnectionErrorCode(oraErr.Code())
