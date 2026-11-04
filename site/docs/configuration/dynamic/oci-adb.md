@@ -84,7 +84,7 @@ An explicit `url` configuration tag is supported only as a full TCPS descriptor 
 | --- | --- | --- |
 | godror | Full OCI descriptor and Oracle Client verification | Per-target `tnsAdmin` with auto-login wallet |
 | go-ora | Encoded descriptor with SSL and certificate verification enabled | Per-target wallet option using `cwallet.sso` |
-| go-oracledb (experimental) | Full OCI descriptor | Unsupported; initialization reports an explicit error |
+| go-oracledb (experimental) | Full OCI descriptor | Supplied `ewallet.pem`, read directly from the per-connector wallet directory |
 
 This table describes implemented paths validated by local configuration and driver tests. Live OCI connections still require validation for the intended deployment. go-ora uses certificate-chain and hostname verification; it does not independently enforce the descriptor's full `SSL_SERVER_CERT_DN` constraint.
 
@@ -94,7 +94,33 @@ When mTLS is selected, discovery uses a preconfigured `tnsAdmin` directory if pr
 
 A wallet Vault secret must contain the original ZIP bytes. The OCI secret-bundle base64 encoding is decoded once; do not add an extra application-level base64 layer.
 
-Downloaded/generated wallets are extracted into separate private temporary directories. Directories use mode `0700`, files use `0600`, extraction rejects unsafe entries and oversized archives, and the local `sqlnet.ora` points to that target's wallet with server DN matching enabled. The ZIP must contain a non-empty root `cwallet.sso`. A generated wallet's encryption password is not persisted; the supported automatic paths use its auto-login wallet.
+### Minimal wallet ZIP by driver
+
+Place the files at the ZIP root, without an enclosing directory. Discovery obtains full connection descriptors from OCI, so TNS aliases are not required.
+
+| Driver | Minimum files to include in the ZIP | Runtime configuration |
+| --- | --- | --- |
+| godror | `cwallet.sso` | The exporter generates `sqlnet.ora` pointing to the extracted wallet directory and enables server DN matching. |
+| go-ora | `cwallet.sso` | The connector reads the supplied auto-login wallet directly. |
+| go-oracledb (experimental) | `ewallet.pem` | The connector reads the supplied PEM directly. It must contain the client private key, matching client certificate, and CA certificates. |
+
+For a ZIP shared by all three driver builds, include **`cwallet.sso` and `ewallet.pem`**. The exporter does not convert, decrypt, derive, or rewrite these credential files.
+
+For these discovery connections, you can omit `ewallet.p12`, `keystore.jks`, `truststore.jks`, `ojdbc.properties`, README files, and `tnsnames.ora`. The ZIP also does not need `sqlnet.ora`; the exporter writes its local configuration after extraction. Keep `tnsnames.ora` if another application uses TNS aliases from the same wallet. A pre-mounted directory used with godror should include an appropriate `sqlnet.ora` alongside `cwallet.sso`.
+
+Downloaded/generated wallets are extracted into separate private temporary directories. Directories use mode `0700`, files use `0600`, and extraction rejects unsafe entries and oversized archives. The ZIP must contain a non-empty root `cwallet.sso` or `ewallet.pem`; the selected driver requires its own file from the table. External `tnsAdmin` directories configure the wallet directory; go-oracledb TNS alias lookup is not added.
+
+### PEM wallet passwords
+
+If the supplied `ewallet.pem` has an encrypted private key, configure its existing wallet password using the native go-oracledb environment variable:
+
+```text
+ORACLE_GO_WALLET_PASSWORD=<wallet-download-password>
+```
+
+The driver also accepts `oracle.go.wallet_password`, which takes precedence if both are set. The exporter reads these settings without modifying the environment. This is the wallet encryption password, not the database user's password; database credentials still come from the configured Vault secret. Unencrypted PEM files do not require a wallet password. These settings are process-wide, so encrypted PEM wallets used by one exporter process must use the same password.
+
+When discovery calls OCI wallet generation with the go-oracledb build, this setting is required and is used as the generation password as well as by the driver to open the resulting PEM. Set it to a value that satisfies OCI's wallet password requirements. For an existing Vault wallet secret or mounted wallet, use the password that already protects its PEM. The godror/go-ora builds generate a random password and use `cwallet.sso`, so they do not need to retain that password.
 
 Wallets are cached for the process lifetime, so metadata polling never downloads wallets. Managed wallets are renewed through a controlled process restart after `walletRefreshInterval`; this is interval-based renewal, not certificate-expiry detection. Renewal first requires a successful metadata probe; if OCI listing fails, active targets stay running and renewal retries at the metadata interval (five minutes if metadata polling is disabled). Externally managed `tnsAdmin` directories are not renewed or deleted. Discovery-owned directories are removed after database pools close during normal shutdown/restart.
 
@@ -144,4 +170,4 @@ OCI_DISCOVERY_TEST_CONFIG=/absolute/path/discovery-test.yaml go test -tags goora
 OCI_DISCOVERY_TEST_CONFIG=/absolute/path/discovery-test.yaml go test -tags oracledb ./collector -run '^TestOCIDiscoveryLiveScrape$' -count=1 -v
 ```
 
-Use a walletless target for the experimental go-oracledb run. For mTLS targets without a wallet secret, this test calls OCI wallet generation. It does not create databases, change access controls, or rotate passwords. A test run must produce one probe metric per discovered target to pass.
+Both walletless TLS and automatic mTLS can be exercised with the experimental go-oracledb build. For mTLS targets without a wallet secret, this test calls OCI wallet generation. It does not create databases, change access controls, or rotate passwords. A test run must produce one probe metric per discovered target to pass.

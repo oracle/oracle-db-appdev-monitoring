@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -53,7 +54,7 @@ func TestOracleDBRejectsUnsupportedConfiguration(t *testing.T) {
 		{name: "no password", username: "user", want: "username/password"},
 		{name: "no username", password: "secret", want: "username/password"},
 		{name: "external auth", username: "user", password: "secret", options: config.ConnectConfig{ExternalAuth: true}, want: "external authentication"},
-		{name: "TNS directory", username: "user", password: "secret", options: config.ConnectConfig{TNSAdmin: "/wallet"}, want: "tnsAdmin"},
+		{name: "TNS directory", username: "user", password: "secret", options: config.ConnectConfig{TNSAdmin: "/nonexistent-wallet"}, want: "ewallet.pem"},
 		{name: "invalid role", username: "user", password: "secret", options: config.ConnectConfig{Role: "UNKNOWN"}, want: "connection configuration"},
 		{name: "invalid DSN", username: "user", password: "secret", url: "user/secret@", want: "connection configuration"},
 	} {
@@ -135,7 +136,33 @@ func TestOracleDBDiscoverySecureDescriptor(t *testing.T) {
 		t.Fatalf("secure descriptor rejected: %v", err)
 	}
 	connector, err = newOracleDBConnector(config.DatabaseConfig{URL: descriptor, DiscoveryWallet: &config.DiscoveryWalletConfig{DatabaseID: "database"}}, "exporter", "password")
-	if err == nil || connector != nil || !strings.Contains(err.Error(), "automatic mTLS") {
-		t.Fatalf("expected explicit unsupported automatic wallet error, got %v", err)
+	if err == nil || connector != nil || !strings.Contains(err.Error(), "not been materialized") {
+		t.Fatalf("expected unmaterialized wallet error, got %v", err)
+	}
+}
+
+func TestOracleDBDiscoveryWalletConnector(t *testing.T) {
+	directory := filepath.Join("..", "docker-compose", "wallet")
+	descriptor := `(DESCRIPTION=(ADDRESS=(PROTOCOL=TCPS)(HOST=adb.example.com)(PORT=1522))(CONNECT_DATA=(SERVICE_NAME=orders_low))(SECURITY=(SSL_SERVER_DN_MATCH=YES)))`
+	connector, err := newOracleDBConnector(config.DatabaseConfig{
+		URL: descriptor, DiscoveryWallet: &config.DiscoveryWalletConfig{DatabaseID: "database"},
+		ConnectConfig: config.ConnectConfig{TNSAdmin: directory},
+	}, "exporter", "password")
+	if err != nil || connector == nil {
+		t.Fatalf("supplied PEM wallet connector failed: %v", err)
+	}
+}
+
+func TestOracleDBRejectsSSOOnlyWallet(t *testing.T) {
+	directory := t.TempDir()
+	if err := os.WriteFile(filepath.Join(directory, "cwallet.sso"), []byte("sso"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.DatabaseConfig{URL: "tcps://localhost:1522/service", ConnectConfig: config.ConnectConfig{TNSAdmin: directory}}
+	if connector, err := newOracleDBConnector(cfg, "exporter", "password"); connector != nil || err == nil || !strings.Contains(err.Error(), "ewallet.pem") {
+		t.Fatalf("expected missing PEM error, got %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(directory, "ewallet.pem")); !os.IsNotExist(err) {
+		t.Fatal("exporter created a PEM file")
 	}
 }

@@ -9,6 +9,8 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
+- Support OCI mTLS wallets with go-oracledb using the supplied `ewallet.pem` directly. Accept PEM-only wallet ZIPs, use the native driver wallet password for encrypted PEM files and OCI wallet generation, and document minimal wallet files for each driver.
+
 - Simplify OCI discovery to one startup/polling path with snapshot statistics. Remove unused discovery wrappers and implicit TLS-to-mTLS fallback; select mTLS through OCI requirements or explicit tag/wallet configuration.
 
 - Refactor OCI discovery into focused configuration and connection-profile components, simplify profile selection, share shutdown setup, and consolidate discovery polling and reconnect failure handling without changing behavior. Centralize credential resolution, SQL handle creation, and error classification behind build-selected driver connectors.

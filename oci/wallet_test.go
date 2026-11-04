@@ -196,6 +196,8 @@ type walletReadCloser struct {
 func (r *walletReadCloser) Close() error { r.closed = true; return nil }
 
 func TestWalletArchiveFromADBUsesContextAndClosesBody(t *testing.T) {
+	t.Setenv("oracle.go.wallet_password", "")
+	t.Setenv("ORACLE_GO_WALLET_PASSWORD", "Test-Wallet-Password-With-Enough-Length-123!")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	body := &walletReadCloser{Reader: strings.NewReader("archive")}
@@ -250,5 +252,21 @@ func TestExtractWalletRejectsTooManyEntries(t *testing.T) {
 	}
 	if directory, err := extractWallet(context.Background(), walletZIP(t, entries)); err == nil || directory != "" {
 		t.Fatalf("oversized entry count accepted: %q, %v", directory, err)
+	}
+}
+
+func TestExtractPEMOnlyWalletPreservesSuppliedFile(t *testing.T) {
+	const supplied = "supplied encrypted or unencrypted PEM bytes"
+	directory, err := extractWallet(context.Background(), walletZIP(t, map[string]string{"ewallet.pem": supplied}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(directory)
+	content, err := os.ReadFile(filepath.Join(directory, "ewallet.pem"))
+	if err != nil || string(content) != supplied {
+		t.Fatal("supplied PEM was modified")
+	}
+	if _, err := os.Stat(filepath.Join(directory, "cwallet.sso")); !os.IsNotExist(err) {
+		t.Fatal("wallet material was synthesized")
 	}
 }

@@ -9,6 +9,8 @@ import (
 	"database/sql/driver"
 	"errors"
 	"flag"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -44,15 +46,19 @@ func newOracleDBConnector(dbconfig config.DatabaseConfig, username, password str
 	if dbconfig.ExternalAuth || username == "" || password == "" {
 		return nil, errors.New("go-oracledb requires username/password authentication; external authentication is not supported")
 	}
-	if dbconfig.DiscoveryWallet != nil {
-		return nil, errors.New("go-oracledb automatic mTLS wallets are not supported; use godror or go-ora for wallet-based OCI discovery")
+	if dbconfig.DiscoveryWallet != nil && dbconfig.TNSAdmin == "" {
+		return nil, errors.New("go-oracledb discovered mTLS wallet has not been materialized")
 	}
 	if dbconfig.TNSAdmin != "" {
-		return nil, errors.New("go-oracledb does not support tnsAdmin; use an Easy Connect string or full connect descriptor in database.url")
+		info, err := os.Stat(filepath.Join(dbconfig.TNSAdmin, "ewallet.pem"))
+		if err != nil || !info.Mode().IsRegular() || info.Size() == 0 {
+			return nil, errors.New("go-oracledb wallet directory requires a non-empty ewallet.pem")
+		}
 	}
 	prepareOracleDBFlags()
 	cfg := oracle.NewOracleDriverConfig()
 	cfg.ConnectDescriptor = dbconfig.URL
+	cfg.ConnectionProperties.WalletLocation = dbconfig.TNSAdmin
 	// Keep credentials out of the DSN so special characters are preserved.
 	cfg.Credentials.User = username
 	cfg.Credentials.Password = password

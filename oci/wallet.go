@@ -7,7 +7,6 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
-	"crypto/rand"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -127,13 +126,10 @@ type walletSecretsClient interface {
 }
 
 func walletArchiveFromADB(ctx context.Context, client walletDatabaseClient, databaseID string) ([]byte, error) {
-	entropy := make([]byte, 32)
-	if _, err := rand.Read(entropy); err != nil {
-		return nil, fmt.Errorf("generate wallet encryption password: %w", err)
+	password, err := walletGenerationPassword()
+	if err != nil {
+		return nil, err
 	}
-	// cwallet.sso is the auto-login wallet. This random password protects ewallet.p12
-	// and is deliberately neither persisted nor logged.
-	password := "aA1!" + base64.RawURLEncoding.EncodeToString(entropy)
 	response, err := client.GenerateAutonomousDatabaseWallet(ctx, adb.GenerateAutonomousDatabaseWalletRequest{
 		AutonomousDatabaseId:                    common.String(databaseID),
 		GenerateAutonomousDatabaseWalletDetails: adb.GenerateAutonomousDatabaseWalletDetails{Password: &password},
@@ -263,8 +259,14 @@ func extractWallet(ctx context.Context, archive []byte) (directory string, err e
 		}
 		total += count
 	}
-	if info, statErr := os.Stat(filepath.Join(directory, "cwallet.sso")); statErr != nil || !info.Mode().IsRegular() || info.Size() == 0 {
-		return directory, errors.New("wallet archive must contain a non-empty cwallet.sso at its root")
+	hasWallet := false
+	for _, name := range []string{"cwallet.sso", "ewallet.pem"} {
+		if info, statErr := os.Stat(filepath.Join(directory, name)); statErr == nil && info.Mode().IsRegular() && info.Size() > 0 {
+			hasWallet = true
+		}
+	}
+	if !hasWallet {
+		return directory, errors.New("wallet archive must contain a non-empty cwallet.sso or ewallet.pem at its root")
 	}
 	// Write our own configuration rather than trusting an archive's filesystem
 	// paths or verification settings. TNS_ADMIN points to this directory.
