@@ -23,7 +23,7 @@ func TestOracleDBLiveSessions(t *testing.T) {
 		t.Skip("ORACLEDB_TEST_URL is not set")
 	}
 	cfg := config.DatabaseConfig{URL: url, Username: os.Getenv("ORACLEDB_TEST_USER"), Password: os.Getenv("ORACLEDB_TEST_PASSWORD")}
-	pool, err := connect(testLogger(), "integration", cfg, config.ClientInfoConfig{Label: "exporter's integration test"})
+	pool, err := connectContext(context.Background(), testLogger(), "integration", cfg, config.ClientInfoConfig{Label: "exporter's integration test"})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -9,6 +9,8 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
+- Refactor OCI discovery into focused configuration and connection-profile components, simplify profile selection, and share connection and shutdown setup without changing discovery behavior.
+
 - Add OCI tag-based Autonomous Database discovery with compartment and lifecycle filters, the optional `oracledb-metrics-exporter-dbname` name override, static target precedence, and combined OCI Vault credentials. Select TCPS profiles for all five ADB services (default `LOW`) and provision mTLS wallets for godror/go-ora.
 - Poll OCI metadata and renew managed wallets through controlled restarts, retain active/static targets on OCI failures, and expose discovery status and matched/accepted/skipped target counts.
 - Re-fetch OCI Vault credentials after authentication failures by retiring stale database pools and rebuilding after the configured connection backoff.

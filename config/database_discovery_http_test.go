@@ -68,7 +68,7 @@ func TestDiscoverOCIThroughSDKHTTP(t *testing.T) {
 		t.Fatal(err)
 	}
 	client.Host = server.URL
-	targets, err := discoverOCIWithClient(context.Background(), testLogger(), &OCIDatabasesFromConfig{
+	snapshot, err := discoverOCIWithClientStats(context.Background(), testLogger(), &OCIDatabasesFromConfig{
 		Auth: oci.AuthModeConfigFile, Compartments: []string{"compartment-1", "compartment-2"},
 		Filters: OCIDatabasesFromFiltersConfig{LifecycleState: adb.AutonomousDatabaseLifecycleStateAvailable, RequiredTags: map[string]string{tagKeyExporterEnabled: "true"}},
 	}, client)
@@ -78,6 +78,7 @@ func TestDiscoverOCIThroughSDKHTTP(t *testing.T) {
 	if strings.Join(requests, ",") != "compartment-1/,compartment-1/next,compartment-2/" {
 		t.Fatalf("unexpected request sequence: %v", requests)
 	}
+	targets := snapshot.Databases
 	if len(targets) != 2 || targets["production-orders"].ResourceID != "ocid1.autonomousdatabase.orders" || !strings.Contains(targets["inventory"].URL, "orders_tpurgent") {
 		t.Fatalf("unexpected targets: %#v", targets)
 	}

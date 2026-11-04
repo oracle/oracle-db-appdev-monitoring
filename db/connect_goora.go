@@ -21,10 +21,6 @@ import (
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
 )
 
-func connect(logger *slog.Logger, dbname string, dbconfig config.DatabaseConfig, clientInfo config.ClientInfoConfig) (*sql.DB, error) {
-	return connectContext(context.Background(), logger, dbname, dbconfig, clientInfo)
-}
-
 func connectContext(ctx context.Context, logger *slog.Logger, dbname string, dbconfig config.DatabaseConfig, clientInfo config.ClientInfoConfig) (*sql.DB, error) {
 	logger.Debug("Launching connection to "+MaskDSN(dbconfig.URL), "database", dbname)
 

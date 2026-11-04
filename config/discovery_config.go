@@ -39,15 +39,15 @@ func (m *MetricsConfiguration) mergeDatabasesFrom() {
 		return
 	}
 	if m.DatabasesFrom.Timeout == nil {
-		value := 30 * time.Second
+		value := m.DatabasesFrom.DiscoveryTimeout()
 		m.DatabasesFrom.Timeout = &value
 	}
 	if m.DatabasesFrom.RefreshInterval == nil {
-		value := 5 * time.Minute
+		value := m.DatabasesFrom.DiscoveryRefreshInterval()
 		m.DatabasesFrom.RefreshInterval = &value
 	}
 	if m.DatabasesFrom.WalletRefreshInterval == nil {
-		value := 24 * time.Hour
+		value := m.DatabasesFrom.DiscoveryWalletRefreshInterval()
 		m.DatabasesFrom.WalletRefreshInterval = &value
 	}
 	if m.DatabasesFrom.OCI != nil {

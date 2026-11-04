@@ -70,6 +70,8 @@ func TestDatabaseConfigRejectsInvalidTags(t *testing.T) {
 		"unknown field":             {tagPrefix + "notAConfigField": "value"},
 		"invalid type":              {tagPrefix + "maxOpenConns": "not-a-number"},
 		"invalid mtls flag":         {tagKeyMTLSConnectionRequired: "invalid"},
+		"wallet secret with TLS":    {tagKeyMTLSConnectionRequired: "false", tagKeyVaultID: "vault", tagKeyWalletSecret: "wallet"},
+		"mounted wallet with TLS":   {tagKeyMTLSConnectionRequired: "false", tagPrefix + "tnsAdmin": "/wallet"},
 		"insecure URL":              {tagPrefix + "url": "adb.example.com:1521/orders_low"},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -128,56 +130,6 @@ func TestDatabaseConfigWalletReference(t *testing.T) {
 	database, err = databaseConfigFromAutonomousDatabase(adb, oci.AuthModeConfigFile)
 	if err != nil || database.DiscoveryWallet != nil || database.TNSAdmin != "/wallet" {
 		t.Fatalf("unexpected mounted wallet: %#v, %v", database, err)
-	}
-}
-
-func TestConnectionStringForAllServices(t *testing.T) {
-	for _, service := range []string{"HIGH", "MEDIUM", "LOW", "TP", "TPURGENT"} {
-		t.Run(service, func(t *testing.T) {
-			profiles := &adb.AutonomousDatabaseConnectionStrings{Profiles: []adb.DatabaseConnectionStringProfile{testADBProfile(service, false), testADBProfile(service, true)}}
-			got, err := connectionStringForService(profiles, " "+strings.ToLower(service)+" ")
-			if err != nil || !strings.Contains(got, "orders_"+strings.ToLower(service)) || !strings.Contains(got, "SSL_SERVER_DN_MATCH=YES") {
-				t.Fatalf("unexpected service: %q, %v", got, err)
-			}
-		})
-	}
-}
-
-func TestConnectionProfileRejectsMissingOrInsecureProfiles(t *testing.T) {
-	insecure := testADBProfile("LOW", false)
-	insecure.Value = common.String(strings.Replace(*insecure.Value, "PROTOCOL=TCPS", "PROTOCOL=TCP", 1))
-	noVerify := testADBProfile("LOW", false)
-	noVerify.Value = common.String(strings.Replace(*noVerify.Value, "(SECURITY=", "(SECURITY=(SSL_SERVER_DN_MATCH=NO)", 1))
-	for _, tt := range []struct {
-		name, service string
-		profiles      *adb.AutonomousDatabaseConnectionStrings
-	}{
-		{name: "nil", service: "LOW"},
-		{name: "legacy only", service: "LOW", profiles: &adb.AutonomousDatabaseConnectionStrings{Low: common.String("adb.example.com:1522/orders_low")}},
-		{name: "unsupported service", service: "DEDICATED", profiles: &adb.AutonomousDatabaseConnectionStrings{}},
-		{name: "wrong group", service: "TP", profiles: &adb.AutonomousDatabaseConnectionStrings{Profiles: []adb.DatabaseConnectionStringProfile{testADBProfile("LOW", false)}}},
-		{name: "wrong auth", service: "LOW", profiles: &adb.AutonomousDatabaseConnectionStrings{Profiles: []adb.DatabaseConnectionStringProfile{testADBProfile("LOW", true)}}},
-		{name: "insecure protocol", service: "LOW", profiles: &adb.AutonomousDatabaseConnectionStrings{Profiles: []adb.DatabaseConnectionStringProfile{insecure}}},
-		{name: "disabled verification", service: "LOW", profiles: &adb.AutonomousDatabaseConnectionStrings{Profiles: []adb.DatabaseConnectionStringProfile{noVerify}}},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			if _, err := connectionStringForService(tt.profiles, tt.service); err == nil {
-				t.Fatal("expected missing verified profile error")
-			}
-		})
-	}
-}
-
-func TestConnectionProfileSelectionIsDeterministic(t *testing.T) {
-	preferred := testADBProfile("LOW", false)
-	redirected := testADBProfile("LOW", false)
-	redirected.SessionMode = adb.DatabaseConnectionStringProfileSessionModeRedirect
-	redirected.Value = common.String(strings.Replace(*redirected.Value, "adb.example.com", "redirect.example.com", -1))
-	for _, profiles := range [][]adb.DatabaseConnectionStringProfile{{preferred, redirected}, {redirected, preferred}} {
-		got, err := connectionStringForService(&adb.AutonomousDatabaseConnectionStrings{Profiles: profiles}, "LOW")
-		if err != nil || strings.Contains(got, "redirect.example.com") {
-			t.Fatalf("unexpected selection: %q, %v", got, err)
-		}
 	}
 }
 

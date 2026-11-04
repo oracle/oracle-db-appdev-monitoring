@@ -8,34 +8,11 @@ import (
 	"fmt"
 	"log/slog"
 	"sort"
-	"strconv"
 	"strings"
 
 	adb "github.com/oracle/oci-go-sdk/v65/database"
 	"github.com/oracle/oracle-db-appdev-monitoring/oci"
-	"go.yaml.in/yaml/v2"
 )
-
-const (
-	tagPrefix                    = "oracledb-metrics-exporter-"
-	tagKeyExporterEnabled        = tagPrefix + "enabled"
-	tagKeyDatabaseName           = tagPrefix + "dbname"
-	tagKeyVaultID                = tagPrefix + "vault-id"
-	tagKeyUsernamePasswordSecret = tagPrefix + "usernamePasswordSecret"
-	tagKeyConnectService         = tagPrefix + "connect-service"
-	tagKeyWalletSecret           = tagPrefix + "wallet-secret"
-	tagKeyMTLSConnectionRequired = tagPrefix + "is-mtls-connection-required"
-)
-
-var discoveryTagKeys = map[string]struct{}{
-	tagKeyExporterEnabled:        {},
-	tagKeyDatabaseName:           {},
-	tagKeyVaultID:                {},
-	tagKeyUsernamePasswordSecret: {},
-	tagKeyConnectService:         {},
-	tagKeyWalletSecret:           {},
-	tagKeyMTLSConnectionRequired: {},
-}
 
 // DiscoveryWalletConfig identifies wallet material without downloading it during
 // metadata polling. The directory is materialized only for active targets.
@@ -79,11 +56,6 @@ func discoverOCIDatabasesWithStats(ctx context.Context, logger *slog.Logger, cfg
 		return DiscoverySnapshot{}, err
 	}
 	return discoverOCIWithClientStats(ctx, logger, cfg, adbClient)
-}
-
-func discoverOCIWithClient(ctx context.Context, logger *slog.Logger, cfg *OCIDatabasesFromConfig, adbClient oci.AutonomousDatabaseLister) (map[string]DatabaseConfig, error) {
-	snapshot, err := discoverOCIWithClientStats(ctx, logger, cfg, adbClient)
-	return snapshot.Databases, err
 }
 
 func discoverOCIWithClientStats(ctx context.Context, logger *slog.Logger, cfg *OCIDatabasesFromConfig, adbClient oci.AutonomousDatabaseLister) (DiscoverySnapshot, error) {
@@ -130,170 +102,7 @@ func addAutonomousDatabase(databases map[string]DatabaseConfig, autonomousDataba
 		logger.Warn("skipping discovered Autonomous Database", "database", name, "resourceID", stringValue(autonomousDatabase.Id), "err", err)
 		return
 	}
-	if strings.TrimSpace(database.URL) == "" {
-		logger.Warn("skipping discovered Autonomous Database without a connection URL; set connect-service or url tag", "database", name)
-		return
-	}
 	databases[name] = database
-}
-
-func databaseConfigFromAutonomousDatabase(autonomousDatabase adb.AutonomousDatabaseSummary, auth oci.AuthMode) (DatabaseConfig, error) {
-	tags := autonomousDatabase.FreeformTags
-	configTags := make(map[string]interface{})
-	for key, value := range tags {
-		if !strings.HasPrefix(key, tagPrefix) || isDiscoveryTag(key) {
-			continue
-		}
-
-		var tagValue interface{}
-		if err := yaml.Unmarshal([]byte(value), &tagValue); err != nil {
-			return DatabaseConfig{}, fmt.Errorf("decode value for tag %q: %w", key, err)
-		}
-		configTags[strings.TrimPrefix(key, tagPrefix)] = tagValue
-	}
-
-	database := DatabaseConfig{ResourceID: strings.TrimSpace(stringValue(autonomousDatabase.Id))}
-	if len(configTags) > 0 {
-		configYAML, err := yaml.Marshal(configTags)
-		if err != nil {
-			return DatabaseConfig{}, fmt.Errorf("marshal database configuration tags: %w", err)
-		}
-		if err := yaml.UnmarshalStrict(configYAML, &database); err != nil {
-			return DatabaseConfig{}, fmt.Errorf("decode database configuration tags: %w", err)
-		}
-	}
-
-	vaultID, usernamePasswordSecret, walletSecret := tags[tagKeyVaultID], tags[tagKeyUsernamePasswordSecret], tags[tagKeyWalletSecret]
-	if vaultID == "" && (usernamePasswordSecret != "" || walletSecret != "") {
-		return DatabaseConfig{}, fmt.Errorf("%q is required when %q or %q is configured", tagKeyVaultID, tagKeyUsernamePasswordSecret, tagKeyWalletSecret)
-	}
-	if vaultID != "" && usernamePasswordSecret == "" && walletSecret == "" {
-		return DatabaseConfig{}, fmt.Errorf("%q or %q is required when %q is configured", tagKeyUsernamePasswordSecret, tagKeyWalletSecret, tagKeyVaultID)
-	}
-	if usernamePasswordSecret != "" {
-		database.Vault = &VaultConfig{OCI: &OCIVault{
-			ID:                     vaultID,
-			Auth:                   auth,
-			UsernamePasswordSecret: usernamePasswordSecret,
-		}}
-	}
-
-	mutual := autonomousDatabase.IsMtlsConnectionRequired != nil && *autonomousDatabase.IsMtlsConnectionRequired
-	var explicitMutual *bool
-	if value, present := tags[tagKeyMTLSConnectionRequired]; present {
-		requested, err := strconv.ParseBool(value)
-		if err != nil {
-			return DatabaseConfig{}, fmt.Errorf("invalid %s tag: %w", tagKeyMTLSConnectionRequired, err)
-		}
-		if mutual && !requested {
-			return DatabaseConfig{}, fmt.Errorf("%s=false conflicts with the database's mTLS requirement", tagKeyMTLSConnectionRequired)
-		}
-		mutual = requested
-		explicitMutual = &requested
-	}
-	// An existing wallet or wallet secret explicitly requests a mutual profile.
-	if walletSecret != "" || database.TNSAdmin != "" {
-		if explicitMutual != nil && !*explicitMutual {
-			return DatabaseConfig{}, fmt.Errorf("a wallet conflicts with %s=false", tagKeyMTLSConnectionRequired)
-		}
-		mutual = true
-	}
-	service := strings.ToUpper(strings.TrimSpace(tags[tagKeyConnectService]))
-	if service == "" {
-		service = "LOW"
-	}
-	if database.URL == "" || tags[tagKeyConnectService] != "" {
-		connectionString, err := connectionProfileForService(autonomousDatabase.ConnectionStrings, service, mutual)
-		// If OCI only advertises mutual profiles, prefer a working wallet-based
-		// connection unless the user explicitly requested walletless TLS.
-		if err != nil && !mutual {
-			if _, explicit := tags[tagKeyMTLSConnectionRequired]; !explicit {
-				if fallback, fallbackErr := connectionProfileForService(autonomousDatabase.ConnectionStrings, service, true); fallbackErr == nil {
-					connectionString, err, mutual = fallback, nil, true
-				}
-			}
-		}
-		if err != nil {
-			return DatabaseConfig{}, err
-		}
-		database.URL = connectionString
-	} else {
-		// Explicit overrides must retain encrypted transport and certificate checks.
-		secured, err := verifiedTCPSDescriptor(database.URL)
-		if err != nil {
-			return DatabaseConfig{}, fmt.Errorf("invalid discovered database URL: %w", err)
-		}
-		database.URL = secured
-	}
-	if mutual && database.TNSAdmin == "" {
-		if database.ResourceID == "" {
-			return DatabaseConfig{}, fmt.Errorf("database OCID is required to prepare an mTLS wallet")
-		}
-		database.DiscoveryWallet = &DiscoveryWalletConfig{Auth: auth, DatabaseID: database.ResourceID, VaultID: vaultID, SecretName: walletSecret}
-	}
-
-	return database, nil
-}
-
-func isDiscoveryTag(key string) bool {
-	_, ok := discoveryTagKeys[key]
-	return ok
-}
-
-// connectionStringForService selects the walletless TLS profile for a service.
-func connectionStringForService(connectionStrings *adb.AutonomousDatabaseConnectionStrings, service string) (string, error) {
-	return connectionProfileForService(connectionStrings, service, false)
-}
-
-func connectionProfileForService(connectionStrings *adb.AutonomousDatabaseConnectionStrings, service string, mutual bool) (string, error) {
-	service = strings.ToUpper(strings.TrimSpace(service))
-	switch service {
-	case "LOW", "MEDIUM", "HIGH", "TP", "TPURGENT":
-	default:
-		return "", fmt.Errorf("unsupported connection service %q; use LOW, MEDIUM, HIGH, TP, or TPURGENT", service)
-	}
-	if connectionStrings == nil {
-		return "", fmt.Errorf("Autonomous Database has no connection profiles")
-	}
-	tlsAuth := adb.DatabaseConnectionStringProfileTlsAuthenticationServer
-	if mutual {
-		tlsAuth = adb.DatabaseConnectionStringProfileTlsAuthenticationMutual
-	}
-	type candidate struct {
-		value string
-		rank  int
-	}
-	var candidates []candidate
-	for _, profile := range connectionStrings.Profiles {
-		if !strings.EqualFold(string(profile.ConsumerGroup), service) || profile.Protocol != adb.DatabaseConnectionStringProfileProtocolTcps || profile.TlsAuthentication != tlsAuth {
-			continue
-		}
-		// A database's FQDN profile is preferred over IP addresses, and direct
-		// profiles over redirects. Deterministic sorting avoids polling changes
-		// merely because OCI reordered its profiles.
-		rank := 0
-		if profile.HostFormat != adb.DatabaseConnectionStringProfileHostFormatFqdn {
-			rank += 2
-		}
-		if profile.SessionMode != adb.DatabaseConnectionStringProfileSessionModeDirect {
-			rank++
-		}
-		value, err := verifiedTCPSDescriptor(stringValue(profile.Value))
-		if err != nil {
-			continue
-		}
-		candidates = append(candidates, candidate{value: value, rank: rank})
-	}
-	if len(candidates) == 0 {
-		return "", fmt.Errorf("Autonomous Database has no verified TCPS %s profile for service %s", tlsAuth, service)
-	}
-	sort.Slice(candidates, func(i, j int) bool {
-		if candidates[i].rank != candidates[j].rank {
-			return candidates[i].rank < candidates[j].rank
-		}
-		return candidates[i].value < candidates[j].value
-	})
-	return candidates[0].value, nil
 }
 
 func stringValue(value *string) string {

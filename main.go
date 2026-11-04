@@ -184,6 +184,12 @@ func main() {
 	}
 
 	databases := db.NewDatabasesContext(workCtx, logger, m)
+	closeDatabases := func() error {
+		if err := db.CloseDatabases(databases); err != nil {
+			return err
+		}
+		return oci.CleanupWallets()
+	}
 	exporter := collector.NewExporter(logger, m, databases)
 	prometheus.MustRegister(exporter)
 	prometheus.MustRegister(cversion.NewCollector("oracledb_exporter"))
@@ -196,12 +202,7 @@ func main() {
 		if err != nil {
 			logger.Error("unable to create OTLP metric pipeline", "error", err)
 			cleanupCtx, cancelCleanup := context.WithTimeout(context.Background(), shutdownTimeout)
-			if cleanupErr := shutdownExporter(cleanupCtx, cancelWork, func(context.Context) error { return nil }, nil, &workers, func() error {
-				if closeErr := db.CloseDatabases(databases); closeErr != nil {
-					return closeErr
-				}
-				return oci.CleanupWallets()
-			}); cleanupErr != nil {
+			if cleanupErr := shutdownExporter(cleanupCtx, cancelWork, func(context.Context) error { return nil }, nil, &workers, closeDatabases); cleanupErr != nil {
 				logger.Error("unable to clean up exporter after OTLP initialization failure", "error", cleanupErr)
 			}
 			cancelCleanup()
@@ -327,12 +328,7 @@ func main() {
 
 	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancelShutdown()
-	if err := shutdownExporter(shutdownCtx, cancelWork, server.Shutdown, shutdownOTLP, &workers, func() error {
-		if err := db.CloseDatabases(databases); err != nil {
-			return err
-		}
-		return oci.CleanupWallets()
-	}); err != nil {
+	if err := shutdownExporter(shutdownCtx, cancelWork, server.Shutdown, shutdownOTLP, &workers, closeDatabases); err != nil {
 		logger.Error("Exporter shutdown failed; terminating the process", "error", err)
 		os.Exit(1)
 	}
