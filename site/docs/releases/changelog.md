@@ -9,18 +9,6 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
-- Add `databasesFrom.walletDirectory` (default `/tmp/exporter`) for managed OCI wallets, independent of `TMPDIR`. Lock the directory and clean abandoned wallet subdirectories on startup to prevent accumulation after crashes and container restarts.
-
-- Support OCI mTLS wallets with go-oracledb using the supplied `ewallet.pem` directly. Accept PEM-only wallet ZIPs, use the native driver wallet password for encrypted PEM files and OCI wallet generation, and document minimal wallet files for each driver.
-
-- Simplify OCI discovery to one startup/polling path with snapshot statistics. Remove unused discovery wrappers and implicit TLS-to-mTLS fallback; select mTLS through OCI requirements or explicit tag/wallet configuration.
-
-- Refactor OCI discovery into focused configuration and connection-profile components, simplify profile selection, share shutdown setup, and consolidate discovery polling and reconnect failure handling without changing behavior. Centralize credential resolution, SQL handle creation, and error classification behind build-selected driver connectors.
-
-- Add OCI tag-based Autonomous Database discovery with compartment and lifecycle filters, the optional `oracledb-metrics-exporter-dbname` name override, static target precedence, and combined OCI Vault credentials. Select TCPS profiles for all five ADB services (default `LOW`) and provision mTLS wallets for godror/go-ora.
-- Poll OCI metadata and renew managed wallets through controlled restarts, retain active/static targets on OCI failures, and expose discovery status and matched/accepted/skipped target counts.
-- Re-fetch OCI Vault credentials after authentication failures by retiring stale database pools and rebuilding after the configured connection backoff.
-
 - Add experimental support for Oracle's [go-oracledb](https://github.com/oracle/go-oracledb) driver with the `oracledb` build tag and `exporter-oracledb` container target, without CGO or Oracle Instant Client.
 - Updated third party dependencies
 - Upgraded the Go runtime and Docker build toolchain to 1.27.3.
