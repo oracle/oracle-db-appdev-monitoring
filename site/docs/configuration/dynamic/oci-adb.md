@@ -16,6 +16,7 @@ databasesFrom:
   timeout: 30s
   refreshInterval: 5m
   walletRefreshInterval: 24h
+  walletDirectory: /tmp/exporter
   oci:
     # config_file (default), instance_principal, resource_principal,
     # or workload_identity
@@ -108,7 +109,7 @@ For a ZIP shared by all three driver builds, include **`cwallet.sso` and `ewalle
 
 For these discovery connections, you can omit `ewallet.p12`, `keystore.jks`, `truststore.jks`, `ojdbc.properties`, README files, and `tnsnames.ora`. The ZIP also does not need `sqlnet.ora`; the exporter writes its local configuration after extraction. Keep `tnsnames.ora` if another application uses TNS aliases from the same wallet. A pre-mounted directory used with godror should include an appropriate `sqlnet.ora` alongside `cwallet.sso`.
 
-Downloaded/generated wallets are extracted into separate private temporary directories. Directories use mode `0700`, files use `0600`, and extraction rejects unsafe entries and oversized archives. The ZIP must contain a non-empty root `cwallet.sso` or `ewallet.pem`; the selected driver requires its own file from the table. External `tnsAdmin` directories configure the wallet directory; go-oracledb TNS alias lookup is not added.
+Downloaded/generated wallets are extracted into private `wallet-*` subdirectories of `databasesFrom.walletDirectory` (default `/tmp/exporter`). This path is independent of `TMPDIR`. Directories use mode `0700`, files use `0600`, and extraction rejects unsafe entries and oversized archives. The ZIP must contain a non-empty root `cwallet.sso` or `ewallet.pem`; the selected driver requires its own file from the table. External `tnsAdmin` directories configure the wallet directory; go-oracledb TNS alias lookup is not added.
 
 ### PEM wallet passwords
 
@@ -123,6 +124,14 @@ The driver also accepts `oracle.go.wallet_password`, which takes precedence if b
 When discovery calls OCI wallet generation with the go-oracledb build, this setting is required and is used as the generation password as well as by the driver to open the resulting PEM. Set it to a value that satisfies OCI's wallet password requirements. For an existing Vault wallet secret or mounted wallet, use the password that already protects its PEM. The godror/go-ora builds generate a random password and use `cwallet.sso`, so they do not need to retain that password.
 
 Wallets are cached for the process lifetime, so metadata polling never downloads wallets. Managed wallets are renewed through a controlled process restart after `walletRefreshInterval`; this is interval-based renewal, not certificate-expiry detection. Renewal first requires a successful metadata probe; if OCI listing fails, active targets stay running and renewal retries at the metadata interval (five minutes if metadata polling is disabled). Externally managed `tnsAdmin` directories are not renewed or deleted. Discovery-owned directories are removed after database pools close during normal shutdown/restart.
+
+### Managed wallet storage and restarts
+
+Use a dedicated writable `walletDirectory` owned by this exporter instance. At startup, the exporter acquires an exclusive `.wallet.lock` and removes leftover `wallet-*` subdirectories before discovery. It keeps the lock until database pools close and wallet cleanup completes. A second exporter using the same directory fails discovery rather than deleting active wallets. Unrelated entries in the directory are preserved, and externally managed `tnsAdmin` directories are outside this cleanup.
+
+On a process crash or forced container termination, the OS releases the lock. The next exporter startup cleans the abandoned wallets before downloading replacements, preventing accumulation across container restarts. The root directory and small lock file remain so ownership always uses the same lock file. Legacy `metrics-exporter-wallet-*` directories created by earlier versions outside this root are not swept.
+
+For Kubernetes, the existing writable `/tmp` volume supports the default. You can instead mount a dedicated `emptyDir` at `/tmp/exporter`, or mount it at another path and set `walletDirectory` accordingly. An `emptyDir` survives container restarts within a Pod; the next process performs cleanup. Pod deletion removes the volume. No persistent volume or `TMPDIR` override is needed.
 
 ## Refresh, failures, and credentials
 

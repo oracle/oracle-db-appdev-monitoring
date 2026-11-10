@@ -15,7 +15,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -34,13 +33,6 @@ type walletSource struct {
 	auth                            AuthMode
 	databaseID, vaultID, secretName string
 }
-
-// Keep each materialization until database handles are closed at process shutdown.
-// Caching also prevents metadata polls from repeatedly generating ADB wallets.
-var preparedWallets = struct {
-	sync.Mutex
-	directories map[walletSource]string
-}{directories: make(map[walletSource]string)}
 
 // PrepareWallet returns a private, process-owned wallet directory for a database.
 // A named Vault secret must contain ZIP bytes (the OCI secret bundle base64 layer
@@ -87,34 +79,21 @@ func prepareWallet(ctx context.Context, source walletSource, download func(conte
 	if directory, ok := preparedWallets.directories[source]; ok {
 		return directory, nil
 	}
+	if preparedWallets.lock == nil {
+		return "", errors.New("managed wallet directory has not been initialized")
+	}
 	ctx, cancel := context.WithTimeout(ctx, walletDownloadTimeout)
 	defer cancel()
 	archive, err := download(ctx)
 	if err != nil {
 		return "", err
 	}
-	directory, err := extractWallet(ctx, archive)
+	directory, err := extractWallet(ctx, archive, preparedWallets.root)
 	if err != nil {
 		return "", err
 	}
 	preparedWallets.directories[source] = directory
 	return directory, nil
-}
-
-// CleanupWallets removes process-owned wallet files. Call after discovery workers
-// stop and all SQL/native connection pools close. It is safe to call repeatedly.
-func CleanupWallets() error {
-	preparedWallets.Lock()
-	defer preparedWallets.Unlock()
-	var errs []error
-	for source, directory := range preparedWallets.directories {
-		if err := os.RemoveAll(directory); err != nil {
-			errs = append(errs, fmt.Errorf("remove OCI wallet directory: %w", err))
-			continue
-		}
-		delete(preparedWallets.directories, source)
-	}
-	return errors.Join(errs...)
 }
 
 type walletDatabaseClient interface {
@@ -185,7 +164,7 @@ func (r walletContextReader) Read(p []byte) (int, error) {
 	return r.reader.Read(p)
 }
 
-func extractWallet(ctx context.Context, archive []byte) (directory string, err error) {
+func extractWallet(ctx context.Context, archive []byte, root string) (directory string, err error) {
 	if len(archive) > maxWalletArchiveBytes {
 		return "", errors.New("wallet archive exceeds size limit")
 	}
@@ -196,7 +175,7 @@ func extractWallet(ctx context.Context, archive []byte) (directory string, err e
 	if len(reader.File) > maxWalletEntries {
 		return "", errors.New("wallet archive has too many entries")
 	}
-	directory, err = os.MkdirTemp("", "metrics-exporter-wallet-")
+	directory, err = os.MkdirTemp(root, "wallet-")
 	if err != nil {
 		return "", err
 	}

@@ -42,7 +42,7 @@ func walletZIP(t *testing.T, entries map[string]string) []byte {
 func TestExtractWalletPermissionsAndSQLNet(t *testing.T) {
 	dir, err := extractWallet(context.Background(), walletZIP(t, map[string]string{
 		"cwallet.sso": "wallet bytes", "tnsnames.ora": "aliases", "sqlnet.ora": "SSL_SERVER_DN_MATCH=no\nWALLET_LOCATION=\"?/network/admin\"",
-	}))
+	}), t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +66,7 @@ func TestExtractWalletPermissionsAndSQLNet(t *testing.T) {
 func TestExtractWalletRejectsUnsafeEntries(t *testing.T) {
 	for _, path := range []string{"../escape", "/absolute", "nested/../../escape", "windows\\escape", "C:/escape", "normalized/../escape"} {
 		t.Run(path, func(t *testing.T) {
-			directory, err := extractWallet(context.Background(), walletZIP(t, map[string]string{"cwallet.sso": "wallet", path: "unsafe"}))
+			directory, err := extractWallet(context.Background(), walletZIP(t, map[string]string{"cwallet.sso": "wallet", path: "unsafe"}), t.TempDir())
 			if err == nil || directory != "" {
 				t.Fatalf("unsafe wallet extracted into %q: %v", directory, err)
 			}
@@ -97,7 +97,7 @@ func TestExtractWalletRejectsSymlinkAndDuplicate(t *testing.T) {
 		if err = writer.Close(); err != nil {
 			t.Fatal(err)
 		}
-		directory, err := extractWallet(context.Background(), output.Bytes())
+		directory, err := extractWallet(context.Background(), output.Bytes(), t.TempDir())
 		if err == nil || directory != "" {
 			t.Fatalf("unsafe wallet extracted into %q: %v", directory, err)
 		}
@@ -113,7 +113,7 @@ func TestExtractWalletRejectsMissingWalletAndLimits(t *testing.T) {
 		"oversized entry": walletZIP(t, map[string]string{"cwallet.sso": strings.Repeat("x", maxWalletArchiveBytes+1)}),
 	} {
 		t.Run(name, func(t *testing.T) {
-			directory, err := extractWallet(context.Background(), archive)
+			directory, err := extractWallet(context.Background(), archive, t.TempDir())
 			if err == nil || directory != "" {
 				t.Fatalf("invalid wallet extracted into %q: %v", directory, err)
 			}
@@ -122,10 +122,7 @@ func TestExtractWalletRejectsMissingWalletAndLimits(t *testing.T) {
 }
 
 func TestPrepareWalletCachesPerResourceAndCleansUp(t *testing.T) {
-	if err := CleanupWallets(); err != nil {
-		t.Fatal(err)
-	}
-	defer CleanupWallets()
+	root := initializeTestWalletDirectory(t)
 	calls := 0
 	archive := walletZIP(t, map[string]string{"cwallet.sso": "wallet"})
 	download := func(context.Context) ([]byte, error) { calls++; return archive, nil }
@@ -141,7 +138,7 @@ func TestPrepareWalletCachesPerResourceAndCleansUp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if calls != 2 || first != again || first == second {
+	if calls != 2 || first != again || first == second || filepath.Dir(first) != root || filepath.Dir(second) != root {
 		t.Fatalf("unexpected materializations: calls=%d first=%q again=%q second=%q", calls, first, again, second)
 	}
 	if err := CleanupWallets(); err != nil {
@@ -158,6 +155,7 @@ func TestPrepareWalletCachesPerResourceAndCleansUp(t *testing.T) {
 }
 
 func TestWalletCancellationAndFailedDownloads(t *testing.T) {
+	initializeTestWalletDirectory(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	_, err := prepareWallet(ctx, walletSource{databaseID: "cancelled"}, func(context.Context) ([]byte, error) { t.Fatal("download called after cancellation"); return nil, nil })
@@ -170,7 +168,7 @@ func TestWalletCancellationAndFailedDownloads(t *testing.T) {
 		t.Fatalf("download error not preserved: %v", err)
 	}
 	archive := walletZIP(t, map[string]string{"cwallet.sso": "wallet"})
-	_, err = extractWallet(ctx, archive)
+	_, err = extractWallet(ctx, archive, t.TempDir())
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("extraction ignored cancellation: %v", err)
 	}
@@ -234,8 +232,7 @@ func TestWalletArchiveFromVaultDecodesBinaryZIPOnce(t *testing.T) {
 
 func TestExtractWalletFailureRemovesPrivateDirectory(t *testing.T) {
 	root := t.TempDir()
-	t.Setenv("TMPDIR", root)
-	_, err := extractWallet(context.Background(), walletZIP(t, map[string]string{"cwallet.sso": "wallet", "../unsafe": "escape"}))
+	_, err := extractWallet(context.Background(), walletZIP(t, map[string]string{"cwallet.sso": "wallet", "../unsafe": "escape"}), root)
 	if err == nil {
 		t.Fatal("unsafe archive accepted")
 	}
@@ -250,14 +247,14 @@ func TestExtractWalletRejectsTooManyEntries(t *testing.T) {
 	for i := 0; i < maxWalletEntries; i++ {
 		entries[fmt.Sprintf("file-%d", i)] = "content"
 	}
-	if directory, err := extractWallet(context.Background(), walletZIP(t, entries)); err == nil || directory != "" {
+	if directory, err := extractWallet(context.Background(), walletZIP(t, entries), t.TempDir()); err == nil || directory != "" {
 		t.Fatalf("oversized entry count accepted: %q, %v", directory, err)
 	}
 }
 
 func TestExtractPEMOnlyWalletPreservesSuppliedFile(t *testing.T) {
 	const supplied = "supplied encrypted or unencrypted PEM bytes"
-	directory, err := extractWallet(context.Background(), walletZIP(t, map[string]string{"ewallet.pem": supplied}))
+	directory, err := extractWallet(context.Background(), walletZIP(t, map[string]string{"ewallet.pem": supplied}), t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}

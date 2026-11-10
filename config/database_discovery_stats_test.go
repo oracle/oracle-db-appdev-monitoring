@@ -33,7 +33,7 @@ func TestDiscoveryStatsCountOnlyMatchingResourcesAndConversionSkips(t *testing.T
 }
 
 func TestDiscoveryStatsIncludeStaticCollisionsAtMaterialization(t *testing.T) {
-	cfg := monitorConfiguration()
+	cfg := monitorConfiguration(t)
 	cfg.Databases = map[string]DatabaseConfig{"orders": {URL: "static"}}
 	m := NewDiscoveryMonitor(cfg)
 	m.snapshot = func(context.Context, *slog.Logger, *OCIDatabasesFromConfig) (discoverySnapshot, error) {

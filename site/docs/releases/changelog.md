@@ -9,6 +9,8 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
+- Add `databasesFrom.walletDirectory` (default `/tmp/exporter`) for managed OCI wallets, independent of `TMPDIR`. Lock the directory and clean abandoned wallet subdirectories on startup to prevent accumulation after crashes and container restarts.
+
 - Support OCI mTLS wallets with go-oracledb using the supplied `ewallet.pem` directly. Accept PEM-only wallet ZIPs, use the native driver wallet password for encrypted PEM files and OCI wallet generation, and document minimal wallet files for each driver.
 
 - Simplify OCI discovery to one startup/polling path with snapshot statistics. Remove unused discovery wrappers and implicit TLS-to-mTLS fallback; select mTLS through OCI requirements or explicit tag/wallet configuration.

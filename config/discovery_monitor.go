@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/oracle/oracle-db-appdev-monitoring/oci"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -109,6 +110,11 @@ func (m *DiscoveryMonitor) Initialize(ctx context.Context, logger *slog.Logger) 
 	started := time.Now()
 	discoveryCtx, cancel := context.WithTimeout(ctx, m.configuration.DatabasesFrom.DiscoveryTimeout())
 	defer cancel()
+	if err := oci.InitializeWalletDirectory(m.configuration.DatabasesFrom.WalletDirectory); err != nil {
+		m.baseline = normalizedDiscoveryTargets(m.configuration.Databases)
+		m.record(started, err, 0, 0, 0)
+		return err
+	}
 	snapshot, err := m.snapshot(discoveryCtx, logger, m.configuration.DatabasesFrom.OCI)
 	if err == nil {
 		var collisions int

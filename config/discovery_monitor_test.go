@@ -10,11 +10,19 @@ import (
 	"testing"
 	"time"
 
+	"github.com/oracle/oracle-db-appdev-monitoring/oci"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func monitorConfiguration() *MetricsConfiguration {
-	return &MetricsConfiguration{DatabasesFrom: &DatabasesFromConfig{OCI: &OCIDatabasesFromConfig{}}}
+func monitorConfiguration(t *testing.T) *MetricsConfiguration {
+	t.Helper()
+	root := t.TempDir()
+	t.Cleanup(func() {
+		if err := oci.CleanupWallets(); err != nil {
+			t.Error(err)
+		}
+	})
+	return &MetricsConfiguration{DatabasesFrom: &DatabasesFromConfig{WalletDirectory: root, OCI: &OCIDatabasesFromConfig{}}}
 }
 
 func TestDiscoveryMonitorDetectsEffectiveTargetChanges(t *testing.T) {
@@ -32,7 +40,7 @@ func TestDiscoveryMonitorDetectsEffectiveTargetChanges(t *testing.T) {
 		{"labels changed", map[string]DatabaseConfig{"orders": {URL: "orders", Labels: map[string]string{"team": "one"}}}, map[string]DatabaseConfig{"orders": {URL: "orders", Labels: map[string]string{"team": "two"}}}, true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewDiscoveryMonitor(monitorConfiguration())
+			m := NewDiscoveryMonitor(monitorConfiguration(t))
 			m.baseline = normalizedDiscoveryTargets(tt.initial)
 			m.snapshot = func(context.Context, *slog.Logger, *OCIDatabasesFromConfig) (discoverySnapshot, error) {
 				return discoverySnapshot{Databases: tt.next}, nil
@@ -46,7 +54,7 @@ func TestDiscoveryMonitorDetectsEffectiveTargetChanges(t *testing.T) {
 }
 
 func TestDiscoveryMonitorIgnoresCollidingDiscoveredTargets(t *testing.T) {
-	cfg := monitorConfiguration()
+	cfg := monitorConfiguration(t)
 	cfg.Databases = map[string]DatabaseConfig{"orders": {URL: "static"}}
 	m := NewDiscoveryMonitor(cfg)
 	m.baseline = normalizedDiscoveryTargets(cfg.Databases)
@@ -59,7 +67,7 @@ func TestDiscoveryMonitorIgnoresCollidingDiscoveredTargets(t *testing.T) {
 }
 
 func TestDiscoveryMonitorFailureRetainsLastSuccessfulState(t *testing.T) {
-	m := NewDiscoveryMonitor(monitorConfiguration())
+	m := NewDiscoveryMonitor(monitorConfiguration(t))
 	m.baseline = map[string]DatabaseConfig{"orders": {URL: "orders"}}
 	m.snapshot = func(context.Context, *slog.Logger, *OCIDatabasesFromConfig) (discoverySnapshot, error) {
 		return discoverySnapshot{Databases: map[string]DatabaseConfig{"orders": {URL: "orders"}}}, nil
@@ -87,7 +95,7 @@ func TestDiscoveryMonitorFailureRetainsLastSuccessfulState(t *testing.T) {
 }
 
 func TestDiscoveryMonitorBoundsRequests(t *testing.T) {
-	cfg := monitorConfiguration()
+	cfg := monitorConfiguration(t)
 	timeout := 10 * time.Millisecond
 	cfg.DatabasesFrom.Timeout = &timeout
 	m := NewDiscoveryMonitor(cfg)
@@ -101,7 +109,7 @@ func TestDiscoveryMonitorBoundsRequests(t *testing.T) {
 }
 
 func TestDiscoveryMonitorStartupFailurePreservesStaticTargets(t *testing.T) {
-	cfg := monitorConfiguration()
+	cfg := monitorConfiguration(t)
 	cfg.Databases = map[string]DatabaseConfig{"orders": {URL: "static"}}
 	m := NewDiscoveryMonitor(cfg)
 	m.snapshot = func(context.Context, *slog.Logger, *OCIDatabasesFromConfig) (discoverySnapshot, error) {
@@ -116,7 +124,7 @@ func TestDiscoveryMonitorStartupFailurePreservesStaticTargets(t *testing.T) {
 }
 
 func TestDiscoveryMonitorWalletFailurePreservesStaticTargets(t *testing.T) {
-	cfg := monitorConfiguration()
+	cfg := monitorConfiguration(t)
 	cfg.Databases = map[string]DatabaseConfig{"orders": {URL: "static"}}
 	m := NewDiscoveryMonitor(cfg)
 	m.snapshot = func(context.Context, *slog.Logger, *OCIDatabasesFromConfig) (discoverySnapshot, error) {
@@ -134,7 +142,7 @@ func TestDiscoveryMonitorWalletFailurePreservesStaticTargets(t *testing.T) {
 }
 
 func TestDiscoveryMonitorSuccessfulEmptyStartup(t *testing.T) {
-	m := NewDiscoveryMonitor(monitorConfiguration())
+	m := NewDiscoveryMonitor(monitorConfiguration(t))
 	m.snapshot = func(context.Context, *slog.Logger, *OCIDatabasesFromConfig) (discoverySnapshot, error) {
 		return discoverySnapshot{Databases: map[string]DatabaseConfig{}}, nil
 	}
@@ -147,7 +155,7 @@ func TestDiscoveryMonitorSuccessfulEmptyStartup(t *testing.T) {
 }
 
 func TestDiscoveryMonitorRunsUntilFirstChange(t *testing.T) {
-	cfg := monitorConfiguration()
+	cfg := monitorConfiguration(t)
 	interval := time.Millisecond
 	cfg.DatabasesFrom.RefreshInterval = &interval
 	m := NewDiscoveryMonitor(cfg)
@@ -173,7 +181,7 @@ func TestDiscoveryMonitorDisabledAndUnconfigured(t *testing.T) {
 	if NewDiscoveryMonitor(&MetricsConfiguration{}) != nil {
 		t.Fatal("monitor created without discovery")
 	}
-	cfg := monitorConfiguration()
+	cfg := monitorConfiguration(t)
 	zero := time.Duration(0)
 	cfg.DatabasesFrom.RefreshInterval = &zero
 	m := NewDiscoveryMonitor(cfg)
@@ -188,7 +196,7 @@ func TestDiscoveryMonitorComparesWalletSourcesInsteadOfGeneratedPaths(t *testing
 	wallet := &DiscoveryWalletConfig{DatabaseID: "ocid1", VaultID: "vault", SecretName: "wallet"}
 	cfg := DatabaseConfig{URL: "orders", DiscoveryWallet: wallet}
 	cfg.TNSAdmin = "/tmp/generated-wallet"
-	m := NewDiscoveryMonitor(monitorConfiguration())
+	m := NewDiscoveryMonitor(monitorConfiguration(t))
 	m.baseline = normalizedDiscoveryTargets(map[string]DatabaseConfig{"orders": cfg})
 	cfg.TNSAdmin = ""
 	m.snapshot = func(context.Context, *slog.Logger, *OCIDatabasesFromConfig) (discoverySnapshot, error) {
@@ -206,7 +214,7 @@ func TestDiscoveryMonitorComparesWalletSourcesInsteadOfGeneratedPaths(t *testing
 }
 
 func TestDiscoveryMonitorRenewsWalletWithMetadataPollingDisabled(t *testing.T) {
-	cfg := monitorConfiguration()
+	cfg := monitorConfiguration(t)
 	zero := time.Duration(0)
 	interval := time.Millisecond
 	cfg.DatabasesFrom.RefreshInterval = &zero
@@ -227,7 +235,7 @@ func TestDiscoveryMonitorRenewsWalletWithMetadataPollingDisabled(t *testing.T) {
 
 func TestDiscoveryMonitorWalletRenewalRequiresManagedWallet(t *testing.T) {
 	for _, disabled := range []bool{false, true} {
-		cfg := monitorConfiguration()
+		cfg := monitorConfiguration(t)
 		zero := time.Duration(0)
 		interval := time.Millisecond
 		cfg.DatabasesFrom.RefreshInterval = &zero
@@ -244,7 +252,7 @@ func TestDiscoveryMonitorWalletRenewalRequiresManagedWallet(t *testing.T) {
 }
 
 func TestDiscoveryMonitorIgnoresConnectionSecretCache(t *testing.T) {
-	cfg := monitorConfiguration()
+	cfg := monitorConfiguration(t)
 	source := &HashiCorpVault{Socket: "socket", MountType: "kvv2", MountName: "mount", SecretPath: "path"}
 	cfg.Databases = map[string]DatabaseConfig{"orders": {URL: "orders", Vault: &VaultConfig{HashiCorp: source}}}
 	m := NewDiscoveryMonitor(cfg)
@@ -262,7 +270,7 @@ func TestDiscoveryMonitorIgnoresConnectionSecretCache(t *testing.T) {
 }
 
 func TestDiscoveryMonitorCountsMatchedSkippedAndStaticCollisions(t *testing.T) {
-	cfg := monitorConfiguration()
+	cfg := monitorConfiguration(t)
 	cfg.Databases = map[string]DatabaseConfig{"static": {URL: "static"}}
 	m := NewDiscoveryMonitor(cfg)
 	m.baseline = normalizedDiscoveryTargets(cfg.Databases)
@@ -285,7 +293,7 @@ func TestDiscoveryMonitorCountsMatchedSkippedAndStaticCollisions(t *testing.T) {
 }
 
 func TestDiscoveryMonitorWalletRenewalRetainsTargetsDuringKnownOutage(t *testing.T) {
-	cfg := monitorConfiguration()
+	cfg := monitorConfiguration(t)
 	zero := time.Duration(0)
 	interval := time.Millisecond
 	cfg.DatabasesFrom.RefreshInterval = &zero

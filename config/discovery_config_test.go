@@ -19,6 +19,7 @@ func TestDiscoveryConfigurationDefaultsAndValidation(t *testing.T) {
 		wantError  bool
 	}{
 		{"defaults", "databasesFrom:\n  oci:\n    compartments: [compartment]\n", false},
+		{"blank wallet directory", "databasesFrom:\n  walletDirectory: ' '\n  oci:\n    compartments: [compartment]\n", true},
 		{"auth", "databasesFrom:\n  oci:\n    compartments: [compartment]\n    auth: invalid\n", true},
 		{"compartments", "databasesFrom:\n  oci: {}\n", true},
 		{"blank compartment", "databasesFrom:\n  oci:\n    compartments: [' ']\n", true},
@@ -29,7 +30,7 @@ func TestDiscoveryConfigurationDefaultsAndValidation(t *testing.T) {
 			if (err != nil) != tt.wantError {
 				t.Fatalf("unexpected validation error: %v", err)
 			}
-			if !tt.wantError && (m.DatabasesFrom.OCI.Filters.LifecycleState != adb.AutonomousDatabaseLifecycleStateAvailable || m.DatabasesFrom.OCI.Filters.RequiredTags[tagKeyExporterEnabled] != "true") {
+			if !tt.wantError && (m.DatabasesFrom.WalletDirectory != "/tmp/exporter" || m.DatabasesFrom.OCI.Filters.LifecycleState != adb.AutonomousDatabaseLifecycleStateAvailable || m.DatabasesFrom.OCI.Filters.RequiredTags[tagKeyExporterEnabled] != "true") {
 				t.Fatalf("missing defaults: %#v", m.DatabasesFrom.OCI.Filters)
 			}
 		})
@@ -37,7 +38,7 @@ func TestDiscoveryConfigurationDefaultsAndValidation(t *testing.T) {
 }
 
 func TestDiscoverDatabasesMergesStaticTargets(t *testing.T) {
-	cfg := monitorConfiguration()
+	cfg := monitorConfiguration(t)
 	cfg.Databases = map[string]DatabaseConfig{"orders": {URL: "static"}}
 	cfg.DatabasesFrom.OCI.Auth = oci.AuthModeWorkloadIdentity
 	m := NewDiscoveryMonitor(cfg)
@@ -56,7 +57,7 @@ func TestDiscoverDatabasesMergesStaticTargets(t *testing.T) {
 }
 
 func TestDiscoverySupportsNoStaticTargets(t *testing.T) {
-	cfg := monitorConfiguration()
+	cfg := monitorConfiguration(t)
 	m := NewDiscoveryMonitor(cfg)
 	m.snapshot = func(context.Context, *slog.Logger, *OCIDatabasesFromConfig) (discoverySnapshot, error) {
 		return discoverySnapshot{Databases: map[string]DatabaseConfig{"orders": {URL: "orders"}}, Matched: 1}, nil
@@ -106,5 +107,12 @@ func TestDiscoveryWalletRefreshValidation(t *testing.T) {
 		if err := cfg.validateDatabasesFromConfig(); (err != nil) != (value < 0) {
 			t.Fatalf("unexpected validation for %v: %v", value, err)
 		}
+	}
+}
+
+func TestDiscoveryWalletDirectoryConfiguration(t *testing.T) {
+	m, err := LoadMetricsConfiguration(testLogger(), &Config{ConfigFile: writeExporterConfig(t, "databasesFrom:\n  walletDirectory: /wallets\n  oci:\n    compartments: [compartment]\n")})
+	if err != nil || m.DatabasesFrom.WalletDirectory != "/wallets" {
+		t.Fatalf("wallet directory not preserved: %#v, %v", m.DatabasesFrom, err)
 	}
 }

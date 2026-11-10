@@ -15,6 +15,7 @@ import (
 
 // DatabasesFromConfig configures database discovery sources.
 type DatabasesFromConfig struct {
+	WalletDirectory       string                  `yaml:"walletDirectory"`
 	OCI                   *OCIDatabasesFromConfig `yaml:"oci"`
 	Timeout               *time.Duration          `yaml:"timeout"`
 	RefreshInterval       *time.Duration          `yaml:"refreshInterval"`
@@ -37,6 +38,9 @@ type OCIDatabasesFromFiltersConfig struct {
 func (m *MetricsConfiguration) mergeDatabasesFrom() {
 	if m.DatabasesFrom == nil {
 		return
+	}
+	if m.DatabasesFrom.WalletDirectory == "" {
+		m.DatabasesFrom.WalletDirectory = "/tmp/exporter"
 	}
 	if m.DatabasesFrom.Timeout == nil {
 		value := m.DatabasesFrom.DiscoveryTimeout()
@@ -86,6 +90,9 @@ func (c *DatabasesFromConfig) DiscoveryWalletRefreshInterval() time.Duration {
 func (m *MetricsConfiguration) validateDatabasesFromConfig() error {
 	if m.DatabasesFrom == nil {
 		return nil
+	}
+	if strings.TrimSpace(m.DatabasesFrom.WalletDirectory) == "" {
+		return errors.New("databasesFrom.walletDirectory must not be blank")
 	}
 	if m.DatabasesFrom.DiscoveryTimeout() <= 0 {
 		return errors.New("databasesFrom.timeout must be greater than zero")
