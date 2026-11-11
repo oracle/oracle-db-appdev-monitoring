@@ -1,0 +1,13 @@
+logStreams:
+  - id: alert
+    timestampColumn: ORIGINATING_TIMESTAMP
+    output:
+      type: file
+      destination: /log/alert.log
+    query: |
+      select originating_timestamp, module_id, execution_context_id,
+       message_text, message_type, process_id, thread_id, record_id, "PARTITION", filename
+       from v$diag_alert_ext
+       where originating_timestamp >= to_timestamp_tz(:1, 'YYYY-MM-DD"T"HH24:MI:SS.FF9TZH:TZM', 'NLS_DATE_LANGUAGE=American')
+       and originating_timestamp <= to_timestamp_tz(:2, 'YYYY-MM-DD"T"HH24:MI:SS.FF9TZH:TZM', 'NLS_DATE_LANGUAGE=American')
+       order by originating_timestamp, "PARTITION", record_id, filename, process_id, thread_id

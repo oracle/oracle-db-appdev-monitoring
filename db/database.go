@@ -340,6 +340,25 @@ func (d *Database) QueryContext(ctx context.Context, query string, args ...inter
 	return rows, d.reconnectMU.RUnlock, nil
 }
 
+// ConnectionContext pins a session for the caller. Release must run before
+// delivering output so log delivery does not hold a database connection.
+func (d *Database) ConnectionContext(ctx context.Context) (*sql.Conn, func() error, error) {
+	d.reconnectMU.RLock()
+	if d.Session == nil {
+		d.reconnectMU.RUnlock()
+		return nil, nil, errDatabaseSessionNotInitialized
+	}
+	conn, err := d.Session.Conn(ctx)
+	if err != nil {
+		d.reconnectMU.RUnlock()
+		return nil, nil, err
+	}
+	return conn, func() error {
+		defer d.reconnectMU.RUnlock()
+		return conn.Close()
+	}, nil
+}
+
 func (d *Database) PingContext(ctx context.Context) error {
 	d.reconnectMU.RLock()
 	defer d.reconnectMU.RUnlock()

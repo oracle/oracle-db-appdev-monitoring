@@ -93,6 +93,12 @@ metrics:
   custom:
     - custom-metrics-example/custom-metrics.toml
 
+# Optional custom log query definitions, loaded from YAML or TOML files.
+#logStreams:
+#  default: /etc/exporter/default-log-streams.yaml
+#  custom:
+#    - custom-log-streams-example/application-logs.yaml
+
 log:
   # Log level: debug, info, warn, or error
   level: info

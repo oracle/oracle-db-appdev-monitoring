@@ -7,7 +7,9 @@ sidebar_position: 7
 
 The exporter can periodically publish its collected metrics to an OpenTelemetry Protocol (OTLP) backend over gRPC. OTLP publishing is optional and works alongside the Prometheus `/metrics` endpoint; enabling it does not disable Prometheus collection.
 
-OTLP publishing exports the gauges, counters, histograms, and untyped metrics exposed by the Prometheus `/metrics` endpoint. It requires a positive `metrics.scrapeInterval`. The OTLP reader and scheduled scraper use that same interval, but run on independent schedules.
+The top-level `otlp` section is also the shared transport configuration for [OTLP log publishing](./alert-logs.md#otlp-logs). Log streams select it with `output.type: otlp`; no nested transport settings are needed. A transport configuration without a positive `metrics.scrapeInterval` does not start the metric publisher.
+
+OTLP metric publishing exports the gauges, counters, histograms, and untyped metrics exposed by the Prometheus `/metrics` endpoint. It requires a positive `metrics.scrapeInterval`. The OTLP reader and scheduled scraper use that same interval, but run on independent schedules.
 
 ![Oracle AI Database metrics flow through Prometheus pull and OTLP push](/img/otlp-flow.svg)
 
