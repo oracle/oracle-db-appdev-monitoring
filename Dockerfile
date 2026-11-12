@@ -13,7 +13,7 @@ ENV TAGS=${TAGS:-godror}
 ARG CGO_ENABLED
 ENV CGO_ENABLED=${CGO_ENABLED:-1}
 
-ARG GO_VERSION=1.27.3
+ARG GO_VERSION=1.27.4
 ENV GO_VERSION=${GO_VERSION}
 
 RUN microdnf update -y && \
@@ -61,7 +61,7 @@ ENV LD_LIBRARY_PATH=/usr/lib/oracle/23/client64/lib
 ENV PATH=$PATH:/usr/lib/oracle/23/client64/bin
 
 COPY --from=build /go/src/oracledb_exporter/oracle-db-appdev-monitoring /oracledb_exporter
-ADD ./default-metrics.toml /default-metrics.toml
+COPY ./default-metrics.toml /default-metrics.toml
 
 # Oracle Client looks up the OS user during OCIServerAttach; ensure UID 1000 has an entry.
 RUN echo 'exporter:x:1000:1000:exporter:/:/sbin/nologin' >> /etc/passwd && \
@@ -83,7 +83,7 @@ RUN microdnf update -y && \
     microdnf clean all
 
 COPY --from=build /go/src/oracledb_exporter/oracle-db-appdev-monitoring /oracledb_exporter
-ADD ./default-metrics.toml /default-metrics.toml
+COPY ./default-metrics.toml /default-metrics.toml
 
 # create the mount point for alert log exports (default location)
 RUN mkdir /log && chown 1000:1000 /log
