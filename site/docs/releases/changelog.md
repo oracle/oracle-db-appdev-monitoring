@@ -9,6 +9,10 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
+- Rewrite [alert log collection](../configuration/alert-logs.md) with persistent timestamp checkpoints per database and stream, bounded reads, retry backoff, and file, stdout, or OTLP/gRPC output. Checkpoints replace progress tracking from the output file and require writable storage at `log.stateDirectory`; without a checkpoint, collection replays all retained history unless `log.initialLookback` is set.
+- Add [custom SQL log streams](../configuration/query-logs.md) defined in YAML or TOML through `logStreams.default` and `logStreams.custom`, with automatic definition reloads and independent collection schedules. Add per-database and per-stream metrics for delivered records, errors, and checkpoint progress.
+- Alert log output now contains the query columns directly, preserving original timestamps and message text.
+
 ### 2.5.2, November 16th, 2026
 
 - Add experimental support for Oracle's [go-oracledb](https://github.com/oracle/go-oracledb) driver with the `oracledb` build tag and `exporter-oracledb` container target, without CGO or Oracle Instant Client.
