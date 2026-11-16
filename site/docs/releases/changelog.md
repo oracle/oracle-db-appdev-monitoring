@@ -9,6 +9,8 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
+### 2.5.2, November 16th, 2026
+
 - Add experimental support for Oracle's [go-oracledb](https://github.com/oracle/go-oracledb) driver with the `oracledb` build tag and `exporter-oracledb` container target, without CGO or Oracle Instant Client.
 - Updated third party dependencies
 - Upgraded the Go runtime and Docker build toolchain to 1.27.4.

@@ -35,7 +35,7 @@ COPY . .
 RUN go mod download
 
 ARG VERSION
-ENV VERSION=${VERSION:-1.0.0}
+ENV VERSION=${VERSION:-2.5.2}
 
 RUN CGO_ENABLED=${CGO_ENABLED} GOOS=${GOOS} GOARCH=${GOARCH} go build --tags=${TAGS} -v -ldflags "-X main.Version=${VERSION} -s -w"
 
@@ -44,7 +44,7 @@ LABEL org.opencontainers.image.authors="Oracle America, Inc."
 LABEL org.opencontainers.image.description="Oracle AI Database Observability Exporter"
 
 ARG VERSION
-ENV VERSION=${VERSION:-1.0.0}
+ENV VERSION=${VERSION:-2.5.2}
 ENV DEBIAN_FRONTEND=noninteractive
 
 ARG GOARCH
