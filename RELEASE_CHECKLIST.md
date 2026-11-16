@@ -37,7 +37,7 @@ Follow the format used by previous releases, for example:
 ### 2.5.0, August 31st, 2026
 ```
 
-## 3. Create the versioned documentation
+## 3. Create the versioned documentation and retain the latest 10 releases
 
 - [ ] From the `site/` directory, run:
 
@@ -50,6 +50,12 @@ npm run docusaurus docs:version <VERSION>
   `site/versioned_sidebars/version-<VERSION>-sidebars.json`, and confirm
   `site/versions.json` lists the new release first.
 - [ ] Confirm the snapshot contains the updated image tags and dated changelog.
+- [ ] Keep only the **10 newest released documentation versions**, in addition
+  to **Next**. After adding the new release, remove any older versions from
+  `site/versions.json`, delete their `site/versioned_docs/version-<OLD_VERSION>/`
+  directories and `site/versioned_sidebars/version-<OLD_VERSION>-sidebars.json`
+  files, and remove their indexing and navbar entries from
+  `site/docusaurus.config.ts`. Preserve historical changelog entries.
 - [ ] After the snapshot is created, add a fresh `### Next, TBD` heading above the
   released section in the source `site/docs/releases/changelog.md` for future work.
 
@@ -69,7 +75,7 @@ Rely on Docusaurus robots metadata and sitemap filtering for this policy;
 and topic keywords remain in `site/src/data/docs-seo.ts`; page titles come from
 front matter or the first heading.
 
-## 5. Update the default build version
+## 5. Update the default build and container versions
 
 - [ ] Update the repository-root [`Makefile`](Makefile) default:
 
@@ -77,11 +83,15 @@ front matter or the first heading.
 VERSION        ?= <VERSION>
 ```
 
+- [ ] Update both `ENV VERSION=${VERSION:-<VERSION>}` fallbacks in the root
+  [`Dockerfile`](Dockerfile) so direct Docker builds report the release version.
 - [ ] From the repository root, run `make version` and confirm it prints the new
   version without an override.
 
 ## Final checks
 
+- [ ] Confirm `site/versions.json` contains at most 10 releases and matches the
+  versioned docs directories, sidebar files, and configured release versions.
 - [ ] From `site/`, run `npm run typecheck` and `npm run build`.
 - [ ] Preview the built site with `npm run serve`: confirm the new release appears
   in the version dropdown and its examples and changelog are correct.

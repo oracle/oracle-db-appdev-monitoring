@@ -83,22 +83,36 @@ You need to give the exporter the connection details for the Oracle AI Database 
 
 ### Simple connection
 
-For a simple connection, you will provide the details using these variables:
+Save the following as `config.yaml` in your current directory. The exporter requires this file; the environment variables below supply values referenced by the YAML.
 
-- `DB_USERNAME` is the database username, e.g., `pdbadmin`
-- `DB_PASSWORD` is the password for that user, e.g., `<your-password>`
-- `DB_CONNECT_STRING` is the connection string, e.g., `free23ai:1521/freepdb`
-- `DB_ROLE` (Optional) can be set to `SYSDBA`, `SYSOPER`, `SYSBACKUP`, `SYSDG`, `SYSKM`, `SYSRAC` or `SYSASM` if you want to connect with one of those roles, however Oracle recommends that you connect with the lowest possible privileges and roles necessary for the exporter to run.
+```yaml
+databases:
+  default:
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    url: ${DB_CONNECT_STRING}
+metrics:
+  default: /default-metrics.toml
+log:
+  destination: /log/alert.log
+```
 
-To run the exporter in a container and expose the port, use a command like this, with the appropriate values for the environment variables:
+- `DB_USERNAME` is the database username, e.g., `pdbadmin`, with the [required permissions](#database-permissions).
+- `DB_PASSWORD` is the password for that user.
+- `DB_CONNECT_STRING` is the connection string, e.g., `<database-ip>:1521/FREEPDB1`. Replace `<database-ip>` with the database container IP obtained above, or another hostname reachable from the exporter container. On a shared user-defined container network, you can use the database container name, e.g., `free23ai:1521/FREEPDB1`.
+- To connect with an administrative role, set `role` in the database YAML configuration. Oracle recommends using the lowest privileges necessary for the exporter to run.
+
+Mount the configuration file and pass its container path with `--config.file`:
 
 ```bash
 docker run -it --rm \
     -e DB_USERNAME=pdbadmin \
     -e DB_PASSWORD='<your-password>' \
-    -e DB_CONNECT_STRING=free23ai:1521/freepdb \
+    -e DB_CONNECT_STRING='<database-ip>:1521/FREEPDB1' \
+    -v "$(pwd)/config.yaml:/exporter/config.yaml:ro" \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:2.5.1
+    container-registry.oracle.com/database/observability-exporter:2.5.2 \
+    --config.file=/exporter/config.yaml
 ```
 
 ## Standalone Binary

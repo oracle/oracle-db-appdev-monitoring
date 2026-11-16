@@ -62,28 +62,34 @@ If you are using Oracle Autonomous Database with mTLS, for example, you can down
 To configure the exporter to use an Oracle Wallet,
 
 1. Set the `TNS_ADMIN` environment variable to the directory containing the unzipped wallet
-2. Configure your database instance with the appropriate database TNS name:
+2. Save a YAML configuration file as `config.yaml`, using the database TNS name from the wallet's `tnsnames.ora` file:
 
 ```yaml
 databases:
   mydb:
-    username: admin
-    password: <REPLACE ME>
-    # TNS Name from wallet tnsnames.ora file, e.g., mydb_high
-    url: <TNS Name>
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    # TNS Name from wallet tnsnames.ora, e.g., mydb_high
+    url: ${DB_CONNECT_STRING}
+    tnsAdmin: ${TNS_ADMIN}
 ```
 
-If you are running the exporter as a container, you can mount the wallet as a volume. For example, mounting the `./wallet` directory to the `/wallet` location:
+For a container deployment, mount both `config.yaml` and the unzipped wallet. Set `TNS_ADMIN` to the wallet path **inside the container** (`/wallet` below), and pass the configuration file with `--config.file`. Any wallet directory specified in `sqlnet.ora` must also resolve to that container path.
 
 ```bash
 docker run -it --rm \
-    -e DB_USERNAME=pdbadmin \
+    -e DB_USERNAME=admin \
     -e DB_PASSWORD='<your-password>' \
     -e DB_CONNECT_STRING=devdb_tp \
-    -v ./wallet:/wallet \
+    -e TNS_ADMIN=/wallet \
+    -v "$(pwd)/config.yaml:/exporter/config.yaml:ro" \
+    -v "$(pwd)/wallet:/wallet:ro" \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:2.5.1
+    container-registry.oracle.com/database/observability-exporter:2.5.2 \
+    --config.file=/exporter/config.yaml
 ```
+
+Replace `devdb_tp` with the TNS name for your database and use its database username and password.
 
 :::tip Troubleshooting ORA-01017 with Wallet Authentication
 If you experience an `ORA-01017: invalid username/password; logon denied` error when using a wallet for authentication, you may need to create a `sqlnet.ora` file in your wallet directory (or `TNS_ADMIN` directory) with the following content:
