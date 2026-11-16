@@ -17,7 +17,7 @@ import (
 	"github.com/oracle/oracle-db-appdev-monitoring/db"
 )
 
-func TestLogStreamFileReloadValidatesAllFilesAndHandlesReplacement(t *testing.T) {
+func TestLogStreamFileWatcherValidatesAllFilesAndNotifiesOnReplacement(t *testing.T) {
 	dir := t.TempDir()
 	first := filepath.Join(dir, "first.yaml")
 	second := filepath.Join(dir, "second.yaml")
@@ -37,11 +37,11 @@ func TestLogStreamFileReloadValidatesAllFilesAndHandlesReplacement(t *testing.T)
 	if err := watchFiles(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), cfg, func() { changes <- struct{}{} }); err != nil {
 		t.Fatal(err)
 	}
-	// A bad edit in another file must prevent replacement of the whole set.
+	// A bad edit in another file must suppress the change notification.
 	write(second, "logStreams: [\n")
 	select {
 	case <-changes:
-		t.Fatal("invalid definitions triggered reload")
+		t.Fatal("invalid definitions triggered a change notification")
 	case <-time.After(200 * time.Millisecond):
 	}
 	replacement := second + ".new"
@@ -52,11 +52,11 @@ func TestLogStreamFileReloadValidatesAllFilesAndHandlesReplacement(t *testing.T)
 	select {
 	case <-changes:
 	case <-time.After(3 * time.Second):
-		t.Fatal("atomic file replacement did not trigger reload")
+		t.Fatal("atomic file replacement did not trigger a change notification")
 	}
 	streams, err := config.LoadLogStreams(cfg)
 	if err != nil || len(streams) != 1 || streams[0].ID != "application" {
-		t.Fatalf("reload did not retain all files: %+v, %v", streams, err)
+		t.Fatalf("loading definitions did not retain all files: %+v, %v", streams, err)
 	}
 }
 

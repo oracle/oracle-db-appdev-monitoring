@@ -6,6 +6,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -34,18 +35,21 @@ func TestDefaultAlertStreamPreservesLegacySettings(t *testing.T) {
 		if s.ID != "alert" || s.TimestampColumn != "ORIGINATING_TIMESTAMP" || s.Interval != interval || s.QueryTimeout != cfg.Logging.QueryTimeout || s.InitialLookback != time.Hour || s.MaxRows != 321 || s.MaxBytes != 4096 || s.Output.Type != "stdout" {
 			t.Fatalf("legacy settings lost: %+v", s)
 		}
+		// Ignore SQL layout and keyword case while checking the shipped query.
+		query := strings.ToLower(strings.Join(strings.Fields(s.Query), " "))
+		query = regexp.MustCompile(`\s*,\s*`).ReplaceAllString(query, ", ")
 		for _, part := range []string{"to_timestamp_tz(:1", "to_timestamp_tz(:2", "NLS_DATE_LANGUAGE=American", `order by originating_timestamp, "PARTITION", record_id, filename, process_id, thread_id`} {
-			if !strings.Contains(s.Query, part) {
+			if !strings.Contains(query, strings.ToLower(part)) {
 				t.Fatalf("missing %q: %s", part, s.Query)
 			}
 		}
-		if strings.Contains(s.Query, `as "level"`) != levels {
+		if strings.Contains(query, `as "level"`) != levels {
 			t.Fatalf("unexpected level projection: %s", s.Query)
 		}
-		if levels && !strings.Contains(s.Query, "filename,\n case message_type") {
+		if levels && !strings.Contains(query, "filename, case message_type") {
 			t.Fatalf("level projection is not separated by a comma: %s", s.Query)
 		}
-		if !levels && !strings.Contains(s.Query, "filename\n from") {
+		if !levels && !strings.Contains(query, "filename from") {
 			t.Fatalf("unexpected default projection: %s", s.Query)
 		}
 		// Repeated loading must rebuild, not accumulate, the built-in stream.
