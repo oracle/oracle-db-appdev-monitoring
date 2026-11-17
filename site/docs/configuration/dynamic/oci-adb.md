@@ -7,7 +7,7 @@ sidebar_position: 2
 
 Configure `databasesFrom.oci` to discover Autonomous Databases from OCI metadata and freeform tags. The exporter lists all result pages in each configured compartment, filters by lifecycle state and required tags, selects a secure connection profile, resolves credentials, and registers ordinary database scrape targets.
 
-This implementation covers Autonomous Database in explicit compartments in one OCI provider-selected region. It does not recursively search compartments, search other regions, read defined tags, or discover Base Database and Exadata DB systems.
+This implementation covers Autonomous Database in explicit compartments in one OCI provider-selected region. In the current implementation, it does not recursively search compartments, search other regions, read defined tags, or discover Base Database and Exadata DB systems.
 
 ## Discovery configuration
 
