@@ -15,7 +15,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"runtime/debug"
 	"strings"
 	"sync"
@@ -34,10 +33,10 @@ import (
 	// Required for debugging
 	// _ "net/http/pprof"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/alertlog"
 	"github.com/oracle/oracle-db-appdev-monitoring/collector"
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
 	"github.com/oracle/oracle-db-appdev-monitoring/db"
+	"github.com/oracle/oracle-db-appdev-monitoring/logstream"
 	"github.com/oracle/oracle-db-appdev-monitoring/otlp"
 )
 
@@ -170,8 +169,8 @@ func main() {
 	prometheus.MustRegister(cversion.NewCollector("oracledb_exporter"))
 
 	var shutdownOTLP func(context.Context) error
-	// If OTLP is enabled, connect the collector snapshots to the SDK metric pipeline.
-	if m.OTLP != nil {
+	// Scheduled scrapes enable metrics on the shared OTLP transport.
+	if m.OTLP != nil && exporter.ScrapeInterval() > 0 {
 		logger.Info("Starting OTLP exporter")
 		otlpPipeline, err := otlp.New(context.Background(), m.OTLP, Version, exporter.ScrapeInterval(), prometheus.DefaultGatherer)
 		if err != nil {
@@ -241,34 +240,8 @@ func main() {
 
 	}
 
-	// start the log exporter
-	if m.LogDisable() == 1 {
-		logger.Info("log.disable set to 1, so will not export the alert logs")
-	} else {
-		if m.LogPerDatabaseFiles() {
-			logger.Info(fmt.Sprintf("Exporting an alert log file per database to %s", filepath.Dir(m.LogDestination())))
-		} else {
-			logger.Info(fmt.Sprintf("Exporting alert logs to %s", m.LogDestination()))
-		}
-		logTicker := time.NewTicker(m.LogInterval())
-		defer logTicker.Stop()
-
-		workers.Go(func() {
-			for {
-				select {
-				case <-workCtx.Done():
-					return
-				case <-logTicker.C:
-					logger.Debug("updating alert log")
-					for _, database := range exporter.GetDBs() {
-						if workCtx.Err() != nil {
-							return
-						}
-						alertlog.UpdateLog(m.LogDestination(), m.LogPerDatabaseFiles(), m.LogMessageLevelEnabled(), logger, database)
-					}
-				}
-			}
-		})
+	if err := logstream.Start(workCtx, &workers, logger, m, databases, Version); err != nil {
+		logger.Error("unable to configure database log collection; metrics collection will continue", "error", err)
 	}
 
 	server := &http.Server{

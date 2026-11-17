@@ -37,16 +37,18 @@ type Config struct {
 }
 
 type MetricsConfiguration struct {
-	ListenAddress string                    `yaml:"listenAddress"`
-	MetricsPath   string                    `yaml:"metricsPath"`
-	Databases     map[string]DatabaseConfig `yaml:"databases"`
-	Metrics       MetricsFilesConfig        `yaml:"metrics"`
-	Logging       LoggingConfig             `yaml:"log"`
-	Web           WebConfig                 `yaml:"web"`
-	OTLP          *OTLPConfig               `yaml:"otlp"`
+	ListenAddress  string                    `yaml:"listenAddress"`
+	MetricsPath    string                    `yaml:"metricsPath"`
+	Databases      map[string]DatabaseConfig `yaml:"databases"`
+	Metrics        MetricsFilesConfig        `yaml:"metrics"`
+	Logging        LoggingConfig             `yaml:"log"`
+	Web            WebConfig                 `yaml:"web"`
+	OTLP           *OTLPConfig               `yaml:"otlp"`
+	LogStreamFiles LogStreamFilesConfig      `yaml:"logStreams"`
+	LogStreams     []LogStreamConfig         `yaml:"-"`
 }
 
-// OTLPConfig configures scheduled metric publishing to an OTLP/gRPC endpoint.
+// OTLPConfig configures the shared transport for metric and log publishing.
 // The endpoint is required whenever this section is present. HTTP and HTTPS
 // endpoint URLs select plaintext and TLS transport respectively.
 type OTLPConfig struct {
@@ -169,6 +171,12 @@ type PerMetricScrapeDurationConfig struct {
 }
 
 type LoggingConfig struct {
+	StateDirectory      string         `yaml:"stateDirectory"`
+	QueryTimeout        time.Duration  `yaml:"queryTimeout"`
+	InitialLookback     time.Duration  `yaml:"initialLookback"`
+	MaxRows             int            `yaml:"maxRows"`
+	MaxBytes            int            `yaml:"maxBytes"`
+	Output              LogOutput      `yaml:"output"`
 	LogLevelEnabled     *bool          `yaml:"messageLevelEnabled"`
 	LogDisable          *int           `yaml:"disable"`
 	LogInterval         *time.Duration `yaml:"interval"`
@@ -405,6 +413,10 @@ func LoadMetricsConfiguration(logger *slog.Logger, cfg *Config) (*MetricsConfigu
 	}
 
 	m.merge()
+	m.LogStreams, err = LoadLogStreams(m)
+	if err != nil {
+		return m, err
+	}
 	return m, m.validate(logger)
 }
 
@@ -422,6 +434,7 @@ func (m *MetricsConfiguration) merge() {
 	}
 	m.mergeWebConfig()
 	m.mergeLoggingConfig()
+	m.mergeLogStreams()
 	m.mergeMetricsConfig()
 	m.mergeOTLPConfig()
 	if m.Metrics.ScrapeInterval == nil {
@@ -507,6 +520,9 @@ func (m *MetricsConfiguration) validate(logger *slog.Logger) error {
 	if err := m.validateLoggingConfig(); err != nil {
 		return err
 	}
+	if err := m.validateLogStreams(); err != nil {
+		return err
+	}
 	if err := m.validateOTLPConfig(); err != nil {
 		return err
 	}
@@ -520,21 +536,28 @@ func (m *MetricsConfiguration) validateOTLPConfig() error {
 	if strings.TrimSpace(m.OTLP.Endpoint) == "" {
 		return errors.New("otlp.endpoint is required when otlp is configured")
 	}
-	if m.Metrics.ScrapeInterval == nil || *m.Metrics.ScrapeInterval <= 0 {
-		return errors.New("metrics.scrapeInterval must be greater than zero when otlp is configured")
+	if m.Metrics.ScrapeInterval != nil && *m.Metrics.ScrapeInterval < 0 {
+		return errors.New("metrics.scrapeInterval must be nonnegative")
 	}
-	if m.OTLP.Timeout == nil || *m.OTLP.Timeout <= 0 {
+	return validateOTLPTransport(m.OTLP)
+}
+
+func validateOTLPTransport(cfg *OTLPConfig) error {
+	if strings.TrimSpace(cfg.Endpoint) == "" {
+		return errors.New("otlp.endpoint is required when otlp is configured")
+	}
+	if cfg.Timeout != nil && *cfg.Timeout <= 0 {
 		return errors.New("otlp.timeout must be greater than zero")
 	}
-	endpointURL, err := url.ParseRequestURI(m.OTLP.Endpoint)
+	endpointURL, err := url.ParseRequestURI(cfg.Endpoint)
 	if err != nil || endpointURL.Host == "" || (endpointURL.Scheme != "http" && endpointURL.Scheme != "https") {
 		return errors.New("otlp.endpoint must be an http:// or https:// URL")
 	}
 	usesPlaintextURL := endpointURL.Scheme == "http"
-	if usesPlaintextURL && m.OTLP.TLS != nil {
+	if usesPlaintextURL && cfg.TLS != nil {
 		return errors.New("otlp.tls cannot be configured when otlp.endpoint uses http")
 	}
-	if tls := m.OTLP.TLS; tls != nil {
+	if tls := cfg.TLS; tls != nil {
 		if (tls.CertFile == "") != (tls.KeyFile == "") {
 			return errors.New("otlp.tls.certFile and otlp.tls.keyFile must be configured together")
 		}

@@ -81,6 +81,7 @@ services:
     #   - DB_PASSWORD=${DB_PASSWORD}
     #   - DB_CONNECT_STRING=free26ai:1521/freepdb1
     volumes:
+      - exporter_log_state:/log
       - ./exporter:/exporter
       - ./wallet:/exporter/wallet
 
@@ -91,4 +92,5 @@ services:
         condition: service_healthy
 
 volumes:
+  exporter_log_state:
   prom_data:

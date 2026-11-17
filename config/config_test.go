@@ -446,7 +446,7 @@ func TestLoadMetricsConfigurationRejectsInvalidOTLPConfig(t *testing.T) {
 		wantErr string
 	}{
 		{name: "missing endpoint", metrics: "scrapeInterval: 15s", otlp: "headers: {}", wantErr: "otlp.endpoint"},
-		{name: "missing interval", metrics: "", otlp: "endpoint: https://otel-collector:4317", wantErr: "metrics.scrapeInterval"},
+		{name: "negative interval", metrics: "scrapeInterval: -1s", otlp: "endpoint: https://otel-collector:4317", wantErr: "metrics.scrapeInterval"},
 		{name: "zero timeout", metrics: "scrapeInterval: 15s", otlp: "endpoint: https://otel-collector:4317\n  timeout: 0s", wantErr: "otlp.timeout"},
 		{name: "scheme-less endpoint", metrics: "scrapeInterval: 15s", otlp: "endpoint: otel-collector:4317", wantErr: "otlp.endpoint must"},
 		{name: "TLS with HTTP endpoint", metrics: "scrapeInterval: 15s", otlp: "endpoint: http://otel-collector:4317\n  tls: {}", wantErr: "otlp.tls cannot"},

@@ -116,3 +116,32 @@ func TestDatabaseCloseWaitsForActiveQuery(t *testing.T) {
 		t.Fatal("Close did not finish after query released its lifecycle lock")
 	}
 }
+
+func TestPinnedConnectionBlocksCloseUntilReleased(t *testing.T) {
+	database := &Database{Session: openTestQueryDB(t)}
+	conn, release, err := database.ConnectionContext(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if conn == nil {
+		t.Fatal("nil pinned connection")
+	}
+	done := make(chan error, 1)
+	go func() { done <- database.Close() }()
+	select {
+	case err := <-done:
+		t.Fatalf("closed pinned session early: %v", err)
+	case <-time.After(20 * time.Millisecond):
+	}
+	if err := release(); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("close blocked after release")
+	}
+}
