@@ -105,13 +105,6 @@ func databaseConfigFromAutonomousDatabase(autonomousDatabase adb.AutonomousDatab
 			return DatabaseConfig{}, err
 		}
 		database.URL = connectionString
-	} else {
-		// Explicit overrides must retain encrypted transport and certificate checks.
-		secured, err := verifiedTCPSDescriptor(database.URL)
-		if err != nil {
-			return DatabaseConfig{}, fmt.Errorf("invalid discovered database URL: %w", err)
-		}
-		database.URL = secured
 	}
 	if mutual && database.TNSAdmin == "" {
 		if database.ResourceID == "" {
@@ -121,4 +114,31 @@ func databaseConfigFromAutonomousDatabase(autonomousDatabase adb.AutonomousDatab
 	}
 
 	return database, nil
+}
+
+// connectionProfileForService selects from OCI metadata and leaves connection
+// string parsing to the driver. Lexical ordering keeps selection stable when
+// OCI returns the same profiles in a different order.
+func connectionProfileForService(connectionStrings *adb.AutonomousDatabaseConnectionStrings, service string, mutual bool) (string, error) {
+	service = strings.ToUpper(strings.TrimSpace(service))
+	tlsAuth := adb.DatabaseConnectionStringProfileTlsAuthenticationServer
+	if mutual {
+		tlsAuth = adb.DatabaseConnectionStringProfileTlsAuthenticationMutual
+	}
+	var selected string
+	if connectionStrings != nil {
+		for _, profile := range connectionStrings.Profiles {
+			if !strings.EqualFold(string(profile.ConsumerGroup), service) || profile.Protocol != adb.DatabaseConnectionStringProfileProtocolTcps || profile.TlsAuthentication != tlsAuth {
+				continue
+			}
+			value := stringValue(profile.Value)
+			if value != "" && (selected == "" || value < selected) {
+				selected = value
+			}
+		}
+	}
+	if selected == "" {
+		return "", fmt.Errorf("Autonomous Database has no TCPS %s profile for service %s", tlsAuth, service)
+	}
+	return selected, nil
 }

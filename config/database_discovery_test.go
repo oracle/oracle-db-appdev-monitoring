@@ -47,7 +47,7 @@ func TestDatabaseConfigFromAutonomousDatabase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(database.URL, "orders_high") || !strings.Contains(database.URL, "SSL_SERVER_DN_MATCH=YES") || database.Role != "SYSDBA" || database.MaxOpenConns == nil || *database.MaxOpenConns != 20 || database.ConnMaxLifetime == nil || *database.ConnMaxLifetime != 5*time.Minute || database.Labels["team"] != "payments" {
+	if !strings.Contains(database.URL, "orders_high") || database.Role != "SYSDBA" || database.MaxOpenConns == nil || *database.MaxOpenConns != 20 || database.ConnMaxLifetime == nil || *database.ConnMaxLifetime != 5*time.Minute || database.Labels["team"] != "payments" {
 		t.Fatalf("unexpected config: %#v", database)
 	}
 	if database.ResourceID != "ocid1.autonomousdatabase.orders" || database.Vault == nil || database.Vault.OCI.Auth != oci.AuthModeWorkloadIdentity || database.Vault.OCI.UsernamePasswordSecret != "credentials" {
@@ -72,7 +72,6 @@ func TestDatabaseConfigRejectsInvalidTags(t *testing.T) {
 		"invalid mtls flag":         {tagKeyMTLSConnectionRequired: "invalid"},
 		"wallet secret with TLS":    {tagKeyMTLSConnectionRequired: "false", tagKeyVaultID: "vault", tagKeyWalletSecret: "wallet"},
 		"mounted wallet with TLS":   {tagKeyMTLSConnectionRequired: "false", tagPrefix + "tnsAdmin": "/wallet"},
-		"insecure URL":              {tagPrefix + "url": "adb.example.com:1521/orders_low"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := databaseConfigFromAutonomousDatabase(testADBSummary("orders", tags), oci.AuthModeConfigFile); err == nil {

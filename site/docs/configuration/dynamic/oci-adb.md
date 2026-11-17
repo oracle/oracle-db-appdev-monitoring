@@ -73,17 +73,17 @@ Invalid individual configurations are skipped with warnings. A successful listin
 
 ## Connection service and transport
 
-The exporter selects structured OCI connection profiles by consumer group and TLS authentication, preserving TCPS and enabling server identity verification. FQDN/direct profiles are preferred, with deterministic selection when OCI reorders profiles. Bare legacy `host:port/service` fields are not used as a secure fallback. `DEDICATED` is not accepted as a consumer group.
+The exporter selects OCI connection profiles by consumer group, TCPS protocol, and TLS authentication metadata. When multiple profiles match, it selects the lexically smallest connection string so OCI response reordering does not trigger a restart. The selected string is passed unchanged to the driver for parsing and connection validation; discovery does not rewrite certificate verification settings. Legacy connection fields are not used as a fallback.
 
 `LOW` is the default for monitoring. You can select any of the five groups when the database returns a compatible profile. The exporter does not switch to another service when the requested service is unavailable. See [Oracle's service guidance](https://docs.oracle.com/en-us/iaas/autonomous-database-serverless/doc/predefined-database-services-names.html).
 
 OCI's actual `isMtlsConnectionRequired` metadata is respected. If the metadata does not require mTLS, discovery selects walletless TLS unless a tag or wallet explicitly requests mTLS. Missing compatible profiles skip the target; discovery does not switch transport modes. A tag cannot enable walletless TLS on a database that requires mTLS. A supplied wallet secret or `tnsAdmin` also requests a mutual profile.
 
-An explicit `url` configuration tag is supported only as a full TCPS descriptor with server identity verification. An explicit `connect-service` takes precedence over `url`.
+An explicit `url` configuration tag is passed unchanged to the driver, as with a statically configured database. Configure the required transport and certificate verification settings in that connection string. An explicit `connect-service` takes precedence over `url`.
 
 | Driver | Walletless TLS path | Automatic mTLS wallet path |
 | --- | --- | --- |
-| godror | Full OCI descriptor and Oracle Client verification | Per-target `tnsAdmin` with auto-login wallet |
+| godror | Unchanged OCI connection string | Per-target `tnsAdmin` with auto-login wallet |
 | go-ora | Encoded descriptor with SSL and certificate verification enabled | Per-target wallet option using `cwallet.sso` |
 | go-oracledb (experimental) | Full OCI descriptor | Supplied `ewallet.pem`, read directly from the per-connector wallet directory |
 
