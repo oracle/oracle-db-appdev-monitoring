@@ -6,35 +6,22 @@ package config
 import (
 	"context"
 	"log/slog"
+	"maps"
 	"reflect"
-	"sync"
 	"time"
 
 	"github.com/oracle/oracle-db-appdev-monitoring/oci"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 // DiscoveryMonitor reconciles OCI target metadata through a controlled process
 // restart. It never changes a live collector's database list or provisions
 // wallets during polling. Failed listings leave the active targets untouched.
 type DiscoveryMonitor struct {
-	configuration   *MetricsConfiguration
-	static          map[string]DatabaseConfig
-	baseline        map[string]DatabaseConfig
-	snapshot        func(context.Context, *slog.Logger, *OCIDatabasesFromConfig) (discoverySnapshot, error)
-	mu              sync.Mutex
-	success         float64
-	duration        float64
-	lastSuccess     float64
-	targets         float64
-	matched         float64
-	skipped         float64
-	successDesc     *prometheus.Desc
-	durationDesc    *prometheus.Desc
-	lastSuccessDesc *prometheus.Desc
-	targetsDesc     *prometheus.Desc
-	matchedDesc     *prometheus.Desc
-	skippedDesc     *prometheus.Desc
+	configuration *MetricsConfiguration
+	static        map[string]DatabaseConfig
+	baseline      map[string]DatabaseConfig
+	snapshot      func(context.Context, *slog.Logger, *OCIDatabasesFromConfig) (discoverySnapshot, error)
+	discoveryMetrics
 }
 
 // NewDiscoveryMonitor captures the static targets before discovery. Returns nil
@@ -44,19 +31,14 @@ func NewDiscoveryMonitor(configuration *MetricsConfiguration) *DiscoveryMonitor 
 		return nil
 	}
 	return &DiscoveryMonitor{
-		configuration:   configuration,
-		static:          copyDatabaseTargets(configuration.Databases),
-		snapshot:        discoverOCIDatabases,
-		successDesc:     prometheus.NewDesc("oracledb_exporter_discovery_success", "Whether the last OCI discovery attempt succeeded.", nil, nil),
-		durationDesc:    prometheus.NewDesc("oracledb_exporter_discovery_duration_seconds", "Duration of the last OCI discovery attempt.", nil, nil),
-		lastSuccessDesc: prometheus.NewDesc("oracledb_exporter_discovery_last_success_timestamp_seconds", "Unix time of the last successful OCI discovery.", nil, nil),
-		targetsDesc:     prometheus.NewDesc("oracledb_exporter_discovery_targets", "Accepted discovered targets after static target precedence in the last successful discovery.", nil, nil),
-		matchedDesc:     prometheus.NewDesc("oracledb_exporter_discovery_matched_targets", "OCI resources matching lifecycle and required tag filters in the last successful discovery.", nil, nil),
-		skippedDesc:     prometheus.NewDesc("oracledb_exporter_discovery_skipped_targets", "Matched OCI resources skipped for invalid configuration, duplicate names, or static target precedence in the last successful discovery.", nil, nil),
+		configuration:    configuration,
+		static:           normalizedDiscoveryTargets(configuration.Databases),
+		snapshot:         discoverOCIDatabases,
+		discoveryMetrics: newDiscoveryMetrics(),
 	}
 }
 
-func copyDatabaseTargets(targets map[string]DatabaseConfig) map[string]DatabaseConfig {
+func normalizedDiscoveryTargets(targets map[string]DatabaseConfig) map[string]DatabaseConfig {
 	copied := make(map[string]DatabaseConfig, len(targets))
 	for name, cfg := range targets {
 		// HashiCorp's fetched secret cache belongs to connection initialization,
@@ -72,36 +54,13 @@ func copyDatabaseTargets(targets map[string]DatabaseConfig) map[string]DatabaseC
 			}
 			cfg.Vault = &vault
 		}
-		copied[name] = cfg
-	}
-	return copied
-}
-
-func normalizedDiscoveryTargets(targets map[string]DatabaseConfig) map[string]DatabaseConfig {
-	normalized := copyDatabaseTargets(targets)
-	for name, cfg := range normalized {
-		// Generated wallet directory paths change across process lifetimes. The
-		// stable wallet source metadata remains part of the comparison.
+		// Generated wallet paths are runtime state; compare wallet sources instead.
 		if cfg.DiscoveryWallet != nil {
 			cfg.TNSAdmin = ""
 		}
-		normalized[name] = cfg
+		copied[name] = cfg
 	}
-	return normalized
-}
-
-func (m *DiscoveryMonitor) record(start time.Time, err error, accepted, matched, skipped int) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.duration = time.Since(start).Seconds()
-	m.success = 0
-	if err == nil {
-		m.success = 1
-		m.lastSuccess = float64(time.Now().UnixNano()) / 1e9
-		m.targets = float64(accepted)
-		m.matched = float64(matched)
-		m.skipped = float64(skipped)
-	}
+	return copied
 }
 
 // Initialize runs the materializing discovery once, before database registration.
@@ -146,7 +105,7 @@ func (m *DiscoveryMonitor) Poll(ctx context.Context, logger *slog.Logger) (bool,
 		m.record(started, err, 0, 0, 0)
 		return false, err
 	}
-	effective := copyDatabaseTargets(m.static)
+	effective := maps.Clone(m.static)
 	accepted := 0
 	for name, cfg := range snapshot.Databases {
 		if _, exists := effective[name]; exists {
@@ -225,19 +184,4 @@ func (m *DiscoveryMonitor) Run(ctx context.Context, logger *slog.Logger, request
 		requestRestart()
 		return
 	}
-}
-
-func (m *DiscoveryMonitor) Describe(out chan<- *prometheus.Desc) {
-	prometheus.DescribeByCollect(m, out)
-}
-
-func (m *DiscoveryMonitor) Collect(out chan<- prometheus.Metric) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	out <- prometheus.MustNewConstMetric(m.successDesc, prometheus.GaugeValue, m.success)
-	out <- prometheus.MustNewConstMetric(m.durationDesc, prometheus.GaugeValue, m.duration)
-	out <- prometheus.MustNewConstMetric(m.lastSuccessDesc, prometheus.GaugeValue, m.lastSuccess)
-	out <- prometheus.MustNewConstMetric(m.targetsDesc, prometheus.GaugeValue, m.targets)
-	out <- prometheus.MustNewConstMetric(m.matchedDesc, prometheus.GaugeValue, m.matched)
-	out <- prometheus.MustNewConstMetric(m.skippedDesc, prometheus.GaugeValue, m.skipped)
 }
