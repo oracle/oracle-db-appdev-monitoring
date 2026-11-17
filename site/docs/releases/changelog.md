@@ -9,10 +9,7 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
-- Add optional [OCI Autonomous Database discovery](../configuration/dynamic/oci-adb.md) through `databasesFrom.oci`, with compartment, lifecycle-state, and freeform-tag filters, secure TLS/mTLS connection profiles, and OCI Vault credentials. Static database configuration takes precedence over discovered targets with the same name.
-- Refresh discovered targets through graceful process restarts, retain active targets when OCI listing fails, and expose discovery status and target-count metrics. Manage downloaded or generated wallets with periodic renewal, private storage, and cleanup after database pools close.
-- Simplify discovery monitoring by separating Prometheus reporting and normalizing target identity in a single pass, preserving refresh and wallet-renewal behavior.
-- Pass discovered connection strings and explicit URL overrides unchanged to the selected driver for validation. Select OCI profiles by service, TCPS protocol, and TLS authentication metadata, with stable ordering across discovery polls.
+- Add [OCI Autonomous Database discovery](../configuration/dynamic/oci-adb.md) through `databasesFrom.oci`, with compartment, lifecycle-state, and freeform-tag filters, secure TLS/mTLS connection profiles, and OCI Vault credentials. Static database configuration takes precedence over discovered targets with the same name.
 - Reload OCI Vault credentials when rebuilding database connections after authentication failures, honoring `metrics.connectionBackoff`.
 - Rewrite [alert log collection](../configuration/alert-logs.md) with persistent timestamp checkpoints per database and stream, bounded reads, retry backoff, and file, stdout, or OTLP/gRPC output. Checkpoints replace progress tracking from the output file and require writable storage at `log.stateDirectory`; without a checkpoint, collection replays all retained history unless `log.initialLookback` is set.
 - Add [custom SQL log streams](../configuration/query-logs.md) defined in YAML or TOML through `logStreams.default` and `logStreams.custom`, with automatic definition reloads and independent collection schedules. Add per-database and per-stream metrics for delivered records, errors, and checkpoint progress.
