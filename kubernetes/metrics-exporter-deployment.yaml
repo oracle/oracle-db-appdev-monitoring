@@ -87,8 +87,12 @@ spec:
             name: metrics-exporter-config
         - name: tmp
           emptyDir: {}
+        # This volume keeps checkpoints across container restarts, but not pod
+        # replacement. Use a PVC for durable collection progress across pods.
         - name: alert-log
           emptyDir: {}
+          # persistentVolumeClaim:
+          #   claimName: exporter-log-state
         # uncomment and customize the next item if you want to provide custom metrics definitions
         #- name: config-volume
         #  configMap:

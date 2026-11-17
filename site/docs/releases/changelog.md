@@ -9,9 +9,17 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
+- Preserve OCI database discovery configuration and wallet cleanup alongside the new SQL log-stream collection support.
+- Rewrite [alert log collection](../configuration/alert-logs.md) with persistent timestamp checkpoints per database and stream, bounded reads, retry backoff, and file, stdout, or OTLP/gRPC output. Checkpoints replace progress tracking from the output file and require writable storage at `log.stateDirectory`; without a checkpoint, collection replays all retained history unless `log.initialLookback` is set.
+- Add [custom SQL log streams](../configuration/query-logs.md) defined in YAML or TOML through `logStreams.default` and `logStreams.custom`, with automatic definition reloads and independent collection schedules. Add per-database and per-stream metrics for delivered records, errors, and checkpoint progress.
+- Alert log output now contains the query columns directly, preserving original timestamps and message text.
+- Improve alert logging tests by removing a cancellation check that never acquired a connection and replacing SQL formatting and fixed checkpoint-size assertions with checks that tolerate formatting and metadata changes.
+
+### 2.5.2, November 16th, 2026
+
 - Add experimental support for Oracle's [go-oracledb](https://github.com/oracle/go-oracledb) driver with the `oracledb` build tag and `exporter-oracledb` container target, without CGO or Oracle Instant Client.
 - Updated third party dependencies
-- Upgraded the Go runtime and Docker build toolchain to 1.27.3.
+- Upgraded the Go runtime and Docker build toolchain to 1.27.4.
 - With scheduled scrapes (`metrics.scrapeInterval`), serve the last completed scrape from `/metrics` without waiting for a scrape in progress. Previously, `/metrics` requests blocked until the slowest query of the current scrape finished, which could exceed the Prometheus scrape timeout and leave gaps in every series of the target.
 - Refresh metrics with a custom `scrapeinterval` as soon as the interval has elapsed. Previously, clock jitter between scrapes often delayed the refresh by one scrape, for example to every 70s instead of every 60s with a 10s `metrics.scrapeInterval`.
 

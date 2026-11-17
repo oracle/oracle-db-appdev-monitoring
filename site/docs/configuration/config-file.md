@@ -93,6 +93,12 @@ metrics:
   custom:
     - custom-metrics-example/custom-metrics.toml
 
+# Optional custom log query definitions, loaded from YAML or TOML files.
+#logStreams:
+#  default: /etc/exporter/default-log-streams.yaml
+#  custom:
+#    - custom-log-streams-example/application-logs.yaml
+
 log:
   # Log level: debug, info, warn, or error
   level: info
@@ -180,7 +186,7 @@ An individual metric may have its own scrape interval separate from the exporter
 To add your custom config file to a container image, you can layer the base exporter image and include that config:
 
 ```Dockerfile
-FROM container-registry.oracle.com/database/observability-exporter:2.5.1
+FROM container-registry.oracle.com/database/observability-exporter:2.5.2
 COPY my-exporter-config.yaml /
 ENTRYPOINT ["/oracledb_exporter", "--config.file", "/my-exporter-config.yaml"]
 ```

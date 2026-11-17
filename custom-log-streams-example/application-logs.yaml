@@ -1,0 +1,17 @@
+# Reference this file from logStreams.custom in the exporter configuration.
+# The application_events table must contain event_timestamp (TIMESTAMP WITH
+# TIME ZONE), event_id, message, and severity columns.
+logStreams:
+  - id: application-events
+    interval: 15s
+    initialLookback: 24h
+    query: |
+      SELECT event_timestamp, message, severity,
+             TO_CHAR(event_id, 'TM9', 'NLS_NUMERIC_CHARACTERS=''.,''') AS event_id
+      FROM application_events
+      WHERE event_timestamp >= TO_TIMESTAMP_TZ(:1, 'YYYY-MM-DD"T"HH24:MI:SS.FF9TZH:TZM', 'NLS_DATE_LANGUAGE=American')
+        AND event_timestamp <= TO_TIMESTAMP_TZ(:2, 'YYYY-MM-DD"T"HH24:MI:SS.FF9TZH:TZM', 'NLS_DATE_LANGUAGE=American')
+      ORDER BY event_timestamp, application_events.event_id
+    timestampColumn: event_timestamp
+    output:
+      type: stdout

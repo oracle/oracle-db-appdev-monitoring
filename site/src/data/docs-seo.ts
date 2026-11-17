@@ -6,6 +6,10 @@ type DocSeoMetadata = {
 // Keys are docs IDs relative to site/docs (for example, "configuration/otlp").
 // Titles remain sourced from each doc's front matter or its first heading.
 const docsSeo: Record<string, DocSeoMetadata> = {
+  'configuration/query-logs': {
+    description: 'Export complete rows from append-only Oracle application tables as JSON or OTLP logs, with local timestamp checkpoints.',
+    keywords: ['Oracle query logs', 'application events', 'OTLP', 'checkpoint files'],
+  },
   'advanced/development': {
     description:
       'Learn how to build, test, and contribute to the Oracle AI Database Metrics Exporter.',

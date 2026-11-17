@@ -66,8 +66,10 @@ metrics:
     - /exporter/more-txeventq-metrics.toml
 
 log:
+  # Mount persistent storage here to preserve progress across replacements.
+  stateDirectory: /log/checkpoints
   # Path of log file
-  destination: /tmp/alert.log
+  destination: /log/alert.log
   # Interval of log updates
   interval: 15s
   ## Set disable to 1 to disable logging
