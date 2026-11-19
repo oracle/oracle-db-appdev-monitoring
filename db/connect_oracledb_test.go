@@ -142,7 +142,12 @@ func TestOracleDBDiscoverySecureDescriptor(t *testing.T) {
 }
 
 func TestOracleDBDiscoveryWalletConnector(t *testing.T) {
-	directory := filepath.Join("..", "docker-compose", "wallet")
+	directory := t.TempDir()
+	// Connector creation only checks that the PEM file exists and is non-empty;
+	// the driver reads its contents when connecting to the database.
+	if err := os.WriteFile(filepath.Join(directory, "ewallet.pem"), []byte("test wallet"), 0600); err != nil {
+		t.Fatal(err)
+	}
 	descriptor := `(DESCRIPTION=(ADDRESS=(PROTOCOL=TCPS)(HOST=adb.example.com)(PORT=1522))(CONNECT_DATA=(SERVICE_NAME=orders_low))(SECURITY=(SSL_SERVER_DN_MATCH=YES)))`
 	connector, err := newOracleDBConnector(config.DatabaseConfig{
 		URL: descriptor, DiscoveryWallet: &config.DiscoveryWalletConfig{DatabaseID: "database"},
