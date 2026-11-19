@@ -14,7 +14,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/config"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/config"
 )
 
 // FileOutput opens the path on every delivery, so rename-and-create rotation

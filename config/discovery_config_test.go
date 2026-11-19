@@ -10,7 +10,7 @@ import (
 	"time"
 
 	adb "github.com/oracle/oci-go-sdk/v65/database"
-	"github.com/oracle/oracle-db-appdev-monitoring/oci"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/oci"
 )
 
 func TestDiscoveryConfigurationDefaultsAndValidation(t *testing.T) {

@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/config"
-	"github.com/oracle/oracle-db-appdev-monitoring/db"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/config"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/db"
 )
 
 func TestLogStreamFileWatcherValidatesAllFilesAndNotifiesOnReplacement(t *testing.T) {
