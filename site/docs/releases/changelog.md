@@ -9,6 +9,8 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
+- Add [OCI Autonomous Database discovery](../configuration/dynamic/oci-adb.md) through `databasesFrom.oci`, with compartment, lifecycle-state, and freeform-tag filters, secure TLS/mTLS connection profiles, and OCI Vault credentials. Static database configuration takes precedence over discovered targets with the same name.
+- Reload OCI Vault credentials when rebuilding database connections after authentication failures, honoring `metrics.connectionBackoff`.
 - Rewrite [alert log collection](../configuration/alert-logs.md) with persistent timestamp checkpoints per database and stream, bounded reads, retry backoff, and file, stdout, or OTLP/gRPC output. Checkpoints replace progress tracking from the output file and require writable storage at `log.stateDirectory`; without a checkpoint, collection replays all retained history unless `log.initialLookback` is set.
 - Add [custom SQL log streams](../configuration/query-logs.md) defined in YAML or TOML through `logStreams.default` and `logStreams.custom`, with automatic definition reloads and independent collection schedules. Add per-database and per-stream metrics for delivered records, errors, and checkpoint progress.
 - Alert log output now contains the query columns directly, preserving original timestamps and message text.

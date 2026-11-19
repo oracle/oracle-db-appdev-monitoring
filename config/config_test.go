@@ -4,6 +4,7 @@
 package config
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -79,7 +80,7 @@ func TestDatabaseConfigGetPasswordReturnsPasswordFileError(t *testing.T) {
 func TestDatabaseConfigPassesOCIVaultAuthMode(t *testing.T) {
 	original := getOCIVaultSecret
 	var calls []string
-	getOCIVaultSecret = func(vaultID, secretName string, authMode oci.AuthMode) (string, error) {
+	getOCIVaultSecret = func(ctx context.Context, vaultID, secretName string, authMode oci.AuthMode) (string, error) {
 		calls = append(calls, fmt.Sprintf("%s/%s/%s", vaultID, secretName, authMode))
 		return "secret-value", nil
 	}

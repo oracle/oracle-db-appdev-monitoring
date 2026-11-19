@@ -6,11 +6,12 @@
 package db
 
 import (
-	"database/sql"
+	"database/sql/driver"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/url"
+	"regexp"
+	"strings"
 
 	go_ora "github.com/sijms/go-ora/v3"
 	"github.com/sijms/go-ora/v3/network"
@@ -18,69 +19,58 @@ import (
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
 )
 
-func connect(logger *slog.Logger, dbname string, dbconfig config.DatabaseConfig, clientInfo config.ClientInfoConfig) (*sql.DB, error) {
-	logger.Debug("Launching connection to "+MaskDSN(dbconfig.URL), "database", dbname)
+const driverName = "go-ora"
 
-	password, err := dbconfig.GetPassword()
-	if err != nil {
-		return nil, err
+func newConnector(dbconfig config.DatabaseConfig, credentials config.DatabaseCredentials, clientInfo config.ClientInfoConfig) (driver.Connector, error) {
+	return withClientInfo(go_ora.NewConnector(gooraDSN(dbconfig, credentials.Username, credentials.Password)), clientInfo), nil
+}
+
+var gooraTCPSProtocol = regexp.MustCompile(`(?i)\(\s*protocol\s*=\s*tcps\s*\)`)
+
+// gooraDSN passes long OCI descriptors via connStr instead of interpolating
+// them into a URL authority. Query encoding preserves certificate DNs containing
+// commas and credentials containing URL delimiters.
+func gooraDSN(dbconfig config.DatabaseConfig, username, password string) string {
+	if strings.HasPrefix(strings.TrimSpace(dbconfig.URL), "(") {
+		u := url.URL{Scheme: "oracle", Host: ":0", User: url.UserPassword(username, password), Path: "/"}
+		q := url.Values{"connStr": []string{dbconfig.URL}}
+		if gooraTCPSProtocol.MatchString(dbconfig.URL) {
+			q.Set("SSL", "true")
+			q.Set("SSL VERIFY", "true")
+		}
+		if dbconfig.TNSAdmin != "" {
+			q.Set("WALLET", dbconfig.TNSAdmin)
+		}
+		if dbconfig.Role != "" {
+			q.Set("DBA PRIVILEGE", dbconfig.Role)
+		}
+		u.RawQuery = q.Encode()
+		return u.String()
 	}
-	username, err := dbconfig.GetUsername()
-	if err != nil {
-		return nil, err
-	}
-	dbconfig.ExternalAuth = password == ""
-
-	logger.Debug(fmt.Sprintf("external authentication set to %t", dbconfig.ExternalAuth), "database", dbname)
-
-	msg := "Using Username/Password Authentication."
-	if dbconfig.ExternalAuth {
-		msg = "Database Password not specified; will attempt to use external authentication (ignoring user input)."
-		dbconfig.Username = ""
-	}
-	logger.Info(msg, "database", dbname)
-
-	// Build connection string for go-ora
 	var dsn string
-	if dbconfig.ExternalAuth {
-		// go-ora doesn't directly support external authentication
-		// So we rely on OS authentication (set Oracle wallet/env)
+	if password == "" {
 		dsn = fmt.Sprintf("oracle://@%s", dbconfig.URL)
 	} else if username != "" {
-		// url.UserPassword properly percent-encodes special characters in credentials,
-		// preventing malformed DSNs when passwords contain @, ?, #, /, % etc.
-		userInfo := url.UserPassword(username, password)
-		dsn = fmt.Sprintf("oracle://%s@%s", userInfo.String(), dbconfig.URL)
+		dsn = fmt.Sprintf("oracle://%s@%s", url.UserPassword(username, password).String(), dbconfig.URL)
 	} else {
 		dsn = fmt.Sprintf("oracle://%s", dbconfig.URL)
 	}
-
-	// open connection (lazy until first use)
-	db := sql.OpenDB(withClientInfo(go_ora.NewConnector(dsn), clientInfo))
-
-	return db, nil
+	// Existing Easy Connect URLs retain their query options.
+	if dbconfig.TNSAdmin != "" {
+		if u, err := url.Parse(dsn); err == nil {
+			q := u.Query()
+			q.Set("WALLET", dbconfig.TNSAdmin)
+			u.RawQuery = q.Encode()
+			return u.String()
+		}
+	}
+	return dsn
 }
 
-func isInvalidCredentialsError(err error) bool {
-	if err == nil {
-		return false
-	}
+func oracleErrorCode(err error) int {
 	var oraErr *network.OracleError
-	ok := errors.As(err, &oraErr)
-	if !ok {
-		return false
+	if !errors.As(err, &oraErr) {
+		return 0
 	}
-	return oraErr.ErrCode == ora01017code || oraErr.ErrCode == ora28000code
-}
-
-func isTemporaryConnectionError(err error) bool {
-	if err == nil {
-		return false
-	}
-	var oraErr *network.OracleError
-	ok := errors.As(err, &oraErr)
-	if !ok {
-		return false
-	}
-	return isTemporaryConnectionErrorCode(oraErr.ErrCode)
+	return oraErr.ErrCode
 }

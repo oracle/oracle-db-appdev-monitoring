@@ -4,6 +4,7 @@
 package config
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"testing"
@@ -13,7 +14,7 @@ import (
 
 func TestDatabaseConfigReturnsOCIVaultLookupError(t *testing.T) {
 	original := getOCIVaultSecret
-	getOCIVaultSecret = func(string, string, oci.AuthMode) (string, error) {
+	getOCIVaultSecret = func(context.Context, string, string, oci.AuthMode) (string, error) {
 		return "", errors.New("vault unavailable")
 	}
 	t.Cleanup(func() {

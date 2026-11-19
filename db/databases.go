@@ -4,6 +4,7 @@
 package db
 
 import (
+	"context"
 	"database/sql/driver"
 	"errors"
 	"fmt"
@@ -17,11 +18,15 @@ import (
 // Connection failures are retained by each Database for the normal warmup and
 // reconnect paths; they do not prevent the remaining databases from starting.
 func NewDatabases(logger *slog.Logger, m *config.MetricsConfiguration) []*Database {
+	return NewDatabasesContext(context.Background(), logger, m)
+}
+
+func NewDatabasesContext(ctx context.Context, logger *slog.Logger, m *config.MetricsConfiguration) []*Database {
 	databases := make([]*Database, 0, len(m.Databases))
 	databaseLabel := m.DatabaseLabel()
 	for name, databaseConfig := range m.Databases {
 		logger.Info("Registering database", "database", name)
-		databases = append(databases, NewDatabase(logger, databaseLabel, name, databaseConfig, m.Metrics.ClientInfo))
+		databases = append(databases, NewDatabaseContext(ctx, logger, databaseLabel, name, databaseConfig, m.Metrics.ClientInfo))
 	}
 	return databases
 }

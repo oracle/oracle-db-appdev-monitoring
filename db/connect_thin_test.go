@@ -209,7 +209,7 @@ func TestInitDBKeepsThinDriverPoolMaxConnections(t *testing.T) {
 	}}
 	db := openTestQueryDB(t)
 
-	initdb(testLogger(), "db1", dbconfig, db)
+	initdb(context.Background(), testLogger(), "db1", dbconfig, db)
 
 	if got := db.Stats().MaxOpenConnections; got != poolMaxConnections {
 		t.Fatalf("expected initdb to keep poolMaxConnections as max open connections, got %d", got)

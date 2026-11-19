@@ -142,3 +142,11 @@ func TestWarmupConnectionPoolSizeCapsAtGodrorPoolMaximum(t *testing.T) {
 		t.Fatalf("expected warmup to be capped at poolMaxConnections, got %d", got)
 	}
 }
+
+func TestGodrorDiscoveryPreservesSecureDescriptorAndWallet(t *testing.T) {
+	descriptor := `(DESCRIPTION=(ADDRESS=(PROTOCOL=TCPS)(HOST=adb.example.com)(PORT=1522))(CONNECT_DATA=(SERVICE_NAME=orders_low))(SECURITY=(SSL_SERVER_DN_MATCH=YES)))`
+	params := connectionParams(config.DatabaseConfig{URL: descriptor, ConnectConfig: config.ConnectConfig{TNSAdmin: "/private/wallet"}}, "exporter", "password", config.ClientInfoConfig{})
+	if params.ConnectString != descriptor || params.ConfigDir != "/private/wallet" {
+		t.Fatal("discovered secure descriptor/wallet not preserved")
+	}
+}

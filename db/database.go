@@ -17,25 +17,6 @@ import (
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
 )
 
-const (
-	ora01017code = 1017
-	ora01033code = 1033
-	ora28000code = 28000
-	ora03113code = 3113
-	ora03114code = 3114
-	ora12537code = 12537
-	ora12541code = 12541
-)
-
-func isTemporaryConnectionErrorCode(code int) bool {
-	switch code {
-	case ora01033code, ora03113code, ora03114code, ora12537code, ora12541code:
-		return true
-	default:
-		return false
-	}
-}
-
 var (
 	errDatabaseSessionNotInitialized = errors.New("database session is not initialized")
 	errDatabaseClosed                = errors.New("database is shut down")
@@ -49,6 +30,7 @@ type Database struct {
 	DatabaseLabel string
 	ClientInfo    config.ClientInfoConfig
 
+	ctx        context.Context
 	closed     bool
 	connectErr error
 	up         float64
@@ -60,11 +42,16 @@ type Database struct {
 }
 
 func NewDatabase(logger *slog.Logger, databaseLabel, name string, databaseConfig config.DatabaseConfig, clientInfo config.ClientInfoConfig) *Database {
-	db, err := connect(logger, name, databaseConfig, clientInfo)
+	return NewDatabaseContext(context.Background(), logger, databaseLabel, name, databaseConfig, clientInfo)
+}
+
+func NewDatabaseContext(ctx context.Context, logger *slog.Logger, databaseLabel, name string, databaseConfig config.DatabaseConfig, clientInfo config.ClientInfoConfig) *Database {
+	db, err := connectContext(ctx, logger, name, databaseConfig, clientInfo)
 	if err != nil {
 		logger.Error("Failed to initialize database session", "error", err, "database", name)
 	}
 	return &Database{
+		ctx:           ctx,
 		Name:          name,
 		Session:       db,
 		Config:        databaseConfig,
@@ -94,6 +81,13 @@ func (d *Database) Close() error {
 		return session.Close()
 	}
 	return nil
+}
+
+func (d *Database) operationContext() context.Context {
+	if d.ctx != nil {
+		return d.ctx
+	}
+	return context.Background()
 }
 
 func (d *Database) StartupReady() bool {
@@ -156,7 +150,7 @@ func (d *Database) warmupSession(logger *slog.Logger, session *sql.DB) error {
 	}
 	warmup := func(i int) error {
 		time.Sleep(100 * time.Millisecond)
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(d.operationContext(), 5*time.Second)
 		defer cancel()
 
 		conn, err := session.Conn(ctx)
@@ -167,7 +161,7 @@ func (d *Database) warmupSession(logger *slog.Logger, session *sql.DB) error {
 		return nil
 	}
 
-	initdb(logger, d.Name, d.Config, session)
+	initdb(d.operationContext(), logger, d.Name, d.Config, session)
 
 	for i := 0; i < poolSize; i++ {
 		// short circuit warmup for inaccessible databases
@@ -189,21 +183,20 @@ func (d *Database) reconnect(logger *slog.Logger, backoff time.Duration) error {
 		return errDatabaseClosed
 	}
 
+	if retryAfter := d.IsValid(); retryAfter != nil {
+		return fmt.Errorf("database reconnect delayed for %s", retryAfter.Round(time.Millisecond))
+	}
 	logger.Info("Reconnecting database session", "database", d.Name)
 
-	session, err := connect(logger, d.Name, d.Config, d.ClientInfo)
-	if err != nil {
-		d.reconnectMU.Lock()
-		d.connectErr = err
-		d.up = 0
-		d.invalidateLocked(backoff)
-		d.reconnectMU.Unlock()
-		return err
-	}
-	if err := d.warmupSession(logger, session); err != nil {
-		if session != nil {
+	ctx := d.operationContext()
+	session, err := connectContext(ctx, logger, d.Name, d.Config, d.ClientInfo)
+	if err == nil {
+		err = d.warmupSession(logger, session)
+		if err != nil && session != nil {
 			_ = session.Close()
 		}
+	}
+	if err != nil {
 		d.reconnectMU.Lock()
 		d.connectErr = err
 		d.up = 0
@@ -228,10 +221,10 @@ func (d *Database) reconnect(logger *slog.Logger, backoff time.Duration) error {
 // Ping the database. If the database is disconnected, try to reconnect.
 // If the database type is unknown, try to reload it.
 func (d *Database) Ping(logger *slog.Logger, backoff time.Duration) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(d.operationContext(), 5*time.Second)
 	defer cancel()
 
-	err := d.PingContext(ctx)
+	session, err := d.pingSession(ctx)
 	if errors.Is(err, errDatabaseClosed) {
 		return err
 	}
@@ -239,6 +232,12 @@ func (d *Database) Ping(logger *slog.Logger, backoff time.Duration) error {
 		return d.reconnect(logger, backoff)
 	}
 	if err != nil {
+		if isInvalidCredentialsError(err) && d.Config.Vault != nil && d.Config.Vault.OCI != nil {
+			// Retire the connector holding old credentials. The next attempt, after
+			// backoff, fetches the current Vault version while rebuilding the SQL handle.
+			d.retireCredentials(session, backoff)
+			return err
+		}
 		d.setUp(0)
 		if isInvalidCredentialsError(err) || isTemporaryConnectionError(err) {
 			d.invalidate(backoff)
@@ -250,8 +249,13 @@ func (d *Database) Ping(logger *slog.Logger, backoff time.Duration) error {
 		}
 		return err
 	}
-	d.setUp(1)
-	d.clearInvalid()
+	// A concurrent authentication failure may already have retired this pool.
+	d.reconnectMU.Lock()
+	if !d.closed && d.Session == session {
+		d.up = 1
+		d.clearInvalidLocked()
+	}
+	d.reconnectMU.Unlock()
 	return nil
 }
 
@@ -360,15 +364,35 @@ func (d *Database) ConnectionContext(ctx context.Context) (*sql.Conn, func() err
 }
 
 func (d *Database) PingContext(ctx context.Context) error {
+	_, err := d.pingSession(ctx)
+	return err
+}
+
+func (d *Database) pingSession(ctx context.Context) (*sql.DB, error) {
 	d.reconnectMU.RLock()
 	defer d.reconnectMU.RUnlock()
 	if d.closed {
-		return errDatabaseClosed
+		return nil, errDatabaseClosed
 	}
 	if d.Session == nil {
-		return errDatabaseSessionNotInitialized
+		return nil, errDatabaseSessionNotInitialized
 	}
-	return d.Session.PingContext(ctx)
+	return d.Session, d.Session.PingContext(ctx)
+}
+
+func (d *Database) retireCredentials(failedSession *sql.DB, backoff time.Duration) {
+	d.reconnectMU.Lock()
+	if d.closed || d.Session != failedSession {
+		d.reconnectMU.Unlock()
+		return
+	}
+	d.Session = nil
+	d.up = 0
+	d.invalidateLocked(backoff)
+	d.reconnectMU.Unlock()
+	if failedSession != nil {
+		_ = failedSession.Close()
+	}
 }
 
 // Up reports whether the most recent connection check succeeded.
@@ -380,13 +404,13 @@ func isClosedDatabaseError(err error) bool {
 	return errors.Is(err, sql.ErrConnDone) || strings.Contains(err.Error(), "sql: database is closed")
 }
 
-func initdb(logger *slog.Logger, dbname string, dbconfig config.DatabaseConfig, db *sql.DB) {
+func initdb(ctx context.Context, logger *slog.Logger, dbname string, dbconfig config.DatabaseConfig, db *sql.DB) {
 	configureSQLConnectionPool(logger, dbname, dbconfig, db)
 	logger.Debug(fmt.Sprintf("set connection max lifetime to %s", dbconfig.GetConnMaxLifetime()), "database", dbname)
 	db.SetConnMaxLifetime(dbconfig.GetConnMaxLifetime())
 	logger.Debug(fmt.Sprintf("Successfully configured connection to %s", MaskDSN(dbconfig.URL)), "database", dbname)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	var sysdba string
 	if err := db.QueryRowContext(ctx, "select sys_context('USERENV', 'ISDBA') from dual").Scan(&sysdba); err != nil {

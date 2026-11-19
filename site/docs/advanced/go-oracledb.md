@@ -49,3 +49,11 @@ databases:
 ```
 
 Use driver-supported Easy Connect query parameters for connection options. See the [upstream driver documentation](https://github.com/oracle/go-oracledb) for TCP, TCPS, TLS/wallet options, and configuration precedence. The upstream driver's environment variables can override programmatic connector settings. The exporter accepts its own `--config.file` flag; configure driver options through the URL or environment rather than upstream driver CLI flags.
+
+### OCI wallets
+
+[OCI Autonomous Database discovery](../configuration/dynamic/oci-adb.md) uses the supplied `ewallet.pem` directly. A minimal wallet ZIP for this driver contains only `ewallet.pem`, including the client private key, client certificate, and CA certificates. No SSO-to-PEM conversion is performed.
+
+For an encrypted PEM private key, configure its wallet password with `ORACLE_GO_WALLET_PASSWORD` (or `oracle.go.wallet_password`, which takes precedence). This is a process-wide native driver setting. Automatic OCI wallet generation uses this same configured password; an unencrypted supplied PEM needs no password. See the discovery guide for minimal files, shared-wallet ZIPs, and generation requirements.
+
+For a static database, `tnsAdmin` identifies a directory containing `ewallet.pem` when `url` supplies a full descriptor or Easy Connect address. This configures wallet material; TNS alias lookup is not added. Credential files are used as supplied. External directories remain untouched, and discovery-owned directories are cleaned up after pools close.
