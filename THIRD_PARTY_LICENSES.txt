@@ -570,62 +570,6 @@ Copyright 2015-2025 go-swagger maintainers
 
 --------------------------------- (separator) ----------------------------------
 == Dependency
-pkg:golang/github.com/go-openapi/spec
-
-== License Type
-SPDX:Apache-2.0
-Other/unknown license
-// SPDX-FileCopyrightText: Copyright 2015-2025 go-swagger maintainers
-// SPDX-License-Identifier: Apache-2.0
-
-package spec
-
-import (
-	"encoding/json"
-
-	"github.com/go-openapi/swag/jsonutils"
-)
-
-// License information for the exposed API.
-//
-// For more information: http://goo.gl/8us55a#licenseObject
-type License struct {
-	LicenseProps
-	VendorExtensible
-}
-
-// LicenseProps holds the properties of a License object.
-type LicenseProps struct {
-	Name string `json:"name,omitempty"`
-	URL  string `json:"url,omitempty"`
-}
-
-// UnmarshalJSON hydrates License from json.
-func (l *License) UnmarshalJSON(data []byte) error {
-	if err := json.Unmarshal(data, &l.LicenseProps); err != nil {
-		return err
-	}
-	return json.Unmarshal(data, &l.VendorExtensible)
-}
-
-// MarshalJSON produces License as json.
-func (l License) MarshalJSON() ([]byte, error) {
-	b1, err := json.Marshal(l.LicenseProps)
-	if err != nil {
-		return nil, err
-	}
-	b2, err := json.Marshal(l.VendorExtensible)
-	if err != nil {
-		return nil, err
-	}
-	return jsonutils.ConcatJSON(b1, b2), nil
-}
-
-== Copyright
-Copyright 2017 go-swagger maintainers
-
---------------------------------- (separator) ----------------------------------
-== Dependency
 pkg:golang/github.com/go-openapi/strfmt
 
 == License Type
@@ -8073,23 +8017,6 @@ SPDX:Apache-2.0
 == Copyright
 Copyright (c) 2006-2011 Kirill Simonov
 Copyright (c) 2011-2019 Canonical Ltd
-
---------------------------------- (separator) ----------------------------------
-== Dependency
-pkg:golang/honnef.co/go/tools
-
-== License Type
-SPDX:MIT
-SPDX:BSD-3-Clause
-
-== Copyright
-Copyright (c) 2013 TOML authors
-Copyright (c) 2014 Dmitry Vyukov. All rights reserved.
-Copyright (c) 2016 Dominik Honnef
-Copyright (c) 2017, Daniel Martí. All rights reserved.
-Copyright 2019 Dominik Honnef. All rights reserved.
-Copyright 2026 The Go Authors. All rights reserved.
-copyright comments, build tags, and package documentation---to the
 
 --------------------------------- (separator) ----------------------------------
 == Dependency
