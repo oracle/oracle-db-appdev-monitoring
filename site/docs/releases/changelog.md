@@ -15,6 +15,10 @@ List of upcoming and historic changes to the exporter.
 - Add [custom SQL log streams](../configuration/query-logs.md) defined in YAML or TOML through `logStreams.default` and `logStreams.custom`, with automatic definition reloads and independent collection schedules. Add per-database and per-stream metrics for delivered records, errors, and checkpoint progress.
 - Alert log output now contains the query columns directly, preserving original timestamps and message text.
 - Improve alert logging tests by removing a cancellation check that never acquired a connection and replacing SQL formatting and fixed checkpoint-size assertions with checks that tolerate formatting and metadata changes.
+- Treat `metricstype` values case-insensitively for histograms as well. Previously, `Histogram` or `HISTOGRAM` produced an untyped sample with only the sum value instead of a histogram, while `Counter` and `Gauge` already worked in any case.
+
+Thank you to the following users for their suggestions and contributions:
+- [0z5a](https://github.com/0z5a)
 
 ### 2.5.2, November 16th, 2026
 

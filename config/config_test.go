@@ -488,6 +488,14 @@ func TestMetricsNormalizeIdentifiers(t *testing.T) {
 			},
 		},
 		{
+			name: "metrics type value",
+			check: func(t *testing.T, metrics *Metrics) {
+				if got := metrics.Metric[0].MetricsType["sqlid_without_profile_on_wcr_pta_multi_deep_bin_v"]; got != "histogram" {
+					t.Fatalf("expected metricstype value to be normalized to lowercase, got %q", got)
+				}
+			},
+		},
+		{
 			name: "metrics bucket key",
 			check: func(t *testing.T, metrics *Metrics) {
 				if _, ok := metrics.Metric[0].MetricsBuckets["sqlid_without_profile_on_wcr_pta_multi_deep_bin_v"]; !ok {
@@ -540,7 +548,7 @@ func TestMetricsNormalizeIdentifiers(t *testing.T) {
 							"sqlid_without_profile_on_WCR_PTA_MULTI_DEEP_BIN_V": "test metric",
 						},
 						MetricsType: map[string]string{
-							"sqlid_without_profile_on_WCR_PTA_MULTI_DEEP_BIN_V": "histogram",
+							"sqlid_without_profile_on_WCR_PTA_MULTI_DEEP_BIN_V": "Histogram",
 						},
 						MetricsBuckets: map[string]map[string]string{
 							"sqlid_without_profile_on_WCR_PTA_MULTI_DEEP_BIN_V": {
