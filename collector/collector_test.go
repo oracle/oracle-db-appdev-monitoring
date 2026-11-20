@@ -10,11 +10,15 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/oracle/oracle-db-appdev-monitoring/config"
 	"github.com/oracle/oracle-db-appdev-monitoring/db"
 	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
 )
 
 var errTestRowsIteration = errors.New("row iteration failed")
@@ -170,5 +174,98 @@ func TestQueryDeadlineReleasesLifecycleLock(t *testing.T) {
 	case <-done:
 	case <-time.After(time.Second):
 		t.Fatal("query deadline leaked lifecycle lock")
+	}
+}
+
+type testHistogramRows struct {
+	read bool
+}
+
+func (r *testHistogramRows) CloneTestRows() driver.Rows {
+	return &testHistogramRows{}
+}
+
+func (r *testHistogramRows) Columns() []string {
+	return []string{"LE_20", "LE_40", "COUNT", "DATA"}
+}
+
+func (r *testHistogramRows) Close() error {
+	return nil
+}
+
+func (r *testHistogramRows) Next(dest []driver.Value) error {
+	if r.read {
+		return io.EOF
+	}
+	r.read = true
+	dest[0], dest[1], dest[2], dest[3] = "3", "19", "45", "123.45"
+	return nil
+}
+
+func TestScrapeGenericValuesHistogramTypeIgnoresCase(t *testing.T) {
+	for _, metricType := range []string{"histogram", "Histogram", "HISTOGRAM"} {
+		t.Run(metricType, func(t *testing.T) {
+			metricsFile := filepath.Join(t.TempDir(), "metrics.toml")
+			definition := `[[metric]]
+context = "test_histo"
+request = "SELECT 3 as le_20, 19 as le_40, 45 as count, 123.45 as data FROM DUAL"
+metricsdesc = { data = "Sum of all values." }
+metricstype = { data = "` + metricType + `" }
+metricsbuckets = { data = { le_20 = "20", le_40 = "40" } }
+`
+			if err := os.WriteFile(metricsFile, []byte(definition), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			metricsConfig := &config.MetricsConfiguration{
+				Metrics: config.MetricsFilesConfig{Custom: []string{metricsFile}},
+			}
+			metrics, err := config.LoadMetrics(testLogger(), metricsConfig)
+			if err != nil {
+				t.Fatalf("expected custom metrics to load, got %v", err)
+			}
+			var metric *config.Metric
+			for _, m := range metrics {
+				if m.Context == "test_histo" {
+					metric = m
+				}
+			}
+			if metric == nil {
+				t.Fatal("expected test_histo metric to be loaded")
+			}
+
+			database := &db.Database{
+				Name:          "db1",
+				Session:       openTestQueryDBWithRows(t, &testHistogramRows{}),
+				DatabaseLabel: "database",
+			}
+			if err := database.WarmupConnectionPool(testLogger(), time.Hour); err != nil {
+				t.Fatalf("expected test database warmup to succeed, got %v", err)
+			}
+			exporter := &Exporter{
+				logger:               testLogger(),
+				MetricsConfiguration: metricsConfig,
+				metricsToScrape:      map[string]*config.Metric{metric.ID: metric},
+				databases:            []*db.Database{database},
+			}
+			exporter.initCache()
+
+			ch := make(chan prometheus.Metric, 1)
+			if err := exporter.scrapeGenericValues(database, ch, metric); err != nil {
+				t.Fatalf("expected scrape to succeed, got %v", err)
+			}
+			close(ch)
+
+			var out dto.Metric
+			if err := (<-ch).Write(&out); err != nil {
+				t.Fatal(err)
+			}
+			histogram := out.GetHistogram()
+			if histogram == nil {
+				t.Fatalf("expected a histogram, got %v", &out)
+			}
+			if histogram.GetSampleCount() != 45 || histogram.GetSampleSum() != 123.45 || len(histogram.GetBucket()) != 2 {
+				t.Fatalf("unexpected histogram: %v", histogram)
+			}
+		})
 	}
 }

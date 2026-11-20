@@ -77,9 +77,10 @@ func (m *Metric) normalizeIdentifiers() {
 	}
 	m.MetricsDesc = normalizedDesc
 
+	// Type values are compared in lower case, so "Histogram" is treated like "histogram".
 	normalizedTypes := make(map[string]string, len(m.MetricsType))
 	for name, metricType := range m.MetricsType {
-		normalizedTypes[strings.ToLower(name)] = metricType
+		normalizedTypes[strings.ToLower(name)] = strings.ToLower(metricType)
 	}
 	m.MetricsType = normalizedTypes
 
