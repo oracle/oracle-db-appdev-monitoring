@@ -17,7 +17,7 @@ import (
 
 	"github.com/oracle/go-oracledb/v26/oracle"
 	oracleerrors "github.com/oracle/go-oracledb/v26/oracle/errors"
-	"github.com/oracle/oracle-db-appdev-monitoring/config"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/config"
 )
 
 const driverName = "experimental go-oracledb"

@@ -13,7 +13,7 @@ import (
 
 	"github.com/godror/godror"
 	"github.com/godror/godror/dsn"
-	"github.com/oracle/oracle-db-appdev-monitoring/config"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/config"
 )
 
 const driverName = "godror"

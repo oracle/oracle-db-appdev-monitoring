@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/db"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/db"
 )
 
 // BoundaryFormat matches TO_TIMESTAMP_TZ(:1, BoundaryMask). Explicit timezone and

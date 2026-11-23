@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/oci"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/oci"
 )
 
 // DiscoveryMonitor reconciles OCI target metadata through a controlled process

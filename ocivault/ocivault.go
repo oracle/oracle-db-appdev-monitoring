@@ -13,7 +13,7 @@ import (
 
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/secrets"
-	"github.com/oracle/oracle-db-appdev-monitoring/oci"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/oci"
 )
 
 type secretBundleGetter interface {

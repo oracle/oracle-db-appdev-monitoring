@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/db"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/db"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

@@ -7,12 +7,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/oracle/oracle-db-appdev-monitoring/oci"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/oci"
 )
 
 func TestDatabaseConfigGetsCredentialsFromOCIUsernamePasswordSecret(t *testing.T) {

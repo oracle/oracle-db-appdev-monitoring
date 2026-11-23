@@ -8,7 +8,7 @@ import (
 	"database/sql"
 	"log/slog"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/config"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/config"
 )
 
 // connectContext owns credential resolution and the lazy SQL handle. Each build

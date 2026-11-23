@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/oci"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/oci"
 	"github.com/prometheus/exporter-toolkit/web"
 	"go.yaml.in/yaml/v2"
 )

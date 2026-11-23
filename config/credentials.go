@@ -10,9 +10,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/azvault"
-	"github.com/oracle/oracle-db-appdev-monitoring/hashivault"
-	"github.com/oracle/oracle-db-appdev-monitoring/ocivault"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/azvault"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/hashivault"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/ocivault"
 )
 
 var (

@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/oracle/oracle-db-appdev-monitoring/config"
+	"github.com/oracle/oracle-db-appdev-monitoring/v2/config"
 )
 
 func withClientInfo(connector driver.Connector, clientInfo config.ClientInfoConfig) driver.Connector {
