@@ -4,6 +4,7 @@
 package collector
 
 import (
+	"context"
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
@@ -130,7 +131,7 @@ func TestCollectEmitsMetricScrapeDuration(t *testing.T) {
 		}
 
 		tick := time.Now()
-		exporter.scheduledScrape(&tick)
+		exporter.scheduledScrape(context.Background(), &tick)
 
 		if !hasScheduledMetric(exporter, metricScrapeDurationName) {
 			t.Fatalf("expected %s in the scheduled scrape results", metricScrapeDurationName)
@@ -262,7 +263,7 @@ func runScrapeDatabase(t *testing.T, exporter *Exporter, database *db.Database) 
 	now := time.Now()
 
 	// scrapeDatabase waits for its metric goroutines before returning.
-	exporter.scrapeDatabase(metricCh, errChan, database, &now)
+	exporter.scrapeDatabase(context.Background(), metricCh, errChan, database, &now)
 	close(metricCh)
 	close(errChan)
 	for range metricCh {
@@ -276,6 +277,7 @@ func runScrapeDatabase(t *testing.T, exporter *Exporter, database *db.Database) 
 func collectExporterMetrics(t *testing.T, exporter *Exporter, database *db.Database) []string {
 	t.Helper()
 
+	exporter.ctx = context.Background()
 	exporter.mu = &sync.Mutex{}
 	exporter.totalScrapes = prometheus.NewCounter(prometheus.CounterOpts{Name: "test_scrapes_total", Help: "test"})
 	exporter.duration = prometheus.NewGauge(prometheus.GaugeOpts{Name: "test_duration_seconds", Help: "test"})

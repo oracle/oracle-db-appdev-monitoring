@@ -57,7 +57,7 @@ func TestDatabaseConfigFromAutonomousDatabase(t *testing.T) {
 
 func TestDatabaseConfigDefaultsToLowTLS(t *testing.T) {
 	database, err := databaseConfigFromAutonomousDatabase(testADBSummary("orders", nil), oci.AuthModeConfigFile)
-	if err != nil || !strings.Contains(database.URL, "orders_low") || database.DiscoveryWallet != nil {
+	if err != nil || !strings.Contains(database.URL, "orders_low") || database.DiscoveryWallet != nil || database.DiscoveryMTLSProfile {
 		t.Fatalf("unexpected default config: %#v, %v", database, err)
 	}
 }
@@ -111,7 +111,7 @@ func TestDatabaseConfigMTLSMetadataAndPreference(t *testing.T) {
 			if (err != nil) != tt.wantError {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if !tt.wantError && (database.DiscoveryWallet != nil) != tt.wantWallet {
+			if !tt.wantError && ((database.DiscoveryWallet != nil) != tt.wantWallet || database.DiscoveryMTLSProfile != tt.wantWallet) {
 				t.Fatalf("unexpected wallet config: %#v", database.DiscoveryWallet)
 			}
 		})
@@ -127,7 +127,7 @@ func TestDatabaseConfigWalletReference(t *testing.T) {
 	// A mounted wallet avoids downloads but still selects a mutual profile.
 	adb.FreeformTags = map[string]string{tagPrefix + "tnsAdmin": "/wallet"}
 	database, err = databaseConfigFromAutonomousDatabase(adb, oci.AuthModeConfigFile)
-	if err != nil || database.DiscoveryWallet != nil || database.TNSAdmin != "/wallet" {
+	if err != nil || database.DiscoveryWallet != nil || database.TNSAdmin != "/wallet" || !database.DiscoveryMTLSProfile {
 		t.Fatalf("unexpected mounted wallet: %#v, %v", database, err)
 	}
 }

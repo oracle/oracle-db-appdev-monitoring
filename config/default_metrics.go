@@ -20,7 +20,7 @@ var defaultMetricsToml string
 func DefaultMetrics(logger *slog.Logger, metricsConfig MetricsFilesConfig) map[string]*Metric {
 	var metricsToScrape Metrics
 	if metricsConfig.Default != "" {
-		if err := loadMetricsConfig(filepath.Clean(metricsConfig.Default), &metricsToScrape); err != nil {
+		if _, err := loadMetricsConfig(filepath.Clean(metricsConfig.Default), &metricsToScrape); err != nil {
 			logger.Error(fmt.Sprintf("there was an issue while loading specified default metrics file at: %s, proceeding to run with default metrics.", metricsConfig.Default),
 				"error", err)
 		} else {

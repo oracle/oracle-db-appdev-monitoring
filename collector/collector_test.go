@@ -10,9 +10,11 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/oracle/oracle-db-appdev-monitoring/config"
 	"github.com/oracle/oracle-db-appdev-monitoring/db"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -120,7 +122,7 @@ func TestGeneratePrometheusMetricsReturnsRowsErr(t *testing.T) {
 	}
 	parseCalls := 0
 
-	err := exporter.generatePrometheusMetrics(db, func(row map[string]string) error {
+	err := exporter.generatePrometheusMetrics(context.Background(), db, func(row map[string]string) error {
 		parseCalls++
 		if row["value"] != "1" {
 			t.Fatalf("expected row value to be scanned before iteration error, got %q", row["value"])
@@ -133,6 +135,98 @@ func TestGeneratePrometheusMetricsReturnsRowsErr(t *testing.T) {
 	}
 	if parseCalls != 1 {
 		t.Fatalf("expected parse to be called once before iteration error, got %d", parseCalls)
+	}
+}
+
+type testDescriptorRows struct {
+	index int
+}
+
+func (*testDescriptorRows) Columns() []string          { return []string{"value", "count", "suffix", "label"} }
+func (*testDescriptorRows) Close() error               { return nil }
+func (*testDescriptorRows) CloneTestRows() driver.Rows { return &testDescriptorRows{} }
+
+func (r *testDescriptorRows) Next(dest []driver.Value) error {
+	switch r.index {
+	case 0:
+		copy(dest, []driver.Value{"1", "1", "invalid_sample", "\xff"})
+	case 1:
+		copy(dest, []driver.Value{"2", "1", "valid_sample", "valid"})
+	default:
+		return io.EOF
+	}
+	r.index++
+	return nil
+}
+
+func TestScrapeReportsInvalidCustomMetricSeries(t *testing.T) {
+	tests := []struct {
+		name       string
+		configure  func(*config.Metric)
+		errorText  string
+		wantMetric string
+	}{
+		{
+			name: "duplicate gauge labels",
+			configure: func(metric *config.Metric) {
+				metric.Labels = []string{"label", "label"}
+			},
+			errorText: "duplicate label names",
+		},
+		{
+			name: "duplicate histogram labels",
+			configure: func(metric *config.Metric) {
+				metric.Labels = []string{"label", "label"}
+				metric.MetricsType["value"] = "histogram"
+				metric.MetricsBuckets = map[string]map[string]string{"value": {"count": "1"}}
+			},
+			errorText: "duplicate label names",
+		},
+		{
+			name: "invalid metric name",
+			configure: func(metric *config.Metric) {
+				metric.Context = "\xff"
+			},
+			errorText: "is not a valid metric name",
+		},
+		{
+			name: "invalid label value in one row",
+			configure: func(metric *config.Metric) {
+				metric.FieldToAppend = "suffix"
+				metric.Labels = []string{"suffix", "label"}
+			},
+			errorText:  "is not valid UTF-8",
+			wantMetric: "oracledb_test_valid_sample",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			metric := newTestDurationMetric("")
+			metric.IgnoreZeroResult = true
+			tt.configure(metric)
+			exporter, database := newTestDurationExporter(t, openTestQueryDBWithRows(t, &testDescriptorRows{}), metric)
+			metrics := make(chan prometheus.Metric, 2)
+			errs := make(chan error, 1)
+			tick := time.Now()
+			exporter.scrapeDatabase(context.Background(), metrics, errs, database, &tick)
+			close(metrics)
+			close(errs)
+
+			if err := <-errs; err == nil || !strings.Contains(err.Error(), tt.errorText) {
+				t.Fatalf("expected scrape error containing %q, got %v", tt.errorText, err)
+			}
+			var descriptors []string
+			for sample := range metrics {
+				descriptors = append(descriptors, sample.Desc().String())
+			}
+			if tt.wantMetric == "" {
+				if len(descriptors) != 0 {
+					t.Fatalf("expected no samples, got %v", descriptors)
+				}
+			} else if len(descriptors) != 1 || !containsMetric(descriptors, tt.wantMetric) {
+				t.Fatalf("expected only %s, got %v", tt.wantMetric, descriptors)
+			}
+		})
 	}
 }
 
@@ -156,7 +250,7 @@ func TestQueryDeadlineReleasesLifecycleLock(t *testing.T) {
 	pool := sql.OpenDB(deadlineConnector{})
 	defer pool.Close()
 	database := &db.Database{Session: pool}
-	err := (&Exporter{}).generatePrometheusMetrics(database, func(map[string]string) error { return nil }, "select 1", time.Millisecond)
+	err := (&Exporter{}).generatePrometheusMetrics(context.Background(), database, func(map[string]string) error { return nil }, "select 1", time.Millisecond)
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("expected query deadline, got %v", err)
 	}

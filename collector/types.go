@@ -3,6 +3,8 @@
 package collector
 
 import (
+	"context"
+	"crypto/sha256"
 	"log/slog"
 	"sync"
 	"time"
@@ -15,13 +17,14 @@ import (
 // Exporter collects Oracle DB metrics. It implements prometheus.Collector.
 type Exporter struct {
 	*config.MetricsConfiguration
+	ctx context.Context
 	// mu serializes scrapes. Collect must not take it in scheduled mode, as a scrape may hold it
 	// for as long as its slowest query.
 	mu *sync.Mutex
 	// resultsMu guards scrapeResults, the last completed scheduled scrape snapshot.
 	resultsMu           sync.RWMutex
 	metricsToScrape     map[string]*config.Metric
-	customMetricsHashes map[string][]byte
+	customMetricsHashes [][sha256.Size]byte
 	duration, error     prometheus.Gauge
 	databaseDuration    *prometheus.GaugeVec
 	// metricScrapeDuration tracks how long the last scrape of each individual metric took, per database.

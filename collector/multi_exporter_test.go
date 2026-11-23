@@ -4,10 +4,12 @@
 package collector
 
 import (
+	"context"
 	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
@@ -19,21 +21,19 @@ metricsdesc = { value = "Custom test metric." }
 request = "select 1 as value from dual"
 `
 
-func TestCheckIfMetricsChangedIsTrackedPerExporter(t *testing.T) {
+func TestNewExporterFingerprintsInitialCustomMetrics(t *testing.T) {
 	customMetricsPath := writeCustomMetricsFixture(t, customMetricFixture)
 
 	first := newTestExporterWithCustomMetrics(customMetricsPath)
-	if !first.checkIfMetricsChanged() {
-		t.Fatal("expected first exporter to detect initial custom metrics load")
+	if first.checkIfMetricsChanged() {
+		t.Fatal("unexpected change after the first exporter loaded custom metrics")
 	}
-	first.reloadMetrics()
 	assertMetricLoaded(t, first, "custom_instances_value")
 
 	second := newTestExporterWithCustomMetrics(customMetricsPath)
-	if !second.checkIfMetricsChanged() {
-		t.Fatal("expected second exporter to detect initial custom metrics load independently")
+	if second.checkIfMetricsChanged() {
+		t.Fatal("unexpected change after the second exporter loaded custom metrics")
 	}
-	second.reloadMetrics()
 	assertMetricLoaded(t, second, "custom_instances_value")
 }
 
@@ -42,15 +42,6 @@ func TestCheckIfMetricsChangedReloadsEachExporterAfterFileUpdate(t *testing.T) {
 
 	first := newTestExporterWithCustomMetrics(customMetricsPath)
 	second := newTestExporterWithCustomMetrics(customMetricsPath)
-
-	if !first.checkIfMetricsChanged() {
-		t.Fatal("expected first exporter to detect initial custom metrics load")
-	}
-	first.reloadMetrics()
-	if !second.checkIfMetricsChanged() {
-		t.Fatal("expected second exporter to detect initial custom metrics load")
-	}
-	second.reloadMetrics()
 
 	updatedMetrics := `[[metric]]
 context = "custom_instances"
@@ -78,12 +69,6 @@ func TestReloadMetricsKeepsLastGoodMetricsOnParseError(t *testing.T) {
 	customMetricsPath := writeCustomMetricsFixture(t, customMetricFixture)
 	exporter := newTestExporterWithCustomMetrics(customMetricsPath)
 
-	if !exporter.checkIfMetricsChanged() {
-		t.Fatal("expected initial custom metrics load to be detected")
-	}
-	if !exporter.reloadMetrics() {
-		t.Fatal("expected initial metrics reload to succeed")
-	}
 	assertMetricRequest(t, exporter, "custom_instances_value", "select 1 as value from dual")
 
 	invalidMetrics := `[[metric]]
@@ -106,6 +91,56 @@ request = "select 2 as value from dual"
 	if !exporter.checkIfMetricsChanged() {
 		t.Fatal("expected invalid custom metrics to continue appearing changed until a reload succeeds")
 	}
+}
+
+func TestReloadMetricsDetectsFileReplacedAfterDecode(t *testing.T) {
+	path := writeCustomMetricsFixture(t, customMetricFixture)
+	exporter := newTestExporterWithCustomMetrics(path)
+	secondVersion := strings.Replace(customMetricFixture, "select 1", "select 2", 1)
+	thirdVersion := strings.Replace(customMetricFixture, "select 1", "select 3", 1)
+	if err := os.WriteFile(path, []byte(secondVersion), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	replacement := filepath.Join(filepath.Dir(path), "replacement.toml")
+	if err := os.WriteFile(replacement, []byte(thirdVersion), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	replaced := false
+	exporter.logger = slog.New(metricLoadHandler{
+		Handler: slog.NewTextHandler(io.Discard, nil),
+		loaded: func() {
+			if !replaced {
+				if err := os.Rename(replacement, path); err != nil {
+					t.Fatal(err)
+				}
+				replaced = true
+			}
+		},
+	})
+
+	if !exporter.checkIfMetricsChanged() || !exporter.reloadMetrics() || !replaced {
+		t.Fatal("expected a reload followed by an atomic replacement")
+	}
+	assertMetricRequest(t, exporter, "custom_instances_value", "select 2 as value from dual")
+	if !exporter.checkIfMetricsChanged() || !exporter.reloadMetrics() {
+		t.Fatal("expected the next reload to pick up the replacement")
+	}
+	assertMetricRequest(t, exporter, "custom_instances_value", "select 3 as value from dual")
+	if exporter.checkIfMetricsChanged() {
+		t.Fatal("unexpected reload for the already loaded file")
+	}
+}
+
+type metricLoadHandler struct {
+	slog.Handler
+	loaded func()
+}
+
+func (h metricLoadHandler) Handle(ctx context.Context, record slog.Record) error {
+	if strings.HasPrefix(record.Message, "Successfully loaded custom metrics from ") {
+		h.loaded()
+	}
+	return h.Handler.Handle(ctx, record)
 }
 
 func newTestExporterWithCustomMetrics(customMetricsPath string) *Exporter {

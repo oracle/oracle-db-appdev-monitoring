@@ -75,6 +75,11 @@ func (c *Collector) Poll(ctx context.Context) error {
 		c.state = state
 		c.save = file.save
 	}
+	if source, ok := c.source.(interface{ prepare(context.Context) error }); ok {
+		if err := source.prepare(ctx); err != nil {
+			return fmt.Errorf("open source: %w", err)
+		}
+	}
 	readCtx, cancel := context.WithTimeout(ctx, c.opts.QueryTimeout)
 	defer cancel()
 	r, err := c.source.Open(readCtx)
@@ -95,8 +100,6 @@ func (c *Collector) Poll(ctx context.Context) error {
 		if c.opts.InitialLookback > 0 {
 			from = now.Add(-c.opts.InitialLookback)
 		}
-		// Store the initial lower bound as the same exclusive cursor used after
-		// completed reads, so retries retain the initial replay policy.
 		state.CompletedThrough = from.Add(-time.Nanosecond)
 	}
 	if now.Before(state.CompletedThrough) {
@@ -117,16 +120,30 @@ func (c *Collector) Poll(ctx context.Context) error {
 		}
 		next := from.Add(upper.Sub(from) / 2)
 		if attempts >= 63 || !next.Before(upper) {
-			return fmt.Errorf("%w; increase maxRows/maxBytes", ErrLimit)
+			err = fmt.Errorf("%w; increase maxRows/maxBytes", ErrLimit)
+			break
 		}
 		upper = next
 	}
 	closeErr := r.Close()
 	released = true
 	if err = errors.Join(err, closeErr); err != nil {
-		return fmt.Errorf("read source: %w", err)
+		err = fmt.Errorf("read source: %w", err)
 	}
 	cancel()
+	if initialize {
+		// Fix the first lookback after releasing the session, even if the query
+		// failed. This boundary can be saved without acknowledging any rows.
+		if ctx.Err() != nil {
+			return errors.Join(err, ctx.Err())
+		}
+		if persistErr := c.persist(state); persistErr != nil {
+			return errors.Join(err, fmt.Errorf("checkpoint initial boundary: %w", persistErr))
+		}
+	}
+	if err != nil {
+		return err
+	}
 	// Validate the full range before emitting any output.
 	for _, row := range rows {
 		timestamp, err := row.Timestamp(c.opts.TimestampColumn)
@@ -135,11 +152,6 @@ func (c *Collector) Poll(ctx context.Context) error {
 		}
 		if timestamp.Before(from) || timestamp.After(upper) {
 			return errors.New("source returned a row outside its requested timestamp range")
-		}
-	}
-	if initialize {
-		if err := c.persist(state); err != nil {
-			return fmt.Errorf("checkpoint initial boundary: %w", err)
 		}
 	}
 	for start := 0; start < len(rows); start += c.opts.BatchRows {

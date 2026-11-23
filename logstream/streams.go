@@ -43,7 +43,7 @@ func Start(ctx context.Context, workers *sync.WaitGroup, logger *slog.Logger, m 
 		cancelWatching()
 		return err
 	}
-	collectors, err := newCollectors(&updated, databases, version)
+	collectors, err := newCollectors(logger, &updated, databases, version)
 	if err != nil {
 		cancelWatching()
 		return err
@@ -63,7 +63,7 @@ func Start(ctx context.Context, workers *sync.WaitGroup, logger *slog.Logger, m 
 					logger.Error("Unable to reload log streams; keeping current collectors", "error", err)
 					continue
 				}
-				next, err := newCollectors(&updated, databases, version)
+				next, err := newCollectors(logger, &updated, databases, version)
 				if err != nil {
 					logger.Error("Unable to configure reloaded log streams; keeping current collectors", "error", err)
 					continue
@@ -127,7 +127,7 @@ type collectorGroup struct {
 	transport  *otlp.LogTransport
 }
 
-func newCollectors(m *config.MetricsConfiguration, databases []*db.Database, version string) (*collectorGroup, error) {
+func newCollectors(logger *slog.Logger, m *config.MetricsConfiguration, databases []*db.Database, version string) (*collectorGroup, error) {
 	group := &collectorGroup{}
 	cleanup := func() {
 		for _, c := range group.collectors {
@@ -162,6 +162,10 @@ func newCollectors(m *config.MetricsConfiguration, databases []*db.Database, ver
 		}
 	}
 	add := func(database *db.Database, s config.LogStreamConfig) error {
+		if database.Config.ResourceID != "" && s.Output.PerDatabaseFiles && !config.IsLogFileAlias(database.Name) {
+			logger.Warn("Skipping log stream with an unsafe database filename", "database", database.Name, "stream", s.ID)
+			return nil
+		}
 		output, err := makeOutput(s.Output, database.Name, s.TimestampColumn)
 		if err != nil {
 			return err

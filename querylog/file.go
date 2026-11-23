@@ -44,7 +44,7 @@ func Destination(path, database string, perDatabase bool) (string, error) {
 	if config.IsStdout(path) {
 		return "", errors.New("stdout cannot use per-database files")
 	}
-	if database == "." || database == ".." || filepath.Base(database) != database || strings.ContainsAny(database, "/\\\x00") {
+	if !config.IsLogFileAlias(database) {
 		return "", errors.New("unsafe database filename")
 	}
 	ext := filepath.Ext(path)

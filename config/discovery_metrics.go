@@ -33,7 +33,7 @@ func newDiscoveryMetrics() discoveryMetrics {
 		lastSuccessDesc: prometheus.NewDesc("oracledb_exporter_discovery_last_success_timestamp_seconds", "Unix time of the last successful OCI discovery.", nil, nil),
 		targetsDesc:     prometheus.NewDesc("oracledb_exporter_discovery_targets", "Accepted discovered targets after static target precedence in the last successful discovery.", nil, nil),
 		matchedDesc:     prometheus.NewDesc("oracledb_exporter_discovery_matched_targets", "OCI resources matching lifecycle and required tag filters in the last successful discovery.", nil, nil),
-		skippedDesc:     prometheus.NewDesc("oracledb_exporter_discovery_skipped_targets", "Matched OCI resources skipped for invalid configuration, duplicate names, or static target precedence in the last successful discovery.", nil, nil),
+		skippedDesc:     prometheus.NewDesc("oracledb_exporter_discovery_skipped_targets", "Matched OCI resources skipped for invalid configuration, duplicate names, static target precedence, or wallet preparation failure in the last successful discovery.", nil, nil),
 	}
 }
 

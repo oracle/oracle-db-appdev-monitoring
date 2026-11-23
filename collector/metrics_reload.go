@@ -6,14 +6,14 @@ package collector
 import "github.com/oracle/oracle-db-appdev-monitoring/config"
 
 func (e *Exporter) reloadMetrics() bool {
-	metricsToScrape, err := config.LoadMetrics(e.logger, e.MetricsConfiguration)
+	metricsToScrape, hashes, err := config.LoadMetricsWithFingerprints(e.logger, e.MetricsConfiguration)
 	if err != nil {
 		e.logger.Error("failed to reload metrics; continuing with last known good metrics", "error", err)
 		return false
 	}
 
 	e.metricsToScrape = metricsToScrape
-	e.refreshCustomMetricsHashes()
+	e.customMetricsHashes = hashes
 	e.initCache()
 	// Metric definitions that no longer exist must not keep reporting the duration of their last scrape.
 	// The vector is nil when metrics.perMetricScrapeDuration.enabled is false.

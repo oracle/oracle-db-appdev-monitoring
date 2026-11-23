@@ -16,6 +16,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
+	"google.golang.org/protobuf/proto"
 )
 
 const scheduledTestMetricName = "oracledb_test_value"
@@ -35,7 +36,7 @@ func TestCollectDoesNotWaitForScheduledScrapeInProgress(t *testing.T) {
 	}
 
 	gate.value.Store("1")
-	exporter.doScrape(time.Now())
+	exporter.doScrape(context.Background(), time.Now())
 	previous := collectScheduledValues(exporter)
 	if got, ok := previous[scheduledTestMetricName]; !ok || got != 1 {
 		t.Fatalf("expected the first scheduled scrape to publish %s=1, got %v", scheduledTestMetricName, previous)
@@ -46,7 +47,7 @@ func TestCollectDoesNotWaitForScheduledScrapeInProgress(t *testing.T) {
 	scrapeDone := make(chan struct{})
 	go func() {
 		defer close(scrapeDone)
-		exporter.doScrape(time.Now())
+		exporter.doScrape(context.Background(), time.Now())
 	}()
 	select {
 	case <-gate.started:
@@ -64,6 +65,11 @@ func TestCollectDoesNotWaitForScheduledScrapeInProgress(t *testing.T) {
 		if len(during) != len(previous) {
 			t.Fatalf("expected the complete previous snapshot while a scrape is in progress, got %v, want %v", during, previous)
 		}
+		for name, want := range previous {
+			if got, ok := during[name]; !ok || got != want {
+				t.Fatalf("metric %s changed before the new scrape completed: got %v, want %v", name, got, want)
+			}
+		}
 	case <-time.After(time.Second):
 		t.Fatal("Collect blocked on the scheduled scrape in progress")
 	}
@@ -76,6 +82,95 @@ func TestCollectDoesNotWaitForScheduledScrapeInProgress(t *testing.T) {
 	}
 	if got := collectScheduledValues(exporter)[scheduledTestMetricName]; got != 2 {
 		t.Fatalf("expected the completed scrape to publish %s=2, got %v", scheduledTestMetricName, got)
+	}
+}
+
+func TestScheduledSnapshotPreservesCounterLabelsAndCreationTime(t *testing.T) {
+	exporter, database := newTestScheduledExporter(t, time.Hour)
+	counter := exporter.scrapeErrors.WithLabelValues("test", database.Name)
+	counter.Inc()
+	var original dto.Metric
+	if err := counter.Write(&original); err != nil {
+		t.Fatal(err)
+	}
+	expected := proto.CloneOf(&original)
+	if len(expected.GetLabel()) != 2 || expected.GetCounter().GetCreatedTimestamp() == nil {
+		t.Fatalf("counter fixture lacks labels or creation time: %s", expected)
+	}
+	exporter.doScrape(context.Background(), time.Now())
+	for _, sample := range exporter.latestScrapeResults() {
+		if sample.Desc() != counter.Desc() {
+			continue
+		}
+		counter.Inc()
+		var output dto.Metric
+		if err := sample.Write(&output); err != nil {
+			t.Fatal(err)
+		}
+		if !proto.Equal(&output, expected) {
+			t.Fatalf("snapshot changed after counter update: got %s, want %s", &output, expected)
+		}
+		*output.GetLabel()[0].Value = "changed"
+		if err := sample.Write(&output); err != nil {
+			t.Fatal(err)
+		}
+		if !proto.Equal(&output, expected) {
+			t.Fatalf("writing a sample exposed the snapshot's labels: got %s, want %s", &output, expected)
+		}
+		return
+	}
+	t.Fatal("scheduled snapshot omitted the labeled scrape error counter")
+}
+
+func TestCancelActiveMetricQuery(t *testing.T) {
+	for _, mode := range []struct {
+		name     string
+		interval time.Duration
+	}{
+		{name: "scheduled", interval: time.Hour},
+		{name: "on demand"},
+	} {
+		t.Run(mode.name, func(t *testing.T) {
+			exporter, database := newTestScheduledExporter(t, mode.interval)
+			gate := newQueryGate()
+			session := sql.OpenDB(gatedQueryConnector{gate: gate})
+			t.Cleanup(func() { _ = session.Close() })
+			database.Session = session
+			if err := database.WarmupConnectionPool(testLogger(), time.Hour); err != nil {
+				t.Fatal(err)
+			}
+
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			if mode.interval == 0 {
+				exporter.ctx = ctx
+			}
+			gate.hold.Store(true)
+			done := make(chan struct{})
+			t.Cleanup(func() {
+				gate.open()
+				<-done
+			})
+			go func() {
+				defer close(done)
+				if mode.interval > 0 {
+					exporter.RunScheduledScrapes(ctx)
+					return
+				}
+				collectScheduledValues(exporter)
+			}()
+			select {
+			case <-gate.started:
+			case <-time.After(time.Second):
+				t.Fatal("timed out waiting for the metric query to start")
+			}
+			cancel()
+			select {
+			case <-done:
+			case <-time.After(time.Second):
+				t.Fatal("metric query stayed blocked after cancellation")
+			}
+		})
 	}
 }
 

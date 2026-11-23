@@ -5,6 +5,7 @@
 package oci
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -26,9 +27,7 @@ var (
 	defaultConfigProvider = func() (common.ConfigurationProvider, error) {
 		return common.DefaultConfigProvider(), nil
 	}
-	instancePrincipalConfigurationProvider = func() (common.ConfigurationProvider, error) {
-		return auth.InstancePrincipalConfigurationProvider()
-	}
+	instancePrincipal                      = &instancePrincipalProvider{create: newInstancePrincipalProvider}
 	resourcePrincipalConfigurationProvider = func() (common.ConfigurationProvider, error) {
 		return auth.ResourcePrincipalConfigurationProvider()
 	}
@@ -63,11 +62,16 @@ func ValidateAuthMode(authMode AuthMode) error {
 // provider; callers that accept configuration input should call
 // ValidateAuthMode first.
 func ConfigurationProviderForAuthMode(authMode AuthMode) (common.ConfigurationProvider, error) {
+	return ConfigurationProviderForAuthModeContext(context.Background(), authMode)
+}
+
+// ConfigurationProviderForAuthModeContext bounds the caller's wait for instance principal initialization.
+func ConfigurationProviderForAuthModeContext(ctx context.Context, authMode AuthMode) (common.ConfigurationProvider, error) {
 	switch normalizeAuthMode(authMode) {
 	case AuthModeConfigFile:
 		return defaultConfigProvider()
 	case AuthModeInstancePrincipal:
-		return instancePrincipalConfigurationProvider()
+		return instancePrincipal.get(ctx)
 	case AuthModeResourcePrincipal:
 		return resourcePrincipalConfigurationProvider()
 	case AuthModeWorkloadIdentity:

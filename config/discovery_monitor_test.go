@@ -123,21 +123,30 @@ func TestDiscoveryMonitorStartupFailurePreservesStaticTargets(t *testing.T) {
 	}
 }
 
-func TestDiscoveryMonitorWalletFailurePreservesStaticTargets(t *testing.T) {
+func TestDiscoveryMonitorWalletFailurePreservesHealthyTargets(t *testing.T) {
 	cfg := monitorConfiguration(t)
 	cfg.Databases = map[string]DatabaseConfig{"orders": {URL: "static"}}
 	m := NewDiscoveryMonitor(cfg)
 	m.snapshot = func(context.Context, *slog.Logger, *OCIDatabasesFromConfig) (discoverySnapshot, error) {
-		return discoverySnapshot{Databases: map[string]DatabaseConfig{
+		return discoverySnapshot{Matched: 2, Databases: map[string]DatabaseConfig{
 			"valid":   {URL: "valid"},
 			"invalid": {URL: "invalid", DiscoveryWallet: &DiscoveryWalletConfig{Auth: "invalid", DatabaseID: "ocid1"}},
 		}}, nil
 	}
-	if err := m.Initialize(context.Background(), testLogger()); err == nil {
-		t.Fatal("expected wallet preparation failure")
+	if err := m.Initialize(context.Background(), testLogger()); err != nil {
+		t.Fatal(err)
 	}
-	if len(cfg.Databases) != 1 || cfg.Databases["orders"].URL != "static" || len(m.baseline) != 1 || m.success != 0 {
-		t.Fatalf("failed materialization changed active targets: %#v", cfg.Databases)
+	if len(cfg.Databases) != 2 || cfg.Databases["orders"].URL != "static" || cfg.Databases["valid"].URL != "valid" {
+		t.Fatalf("expected only the static and healthy discovered targets: %#v", cfg.Databases)
+	}
+	if m.success != 1 || m.targets != 1 || m.skipped != 1 {
+		t.Fatalf("expected successful discovery with one accepted and one skipped target: %#v", m)
+	}
+	if changed, err := m.Poll(context.Background(), testLogger()); err != nil || changed {
+		t.Fatalf("unchanged metadata requested a restart: changed=%v error=%v", changed, err)
+	}
+	if m.targets != 1 || m.skipped != 1 {
+		t.Fatalf("metadata polling changed the counts for an unprovisioned target: %#v", m)
 	}
 }
 
@@ -230,6 +239,33 @@ func TestDiscoveryMonitorRenewsWalletWithMetadataPollingDisabled(t *testing.T) {
 	m.Run(ctx, testLogger(), func() { restarts++ })
 	if restarts != 1 {
 		t.Fatalf("expected wallet renewal restart, got %d", restarts)
+	}
+}
+
+func TestDiscoveryMonitorRetriesSkippedWalletAtRenewal(t *testing.T) {
+	cfg := monitorConfiguration(t)
+	zero := time.Duration(0)
+	interval := time.Millisecond
+	cfg.DatabasesFrom.RefreshInterval = &zero
+	cfg.DatabasesFrom.WalletRefreshInterval = &interval
+	m := NewDiscoveryMonitor(cfg)
+	m.snapshot = func(context.Context, *slog.Logger, *OCIDatabasesFromConfig) (discoverySnapshot, error) {
+		return discoverySnapshot{Matched: 1, Databases: map[string]DatabaseConfig{
+			"orders": {DiscoveryWallet: &DiscoveryWalletConfig{Auth: "invalid", DatabaseID: "ocid1"}},
+		}}, nil
+	}
+	if err := m.Initialize(context.Background(), testLogger()); err != nil {
+		t.Fatalf("successful listing with no usable targets should remain observable: %v", err)
+	}
+	if len(cfg.Databases) != 0 || m.success != 1 || m.targets != 0 || m.skipped != 1 {
+		t.Fatalf("expected successful discovery with no usable targets: %#v", m)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	restarts := 0
+	m.Run(ctx, testLogger(), func() { restarts++ })
+	if restarts != 1 {
+		t.Fatalf("expected renewal to retry the skipped wallet, got %d restarts", restarts)
 	}
 }
 

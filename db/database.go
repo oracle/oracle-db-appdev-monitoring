@@ -17,6 +17,9 @@ import (
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
 )
 
+// ErrConnectionNotReady means acquisition can be retried at the next poll.
+var ErrConnectionNotReady = errors.New("database connection is not ready")
+
 var (
 	errDatabaseSessionNotInitialized = errors.New("database session is not initialized")
 	errDatabaseClosed                = errors.New("database is shut down")
@@ -39,6 +42,8 @@ type Database struct {
 	startupReady       atomic.Bool
 	reconnectMU        sync.RWMutex
 	reconnectAttemptMU sync.Mutex
+	warmupLogger       *slog.Logger
+	connectionBackoff  time.Duration
 }
 
 func NewDatabase(logger *slog.Logger, databaseLabel, name string, databaseConfig config.DatabaseConfig, clientInfo config.ClientInfoConfig) *Database {
@@ -95,14 +100,14 @@ func (d *Database) StartupReady() bool {
 }
 
 // WarmupConnectionPool serially acquires connections to "warm up" the connection pool.
-// This is a workaround for a perceived bug in ODPI_C where rapid acquisition of connections
-// results in a SIGABRT.
 func (d *Database) WarmupConnectionPool(logger *slog.Logger, backoff time.Duration) error {
 	d.reconnectAttemptMU.Lock()
 	defer d.reconnectAttemptMU.Unlock()
 	if d.closed {
 		return errDatabaseClosed
 	}
+	d.warmupLogger = logger
+	d.connectionBackoff = backoff
 	defer d.startupReady.Store(true)
 
 	d.reconnectMU.RLock()
@@ -119,7 +124,7 @@ func (d *Database) WarmupConnectionPool(logger *slog.Logger, backoff time.Durati
 		return errDatabaseSessionNotInitialized
 	}
 
-	if err := d.warmupSession(logger, session); err != nil {
+	if err := d.warmupSession(d.operationContext(), logger, session); err != nil {
 		d.setUp(0)
 		d.invalidate(backoff)
 		return err
@@ -130,7 +135,7 @@ func (d *Database) WarmupConnectionPool(logger *slog.Logger, backoff time.Durati
 	return nil
 }
 
-func (d *Database) warmupSession(logger *slog.Logger, session *sql.DB) error {
+func (d *Database) warmupSession(ctx context.Context, logger *slog.Logger, session *sql.DB) error {
 	if session == nil {
 		return errDatabaseSessionNotInitialized
 	}
@@ -148,9 +153,17 @@ func (d *Database) warmupSession(logger *slog.Logger, session *sql.DB) error {
 	if poolSize > 100 { // defensively cap poolsize
 		poolSize = 100
 	}
-	warmup := func(i int) error {
-		time.Sleep(100 * time.Millisecond)
-		ctx, cancel := context.WithTimeout(d.operationContext(), 5*time.Second)
+	warmup := func() error {
+		if warmupConnectionPause > 0 {
+			pause := time.NewTimer(warmupConnectionPause)
+			defer pause.Stop()
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-pause.C:
+			}
+		}
+		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
 		conn, err := session.Conn(ctx)
@@ -161,42 +174,55 @@ func (d *Database) warmupSession(logger *slog.Logger, session *sql.DB) error {
 		return nil
 	}
 
-	initdb(d.operationContext(), logger, d.Name, d.Config, session)
+	initdb(ctx, logger, d.Name, d.Config, session)
 
 	for i := 0; i < poolSize; i++ {
 		// short circuit warmup for inaccessible databases
-		if err := warmup(i + 1); err != nil {
+		if err := warmup(); err != nil {
 			logger.Debug("Failed warmup database connection pool", "conn", i, "error", err, "database", d.Name)
 			return err
 		}
 	}
 
 	logger.Debug("Warmed connection pool", "total", len(connections), "database", d.Name)
-	return nil
+	return ctx.Err()
 }
 
-func (d *Database) reconnect(logger *slog.Logger, backoff time.Duration) error {
+func (d *Database) reconnect(logger *slog.Logger, backoff time.Duration, failedSession *sql.DB) error {
 	d.reconnectAttemptMU.Lock()
 	defer d.reconnectAttemptMU.Unlock()
+	return d.reconnectLocked(d.operationContext(), logger, backoff, failedSession)
+}
 
+func (d *Database) reconnectLocked(ctx context.Context, logger *slog.Logger, backoff time.Duration, failedSession *sql.DB) error {
 	if d.closed {
 		return errDatabaseClosed
 	}
-
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	d.reconnectMU.RLock()
+	current := d.Session
+	d.reconnectMU.RUnlock()
+	if current != failedSession {
+		return nil // Another caller already replaced the failed handle.
+	}
 	if retryAfter := d.IsValid(); retryAfter != nil {
-		return fmt.Errorf("database reconnect delayed for %s", retryAfter.Round(time.Millisecond))
+		return fmt.Errorf("database reconnect delayed for %s: %w", retryAfter.Round(time.Millisecond), ErrConnectionNotReady)
 	}
 	logger.Info("Reconnecting database session", "database", d.Name)
 
-	ctx := d.operationContext()
 	session, err := connectContext(ctx, logger, d.Name, d.Config, d.ClientInfo)
 	if err == nil {
-		err = d.warmupSession(logger, session)
+		err = d.warmupSession(ctx, logger, session)
 		if err != nil && session != nil {
 			_ = session.Close()
 		}
 	}
 	if err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		d.reconnectMU.Lock()
 		d.connectErr = err
 		d.up = 0
@@ -229,7 +255,7 @@ func (d *Database) Ping(logger *slog.Logger, backoff time.Duration) error {
 		return err
 	}
 	if errors.Is(err, errDatabaseSessionNotInitialized) {
-		return d.reconnect(logger, backoff)
+		return d.reconnect(logger, backoff, session)
 	}
 	if err != nil {
 		if isInvalidCredentialsError(err) && d.Config.Vault != nil && d.Config.Vault.OCI != nil {
@@ -245,7 +271,7 @@ func (d *Database) Ping(logger *slog.Logger, backoff time.Duration) error {
 		}
 		// If database is closed, rebuild the handle and rerun init/warmup.
 		if isClosedDatabaseError(err) {
-			return d.reconnect(logger, backoff)
+			return d.reconnect(logger, backoff, session)
 		}
 		return err
 	}
@@ -342,6 +368,30 @@ func (d *Database) QueryContext(ctx context.Context, query string, args ...inter
 		return nil, nil, err
 	}
 	return rows, d.reconnectMU.RUnlock, nil
+}
+
+// EnsureSession recovers an absent pool after startup and connection backoff.
+// Call this with the worker context before starting a query timeout.
+func (d *Database) EnsureSession(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if !d.StartupReady() {
+		return ErrConnectionNotReady
+	}
+	d.reconnectMU.RLock()
+	available := d.Session != nil
+	d.reconnectMU.RUnlock()
+	if available {
+		return nil
+	}
+	// Another caller may already be recovering this database. Let scheduled
+	// log polls retry on their normal cadence without waiting for that caller.
+	if !d.reconnectAttemptMU.TryLock() {
+		return ErrConnectionNotReady
+	}
+	defer d.reconnectAttemptMU.Unlock()
+	return d.reconnectLocked(ctx, d.warmupLogger, d.connectionBackoff, nil)
 }
 
 // ConnectionContext pins a session for the caller. Release must run before

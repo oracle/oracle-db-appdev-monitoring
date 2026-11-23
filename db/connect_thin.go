@@ -14,6 +14,8 @@ import (
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
 )
 
+const warmupConnectionPause = 0
+
 func withClientInfo(connector driver.Connector, clientInfo config.ClientInfoConfig) driver.Connector {
 	if !clientInfo.IsEnabled() {
 		return connector

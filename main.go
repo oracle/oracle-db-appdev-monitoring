@@ -189,7 +189,7 @@ func main() {
 		}
 		return oci.CleanupWallets()
 	}
-	exporter := collector.NewExporter(logger, m, databases)
+	exporter := collector.NewExporterContext(workCtx, logger, m, databases)
 	prometheus.MustRegister(exporter)
 	prometheus.MustRegister(cversion.NewCollector("oracledb_exporter"))
 

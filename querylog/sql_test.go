@@ -9,9 +9,15 @@ import (
 	"database/sql/driver"
 	"errors"
 	"io"
+	"log/slog"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/oracle/oracle-db-appdev-monitoring/config"
+	"github.com/oracle/oracle-db-appdev-monitoring/db"
 )
 
 type rowConnector struct {
@@ -71,6 +77,21 @@ func newRowReader(t *testing.T, columns []string, values []driver.Value, args *[
 	reader := &sqlReader{conn: conn, release: conn.Close, source: &SQLSource{Query: "SELECT"}}
 	t.Cleanup(func() { _ = reader.Close() })
 	return reader
+}
+
+func TestSQLLogPollRetriesFailedStartupCredentialLookup(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	database := db.NewDatabaseContext(t.Context(), logger, "database", "db", config.DatabaseConfig{
+		PasswordFile: filepath.Join(t.TempDir(), "missing-password"),
+	}, config.ClientInfoConfig{})
+	if err := database.WarmupConnectionPool(logger, 0); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected startup credential lookup failure, got %v", err)
+	}
+	c, _, _ := setupCollector(t)
+	c.source = &SQLSource{Database: database, Query: "SELECT"}
+	if err := c.Poll(t.Context()); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected log poll to retry credential lookup, got %v", err)
+	}
 }
 
 func TestSQLReaderPreservesRetrievedColumns(t *testing.T) {
