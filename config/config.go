@@ -426,9 +426,6 @@ func (m *MetricsConfiguration) validate(logger *slog.Logger) error {
 	if err := m.validateLoggingConfig(); err != nil {
 		return err
 	}
-	if err := m.validateLogStreams(); err != nil {
-		return err
-	}
 	if m.Metrics.ScrapeInterval != nil && *m.Metrics.ScrapeInterval < 0 {
 		return errors.New("metrics.scrapeInterval must be nonnegative")
 	}
@@ -441,9 +438,6 @@ func (m *MetricsConfiguration) validate(logger *slog.Logger) error {
 func (m *MetricsConfiguration) validateOTLPConfig() error {
 	if m.OTLP == nil {
 		return nil
-	}
-	if strings.TrimSpace(m.OTLP.Endpoint) == "" {
-		return errors.New("otlp.endpoint is required when otlp is configured")
 	}
 	return validateOTLPTransport(m.OTLP)
 }

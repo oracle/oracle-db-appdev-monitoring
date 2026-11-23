@@ -282,17 +282,15 @@ func (e *Exporter) scheduledScrape(ctx context.Context, tick *time.Time) {
 	metadataCh := make(chan prometheus.Metric, 5)
 
 	results := []prometheus.Metric{}
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	var wg sync.WaitGroup
+	wg.Go(func() {
 		for metric := range metricCh {
 			results = append(results, metric)
 		}
 		for metric := range metadataCh {
 			results = append(results, freezeMetric(metric))
 		}
-	}()
+	})
 	e.scrape(ctx, metricCh, tick)
 	close(metricCh)
 	e.collectScrapeMetadata(metadataCh)

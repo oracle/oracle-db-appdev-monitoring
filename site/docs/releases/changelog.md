@@ -9,26 +9,17 @@ List of upcoming and historic changes to the exporter.
 
 ### Next, TBD
 
+- Add [OCI Autonomous Database discovery](../configuration/dynamic/oci-adb.md) through `databasesFrom.oci`, with compartment, lifecycle-state, and freeform-tag filters, secure TLS/mTLS connection profiles, and OCI Vault credentials. Static database configuration takes precedence over discovered targets with the same name.
+- Rewrite [alert log collection](../configuration/alert-logs.md) with persistent timestamp checkpoints per database and stream, bounded reads, retry backoff, and file, stdout, or OTLP/gRPC output. Checkpoints replace progress tracking from the output file and require writable storage at `log.stateDirectory`; without a checkpoint, collection replays all retained history unless `log.initialLookback` is set.
+- Add [custom SQL log streams](../configuration/query-logs.md) defined in YAML or TOML through `logStreams.default` and `logStreams.custom`, with automatic definition reloads and independent collection schedules. Add per-database and per-stream metrics for delivered records, errors, and checkpoint progress.
 - Fingerprint the custom metrics definitions that were loaded so a file replaced during reload is picked up on the next scrape.
 - Remove the ODPI-C checkout delay from connection pool warmup for go-ora and go-oracledb.
-- Add [OCI Autonomous Database discovery](../configuration/dynamic/oci-adb.md) through `databasesFrom.oci`, with compartment, lifecycle-state, and freeform-tag filters, secure TLS/mTLS connection profiles, and OCI Vault credentials. Static database configuration takes precedence over discovered targets with the same name.
-- Skip individual OCI targets whose managed wallets fail to prepare, keep healthy targets running, and retry skipped wallets on the configured renewal schedule or when discovery metadata changes.
-- Select each discovered godror mTLS target's wallet in its OCI connection descriptor so multiple databases can use distinct wallets in the same exporter process.
 - Cancel active metric queries during exporter shutdown and controlled restarts while preserving per-query timeouts.
 - Reload OCI Vault credentials when rebuilding database connections after authentication failures, honoring `metrics.connectionBackoff`.
 - Honor caller deadlines while waiting for OCI instance-principal initialization during database discovery, managed wallet preparation, and Vault secret lookups.
-- Rewrite [alert log collection](../configuration/alert-logs.md) with persistent timestamp checkpoints per database and stream, bounded reads, retry backoff, and file, stdout, or OTLP/gRPC output. Checkpoints replace progress tracking from the output file and require writable storage at `log.stateDirectory`; without a checkpoint, collection replays all retained history unless `log.initialLookback` is set.
-- Let database log streams retry a failed startup credential lookup without waiting for a metrics scrape.
-- Preserve the original log lookback window when the collector retries a failed first query.
-- Add [custom SQL log streams](../configuration/query-logs.md) defined in YAML or TOML through `logStreams.default` and `logStreams.custom`, with automatic definition reloads and independent collection schedules. Add per-database and per-stream metrics for delivered records, errors, and checkpoint progress.
-- Allow log stream database selectors to target OCI-discovered aliases, including aliases absent at startup.
-- Skip only the affected per-database log file when a discovered alias cannot be used in a filename.
 - Alert log output now contains the query columns directly, preserving original timestamps and message text.
-- Keep the Compose and Kubernetes example configurations compatible with their pinned exporter images and use the default checkpoint path on images that support it.
 - Report invalid custom metric descriptors and label values as scrape errors while continuing to export valid series.
 - Reject negative metric scrape intervals even when OTLP publishing is disabled.
-- Keep scrape metadata and database metrics together in the last completed scheduled snapshot while a new scrape runs.
-- Improve alert logging tests by removing a cancellation check that never acquired a connection and replacing SQL formatting and fixed checkpoint-size assertions with checks that tolerate formatting and metadata changes.
 
 ### 2.5.2, November 16th, 2026
 

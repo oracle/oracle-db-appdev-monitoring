@@ -86,29 +86,6 @@ func TestLogCollectorsStartWithUnavailableCheckpointStorage(t *testing.T) {
 	}
 }
 
-func TestLogCollectorStartsOnlyForMatchingDiscoveredAlias(t *testing.T) {
-	cfg := &config.MetricsConfiguration{
-		Logging: config.LoggingConfig{StateDirectory: t.TempDir()},
-		LogStreams: []config.LogStreamConfig{{
-			ID: "application", Databases: []string{"discovered-db"}, Query: "SELECT ts FROM events",
-			TimestampColumn: "ts", Output: config.LogOutput{Type: "stdout"},
-			Interval: time.Second, QueryTimeout: time.Second, MaxRows: 100, MaxBytes: 4096,
-		}},
-	}
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	databases := []*db.Database{{Name: "static-db"}}
-	group, err := newCollectors(logger, cfg, databases, "test")
-	if err != nil || len(group.collectors) != 0 {
-		t.Fatalf("expected no collectors for an absent alias, got %v, %v", group, err)
-	}
-	databases = append(databases, &db.Database{Name: "discovered-db"})
-	group, err = newCollectors(logger, cfg, databases, "test")
-	if err != nil || len(group.collectors) != 1 {
-		t.Fatalf("expected one collector for the matching alias, got %v, %v", group, err)
-	}
-	t.Cleanup(func() { _ = group.collectors[0].Close() })
-}
-
 func TestLogStreamStartupSkipsOnlyUnsafeDiscoveredFileAlias(t *testing.T) {
 	dir := t.TempDir()
 	streamsPath := filepath.Join(dir, "streams.yaml")
@@ -119,6 +96,11 @@ func TestLogStreamStartupSkipsOnlyUnsafeDiscoveredFileAlias(t *testing.T) {
     timestampColumn: ts
     output: {type: file, destination: events.log, perDatabaseFiles: true}
   - id: independent
+    query: SELECT ts FROM events
+    timestampColumn: ts
+    output: {type: stdout}
+  - id: pending
+    databases: [absent-db]
     query: SELECT ts FROM events
     timestampColumn: ts
     output: {type: stdout}
@@ -141,10 +123,12 @@ func TestLogStreamStartupSkipsOnlyUnsafeDiscoveredFileAlias(t *testing.T) {
 	cfg.Databases = map[string]config.DatabaseConfig{
 		"valid-db":   {ResourceID: "valid-ocid"},
 		"db/invalid": {ResourceID: "invalid-alias-ocid"},
+		"other-db":   {ResourceID: "other-ocid"},
 	}
 	databases := []*db.Database{
 		{Name: "db/invalid", Config: cfg.Databases["db/invalid"]},
 		{Name: "valid-db", Config: cfg.Databases["valid-db"]},
+		{Name: "other-db", Config: cfg.Databases["other-db"]},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -158,7 +142,7 @@ func TestLogStreamStartupSkipsOnlyUnsafeDiscoveredFileAlias(t *testing.T) {
 	if !strings.Contains(messages, "level=WARN") || !strings.Contains(messages, "database=db/invalid stream=per-db") {
 		t.Fatalf("missing warning for skipped file collector: %s", messages)
 	}
-	if !strings.Contains(messages, "streams=3") {
-		t.Fatalf("expected one per-database file collector and two stdout collectors: %s", messages)
+	if !strings.Contains(messages, "streams=4") {
+		t.Fatalf("expected one per-database file collector and three stdout collectors: %s", messages)
 	}
 }
