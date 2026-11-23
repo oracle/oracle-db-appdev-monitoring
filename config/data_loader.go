@@ -4,6 +4,7 @@
 package config
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"log/slog"
 	"os"
@@ -15,25 +16,36 @@ import (
 
 // LoadMetrics loads the configured default and custom metric definitions.
 func LoadMetrics(logger *slog.Logger, configuration *MetricsConfiguration) (map[string]*Metric, error) {
-	metricsToScrape := DefaultMetrics(logger, configuration.Metrics)
+	metrics, _, err := LoadMetricsWithFingerprints(logger, configuration)
+	return metrics, err
+}
 
-	if len(configuration.CustomMetricsFiles()) == 0 {
+// LoadMetricsWithFingerprints returns definitions and fingerprints of the bytes
+// decoded from each custom file in configuration order.
+func LoadMetricsWithFingerprints(logger *slog.Logger, configuration *MetricsConfiguration) (map[string]*Metric, [][sha256.Size]byte, error) {
+	metricsToScrape := DefaultMetrics(logger, configuration.Metrics)
+	customFiles := configuration.CustomMetricsFiles()
+
+	if len(customFiles) == 0 {
 		logger.Debug("No custom metrics defined.")
-		return metricsToScrape, nil
+		return metricsToScrape, nil, nil
 	}
 
-	for _, customMetricsFile := range configuration.CustomMetricsFiles() {
+	fingerprints := make([][sha256.Size]byte, len(customFiles))
+	for i, customMetricsFile := range customFiles {
 		metrics := &Metrics{}
 
-		if err := loadMetricsConfig(customMetricsFile, metrics); err != nil {
-			return nil, fmt.Errorf("failed to load custom metrics %s: %w", customMetricsFile, err)
+		contents, err := loadMetricsConfig(customMetricsFile, metrics)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to load custom metrics %s: %w", customMetricsFile, err)
 		}
+		fingerprints[i] = sha256.Sum256(contents)
 
 		logger.Info("Successfully loaded custom metrics from " + customMetricsFile)
 		mergeMetrics(metricsToScrape, metrics)
 	}
 
-	return metricsToScrape, nil
+	return metricsToScrape, fingerprints, nil
 }
 
 func mergeMetrics(dst map[string]*Metric, metrics *Metrics) {
@@ -42,34 +54,18 @@ func mergeMetrics(dst map[string]*Metric, metrics *Metrics) {
 	}
 }
 
-func loadYamlMetricsConfig(metricsFileName string, metrics *Metrics) error {
-	yamlBytes, err := os.ReadFile(metricsFileName)
+func loadMetricsConfig(metricsFileName string, metrics *Metrics) ([]byte, error) {
+	contents, err := os.ReadFile(metricsFileName)
 	if err != nil {
-		return fmt.Errorf("cannot read the metrics config %s: %w", metricsFileName, err)
+		return nil, fmt.Errorf("cannot read the metrics config %s: %w", metricsFileName, err)
 	}
-	if err := yaml.Unmarshal(yamlBytes, metrics); err != nil {
-		return fmt.Errorf("cannot unmarshal the metrics config %s: %w", metricsFileName, err)
-	}
-	return nil
-}
-
-func loadTomlMetricsConfig(customMetricsFile string, metrics *Metrics) error {
-	if _, err := toml.DecodeFile(customMetricsFile, metrics); err != nil {
-		return fmt.Errorf("cannot read the metrics config %s: %w", customMetricsFile, err)
-	}
-	return nil
-}
-
-func loadMetricsConfig(customMetricsFile string, metrics *Metrics) error {
-	if strings.HasSuffix(customMetricsFile, "toml") {
-		if err := loadTomlMetricsConfig(customMetricsFile, metrics); err != nil {
-			return fmt.Errorf("cannot load toml based metrics: %w", err)
+	if strings.HasSuffix(metricsFileName, "toml") {
+		if err := toml.Unmarshal(contents, metrics); err != nil {
+			return nil, fmt.Errorf("cannot decode TOML metrics config %s: %w", metricsFileName, err)
 		}
-	} else {
-		if err := loadYamlMetricsConfig(customMetricsFile, metrics); err != nil {
-			return fmt.Errorf("cannot load yaml based metrics: %w", err)
-		}
+	} else if err := yaml.Unmarshal(contents, metrics); err != nil {
+		return nil, fmt.Errorf("cannot decode YAML metrics config %s: %w", metricsFileName, err)
 	}
 	metrics.normalizeIdentifiers()
-	return nil
+	return contents, nil
 }

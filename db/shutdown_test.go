@@ -68,7 +68,7 @@ func TestCloseDatabasesClosesSharedNativePoolsOnce(t *testing.T) {
 		if err := database.Ping(testLogger(), time.Second); !errors.Is(err, errDatabaseClosed) {
 			t.Fatalf("Ping after shutdown: %v", err)
 		}
-		if err := database.reconnect(testLogger(), time.Second); !errors.Is(err, errDatabaseClosed) {
+		if err := database.reconnect(testLogger(), time.Second, nil); !errors.Is(err, errDatabaseClosed) {
 			t.Fatalf("reconnect after shutdown: %v", err)
 		}
 		if err := database.WarmupConnectionPool(testLogger(), time.Second); !errors.Is(err, errDatabaseClosed) {

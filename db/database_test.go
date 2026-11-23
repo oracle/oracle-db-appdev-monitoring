@@ -10,6 +10,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -293,7 +294,7 @@ func TestWarmupSessionClosesAcquiredConnectionsAfterPartialFailure(t *testing.T)
 		DatabaseLabel: "database",
 	}
 
-	err := db.warmupSession(logger, session)
+	err := db.warmupSession(t.Context(), logger, session)
 
 	if !errors.Is(err, errWarmupConnectionFailed) {
 		t.Fatalf("expected warmup connection failure, got %v", err)
@@ -390,7 +391,32 @@ func TestRetireCredentialsClosesFailedPoolAndRetainsReplacement(t *testing.T) {
 func TestReconnectHonorsBackoffWithoutResolvingCredentials(t *testing.T) {
 	d := &Database{}
 	d.invalidate(time.Minute)
-	if err := d.reconnect(testLogger(), time.Minute); err == nil || !strings.Contains(err.Error(), "reconnect delayed") {
+	if err := d.reconnect(testLogger(), time.Minute, nil); err == nil || !strings.Contains(err.Error(), "reconnect delayed") {
 		t.Fatalf("expected backoff before connection attempt, got %v", err)
+	}
+}
+
+func TestEnsureSessionReusesConcurrentReplacement(t *testing.T) {
+	d := &Database{Config: config.DatabaseConfig{PasswordFile: filepath.Join(t.TempDir(), "missing-password")}}
+	if err := d.WarmupConnectionPool(testLogger(), 0); !errors.Is(err, errDatabaseSessionNotInitialized) {
+		t.Fatalf("expected a missing startup session, got %v", err)
+	}
+	d.reconnectAttemptMU.Lock()
+	err := d.EnsureSession(t.Context())
+	d.reconnectAttemptMU.Unlock()
+	if !errors.Is(err, ErrConnectionNotReady) {
+		t.Fatalf("expected a concurrent recovery to skip acquisition, got %v", err)
+	}
+	d.Session = openTestQueryDB(t)
+	// The second caller saw a missing handle before the first installed it.
+	if err := d.reconnect(testLogger(), time.Minute, nil); err != nil {
+		t.Fatalf("replacing an already recovered pool retried credential lookup: %v", err)
+	}
+	_, release, err := d.ConnectionContext(t.Context())
+	if err != nil {
+		t.Fatalf("acquiring from the replacement pool: %v", err)
+	}
+	if err := release(); err != nil {
+		t.Fatal(err)
 	}
 }

@@ -34,9 +34,9 @@ To write to stdout, set `log.output.type: stdout`, or use `log.destination: /dev
 
 Log checkpoints require writable storage at `log.stateDirectory`. Use a persistent volume when progress must survive pod/container replacement. When this value is not present, it defaults to a `checkpoints` subdirectory beside the effective log destination, an explicit `log.stateDirectory` takes precedence. Missing or unwritable checkpoint storage pauses logging and retries with backoff; metrics collection continues.
 
-A log checkpoint contains a timestamp cursor (`completedThrough`) and version format for each configured database alias and stream ID. The cursor marks the end of the last fully delivered read range, including empty ranges. Files are replaced atomically once that range is acknowledged, using a process lock. Pause exporter collection if you must deliberately move a log checkpoint (to reset or adjust it).
+A log checkpoint contains a timestamp cursor (`completedThrough`) and a format version for each configured database alias and stream ID. After a read range is fully delivered, including an empty range, the collector advances the cursor to its end. The collector updates the file atomically under a process lock. Pause exporter collection if you must deliberately move a log checkpoint to reset or adjust it.
 
-Set `initialLookback`, for example, to `24h` to limit initial log replay.
+Set `initialLookback`, for example, to `24h` to limit initial log replay. The collector calculates the starting boundary from the first poll's database clock and saves it after releasing the database session, even if that read fails. The checkpoint file must be saved for retries and restarts to reuse that boundary.
 
 Configuration changes reuse existing checkpoints for the same configured database alias and stream ID, including changes to queries, timestamp-column selection, and outputs. Definitions in custom files [reload automatically](./query-logs.md#reloading-definitions). Checkpoint filenames hash the database alias and stream ID rather than embedding connection credentials. Changing the connection behind an alias reuses its cursor; choose a new alias or deliberately reset state when switching to a different source.
 
@@ -60,7 +60,7 @@ All visible records sharing a timestamp are delivered before the cursor advances
 
 Rows and bytes per read are bounded by maxRows and maxBytes. Dense ranges are subdivided by timestamp. If a single timestamp group cannot fit, collection fails explicitly rather than skipping rows; increase the limits. Output batches contain at most 256 events. Large initial backlogs catch up over subsequent polls. An unterminated final output line pauses file delivery until the operator adds a newline or repairs the file; existing output is never truncated automatically.
 
-File batches are synced before checkpoints advance. Checkpoints are written once per completed read range, rather than after every output batch. Failed partial ranges and crashes between output and checkpoint persistence can replay already delivered batches. Successful stdout writes acknowledge only the local write, not downstream ingestion. Checkpoints protect collection progress; they do not guarantee that an external shipper has read a file or prevent external deletion of unshipped output.
+File batches are synced before checkpoints advance. After the initial boundary is saved, the collector writes one checkpoint per completed read range. Failed partial ranges and crashes between output and checkpoint persistence can replay already delivered batches. A successful stdout write acknowledges delivery to the local stream. External log shippers track their own ingestion and file retention.
 
 ## OTLP logs
 

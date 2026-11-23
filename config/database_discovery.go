@@ -33,7 +33,7 @@ type discoverySnapshot struct {
 }
 
 func discoverOCIDatabases(ctx context.Context, logger *slog.Logger, cfg *OCIDatabasesFromConfig) (discoverySnapshot, error) {
-	configProvider, err := oci.ConfigurationProviderForAuthMode(cfg.Auth)
+	configProvider, err := oci.ConfigurationProviderForAuthModeContext(ctx, cfg.Auth)
 	if err != nil {
 		return discoverySnapshot{}, err
 	}
@@ -98,20 +98,24 @@ func stringValue(value *string) string {
 	return *value
 }
 
-func (m *MetricsConfiguration) mergeDiscoveredDatabases(ctx context.Context, logger *slog.Logger, discovered map[string]DatabaseConfig) (int, error) {
+func (m *MetricsConfiguration) mergeDiscoveredDatabases(ctx context.Context, logger *slog.Logger, discovered map[string]DatabaseConfig) (map[string]DatabaseConfig, int, error) {
 	next := make(map[string]DatabaseConfig, len(m.Databases)+len(discovered))
 	maps.Copy(next, m.Databases)
-	collisions := 0
+	failedWallets := make(map[string]DatabaseConfig)
+	skipped := 0
 	for name, database := range discovered {
 		if _, exists := next[name]; exists {
 			logger.Warn("skipping discovered database that conflicts with static configuration", "database", name, "resourceID", database.ResourceID)
-			collisions++
+			skipped++
 			continue
 		}
 		if wallet := database.DiscoveryWallet; wallet != nil {
 			directory, err := oci.PrepareWallet(ctx, wallet.Auth, wallet.DatabaseID, wallet.VaultID, wallet.SecretName)
 			if err != nil {
-				return collisions, fmt.Errorf("prepare wallet for database %q: %w", name, err)
+				logger.Warn("skipping discovered database because wallet preparation failed", "database", name, "resourceID", database.ResourceID, "error", err)
+				failedWallets[name] = database
+				skipped++
+				continue
 			}
 			database.TNSAdmin = directory
 		}
@@ -120,8 +124,8 @@ func (m *MetricsConfiguration) mergeDiscoveredDatabases(ctx context.Context, log
 	candidate := *m
 	candidate.Databases = next
 	if err := candidate.validateOCIVaultAuth(); err != nil {
-		return collisions, err
+		return nil, skipped, err
 	}
 	m.Databases = next
-	return collisions, nil
+	return failedWallets, skipped, nil
 }

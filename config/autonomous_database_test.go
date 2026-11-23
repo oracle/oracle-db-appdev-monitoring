@@ -61,13 +61,14 @@ func TestConnectionProfileSelectionIsDeterministic(t *testing.T) {
 func TestDatabaseConfigPreservesExplicitURL(t *testing.T) {
 	for _, value := range []string{"adb.example.com:1521/orders_low", "invalid connection string"} {
 		summary := testADBSummary("orders", map[string]string{tagPrefix + "url": value})
+		summary.IsMtlsConnectionRequired = common.Bool(true)
 		database, err := databaseConfigFromAutonomousDatabase(summary, oci.AuthModeConfigFile)
-		if err != nil || database.URL != value {
+		if err != nil || database.URL != value || database.DiscoveryMTLSProfile {
 			t.Fatalf("got URL %q, %v; want unchanged override %q", database.URL, err, value)
 		}
-		summary.FreeformTags[tagKeyConnectService] = "HIGH"
+		summary.FreeformTags[tagKeyConnectService] = "LOW"
 		database, err = databaseConfigFromAutonomousDatabase(summary, oci.AuthModeConfigFile)
-		if err != nil || database.URL != *summary.ConnectionStrings.Profiles[1].Value {
+		if err != nil || database.URL != *summary.ConnectionStrings.Profiles[2].Value || !database.DiscoveryMTLSProfile {
 			t.Fatalf("explicit service did not override URL: %q, %v", database.URL, err)
 		}
 	}

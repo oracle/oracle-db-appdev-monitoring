@@ -66,8 +66,7 @@ metrics:
     - /exporter/more-txeventq-metrics.toml
 
 log:
-  # Mount persistent storage here to preserve progress across replacements.
-  stateDirectory: /log/checkpoints
+  # Exporters with checkpoint support store progress in /log/checkpoints by default.
   # Path of log file
   destination: /log/alert.log
   # Interval of log updates

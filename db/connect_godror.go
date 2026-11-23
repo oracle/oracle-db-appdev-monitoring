@@ -9,6 +9,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/godror/godror"
@@ -18,11 +19,18 @@ import (
 
 const driverName = "godror"
 
+// Pace checkouts during warmup to avoid a reported ODPI-C crash on rapid acquisition.
+const warmupConnectionPause = 100 * time.Millisecond
+
 func newConnector(dbconfig config.DatabaseConfig, credentials config.DatabaseCredentials, clientInfo config.ClientInfoConfig) (driver.Connector, error) {
-	return godror.NewConnector(connectionParams(dbconfig, credentials.Username, credentials.Password, clientInfo)), nil
+	params, err := connectionParams(dbconfig, credentials.Username, credentials.Password, clientInfo)
+	if err != nil {
+		return nil, err
+	}
+	return godror.NewConnector(params), nil
 }
 
-func connectionParams(dbconfig config.DatabaseConfig, username, password string, clientInfo config.ClientInfoConfig) godror.ConnectionParams {
+func connectionParams(dbconfig config.DatabaseConfig, username, password string, clientInfo config.ClientInfoConfig) (godror.ConnectionParams, error) {
 	var P godror.ConnectionParams
 	if clientInfo.IsEnabled() {
 		P.OnInitStmts = []string{clientInfoSQL(clientInfo.GetLabel())}
@@ -52,7 +60,17 @@ func connectionParams(dbconfig config.DatabaseConfig, username, password string,
 		P.StandaloneConnection = sql.NullBool{Bool: false, Valid: true}
 	}
 	P.PoolParams.WaitTimeout = time.Second * 5
-	P.ConfigDir = dbconfig.TNSAdmin
+	if dbconfig.DiscoveryMTLSProfile {
+		// Godror uses ConfigDir only when initializing the shared ODPI-C context.
+		// Keep the wallet in the descriptor so each connection uses its own path.
+		descriptor, err := descriptorWithWallet(dbconfig.URL, dbconfig.TNSAdmin)
+		if err != nil {
+			return godror.ConnectionParams{}, fmt.Errorf("configure godror wallet for OCI mTLS profile: %w", err)
+		}
+		P.ConnectString = descriptor
+	} else {
+		P.ConfigDir = dbconfig.TNSAdmin
+	}
 
 	switch dbconfig.Role {
 	case "SYSDBA":
@@ -73,7 +91,7 @@ func connectionParams(dbconfig config.DatabaseConfig, username, password string,
 		P.AdminRole = dsn.NoRole
 	}
 
-	return P
+	return P, nil
 }
 
 func effectiveSQLPoolLimits(dbconfig config.DatabaseConfig) (int, int) {

@@ -21,10 +21,31 @@ type fixtureSource struct {
 	active int
 	opens  int
 	fail   error
+	onRead func()
 }
 type fixtureReader struct {
 	s      *fixtureSource
 	closed bool
+}
+
+type recoveringFixtureSource struct {
+	*fixtureSource
+	prepared bool
+}
+
+func (s *recoveringFixtureSource) prepare(ctx context.Context) error {
+	if _, ok := ctx.Deadline(); ok {
+		return errors.New("pool recovery received the query deadline")
+	}
+	s.prepared = true
+	return ctx.Err()
+}
+
+func (s *recoveringFixtureSource) Open(ctx context.Context) (Reader, error) {
+	if _, ok := ctx.Deadline(); !ok || !s.prepared {
+		return nil, errors.New("query timeout must start after pool recovery")
+	}
+	return s.fixtureSource.Open(ctx)
 }
 
 func (s *fixtureSource) Open(ctx context.Context) (Reader, error) {
@@ -44,6 +65,12 @@ func (r *fixtureReader) Close() error {
 	return nil
 }
 func (r *fixtureReader) Read(ctx context.Context, from, to time.Time, rows, bytes int) ([]Row, error) {
+	if r.s.onRead != nil {
+		r.s.onRead()
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if r.s.fail != nil {
 		return nil, r.s.fail
 	}
@@ -104,6 +131,15 @@ func poll(t *testing.T, c *Collector) {
 	}
 }
 
+func TestLogPollStartsQueryTimeoutAfterPoolRecovery(t *testing.T) {
+	c, source, _ := setupCollector(t)
+	c.source = &recoveringFixtureSource{fixtureSource: source}
+	poll(t, c)
+	if source.opens != 1 {
+		t.Fatalf("got %d source reads, want one", source.opens)
+	}
+}
+
 func TestTimestampCursorTiesLateRecordsAndRestart(t *testing.T) {
 	c, s, o := setupCollector(t)
 	e := eventAt(s, 0, "same")
@@ -130,6 +166,51 @@ func TestTimestampCursorTiesLateRecordsAndRestart(t *testing.T) {
 	poll(t, restored)
 	if len(o.events) != 4 {
 		t.Fatal("restart replayed completed range")
+	}
+}
+
+func TestInitialLookbackSurvivesFailedReadAndRestart(t *testing.T) {
+	for _, readErr := range []error{errors.New("query failed"), ErrLimit} {
+		t.Run(readErr.Error(), func(t *testing.T) {
+			c, s, o := setupCollector(t)
+			s.events = []Row{eventAt(s, -30*time.Minute, "within first lookback")}
+			s.fail = readErr
+			if err := c.Poll(context.Background()); !errors.Is(err, readErr) {
+				t.Fatalf("expected %v, got %v", readErr, err)
+			}
+			firstBoundary := s.now.Add(-c.opts.InitialLookback).Add(-time.Nanosecond)
+			if !c.state.CompletedThrough.Equal(firstBoundary) || len(o.events) != 0 || s.active != 0 {
+				t.Fatalf("first read did not save only the starting boundary: state=%+v, delivered=%d, sessions=%d", c.state, len(o.events), s.active)
+			}
+			if err := c.Close(); err != nil {
+				t.Fatal(err)
+			}
+
+			s.now = s.now.Add(2 * time.Hour)
+			s.fail = nil
+			restored, err := New(c.opts, s, o)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer restored.Close()
+			poll(t, restored)
+			if len(o.events) != 1 || o.events[0]["message"] != "within first lookback" {
+				t.Fatalf("original lookback lost after restart: %+v", o.events)
+			}
+		})
+	}
+}
+
+func TestCanceledFirstReadDoesNotSaveLookback(t *testing.T) {
+	c, s, o := setupCollector(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	s.onRead = cancel
+	if err := c.Poll(ctx); !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected cancellation, got %v", err)
+	}
+	if !c.state.CompletedThrough.IsZero() || c.pending != nil || len(o.events) != 0 || s.active != 0 {
+		t.Fatalf("canceled first read saved state or retained a session: state=%+v, delivered=%d, sessions=%d", c.state, len(o.events), s.active)
 	}
 }
 

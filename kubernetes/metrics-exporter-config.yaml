@@ -54,11 +54,9 @@ metrics:
   #   - /oracle/observability/txeventq-metrics.toml
 
 log:
+  # Exporters with checkpoint support store progress in /log/checkpoints by default.
   # Path of log file
   destination: /log/alert.log
-  stateDirectory: /log/checkpoints
-  # Optional: limit replay on the first startup without checkpoints.
-  # initialLookback: 24h
   # Interval of log updates
   interval: 15s
   ## Set disable to 1 to disable logging

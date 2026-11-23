@@ -33,6 +33,8 @@ databasesFrom:
 
 `timeout` bounds each startup discovery or metadata refresh, including startup wallet preparation, and must be positive. `refreshInterval` defaults to five minutes; `0s` disables metadata polling. `walletRefreshInterval` defaults to 24 hours; `0s` disables scheduled renewal of wallets managed by discovery. Negative intervals are invalid.
 
+With `instance_principal` authentication, the exporter shares one initialization attempt across discovery and Vault requests. Each request observes its own deadline while waiting for initialization. The OCI SDK can continue retrying authentication in the background and handles later token refreshes itself.
+
 Configuration validation does not call OCI.
 
 ## Database tags
@@ -73,7 +75,7 @@ Invalid individual configurations are skipped with warnings. A successful listin
 
 ## Connection service and transport
 
-The exporter selects OCI connection profiles by consumer group, TCPS protocol, and TLS authentication metadata. When multiple profiles match, it selects the lexically smallest connection string so OCI response reordering does not trigger a restart. The selected string is passed unchanged to the driver for parsing and connection validation; discovery does not rewrite certificate verification settings. Legacy connection fields are not used as a fallback.
+The exporter selects OCI connection profiles by consumer group, TCPS protocol, and TLS authentication metadata. When multiple profiles match, it selects the lexically smallest connection string so OCI response reordering does not trigger a restart. The godror mTLS path adds the target wallet to the long OCI descriptor and enables server DN matching when the descriptor leaves it unset. Existing certificate verification settings are preserved. Legacy connection fields are not used as a fallback.
 
 `LOW` is the default for monitoring. You can select any of the five groups when the database returns a compatible profile. The exporter does not switch to another service when the requested service is unavailable. See [Oracle's service guidance](https://docs.oracle.com/en-us/iaas/autonomous-database-serverless/doc/predefined-database-services-names.html).
 
@@ -83,7 +85,7 @@ An explicit `url` configuration tag is passed unchanged to the driver, as with a
 
 | Driver | Walletless TLS path | Automatic mTLS wallet path |
 | --- | --- | --- |
-| godror | Unchanged OCI connection string | Per-target `tnsAdmin` with auto-login wallet |
+| godror | Unchanged OCI connection string | Per-target auto-login wallet selected by `MY_WALLET_DIRECTORY` in the OCI descriptor |
 | go-ora | Encoded descriptor with SSL and certificate verification enabled | Per-target wallet option using `cwallet.sso` |
 | go-oracledb (experimental) | Full OCI descriptor | Supplied `ewallet.pem`, read directly from the per-connector wallet directory |
 
@@ -101,13 +103,13 @@ Place the files at the ZIP root, without an enclosing directory. Discovery obtai
 
 | Driver | Minimum files to include in the ZIP | Runtime configuration |
 | --- | --- | --- |
-| godror | `cwallet.sso` | The exporter generates `sqlnet.ora` pointing to the extracted wallet directory and enables server DN matching. |
+| godror | `cwallet.sso` | The OCI descriptor points to the mounted or extracted wallet directory. |
 | go-ora | `cwallet.sso` | The connector reads the supplied auto-login wallet directly. |
 | go-oracledb (experimental) | `ewallet.pem` | The connector reads the supplied PEM directly. It must contain the client private key, matching client certificate, and CA certificates. |
 
 For a ZIP shared by all three driver builds, include **`cwallet.sso` and `ewallet.pem`**. The exporter does not convert, decrypt, derive, or rewrite these credential files.
 
-For these discovery connections, you can omit `ewallet.p12`, `keystore.jks`, `truststore.jks`, `ojdbc.properties`, README files, and `tnsnames.ora`. The ZIP also does not need `sqlnet.ora`; the exporter writes its local configuration after extraction. Keep `tnsnames.ora` if another application uses TNS aliases from the same wallet. A pre-mounted directory used with godror should include an appropriate `sqlnet.ora` alongside `cwallet.sso`.
+For these discovery connections, you can omit `ewallet.p12`, `keystore.jks`, `truststore.jks`, `ojdbc.properties`, README files, and `tnsnames.ora`. The ZIP also does not need `sqlnet.ora`; the exporter writes its local configuration after extraction. Keep `tnsnames.ora` if another application uses TNS aliases from the same wallet. For a pre-mounted godror wallet with an explicit `url` override, configure the wallet location in the connection string or the applicable Oracle Net configuration.
 
 Downloaded/generated wallets are extracted into private `wallet-*` subdirectories of `databasesFrom.walletDirectory` (default `/tmp/exporter`). This path is independent of `TMPDIR`. Directories use mode `0700`, files use `0600`, and extraction rejects unsafe entries and oversized archives. The ZIP must contain a non-empty root `cwallet.sso` or `ewallet.pem`; the selected driver requires its own file from the table. External `tnsAdmin` directories configure the wallet directory; go-oracledb TNS alias lookup is not added.
 
@@ -139,7 +141,9 @@ Metadata polling compares effective targets, including resource OCIDs, names, la
 
 An OCI listing failure during polling retains current targets and does not request removal or restart. At startup, discovery failure continues with static targets when present; without static targets, startup fails. A successful empty discovery remains running so later metadata polls can detect new targets.
 
-Combined OCI credentials are read when a SQL handle is created or rebuilt. On an OCI-backed authentication failure, the old handle is retired; after `metrics.connectionBackoff`, rebuilding fetches the current secret. Ordinary pool replacement connections use their existing connector credentials until an authentication failure or restart. OCI credential calls observe caller cancellation and a maximum 30-second deadline.
+If OCI listing succeeds but a managed wallet fails to prepare, the exporter skips that target and serves the usable targets and discovery status. An unchanged metadata poll keeps the process running. A metadata change that triggers a restart or the configured wallet renewal schedule retries wallet preparation.
+
+Combined OCI credentials are read when a SQL handle is created or rebuilt. On an OCI-backed authentication failure, the exporter retires the old handle and fetches the current secret when it rebuilds the handle after `metrics.connectionBackoff`. Ordinary pool replacement connections use their existing connector credentials until an authentication failure or restart. The Vault request and the wait for initial instance-principal authentication use caller cancellation and a maximum 30-second deadline. The OCI SDK can outlast the caller's deadline when refreshing an expired instance-principal token.
 
 Discovery exposes these metrics:
 
@@ -150,7 +154,7 @@ Discovery exposes these metrics:
 - `oracledb_exporter_discovery_matched_targets`
 - `oracledb_exporter_discovery_skipped_targets`
 
-Matched counts resources after lifecycle/tag filtering; skipped counts invalid targets, duplicate names, and static-name collisions. Counts retain the last successful values during discovery failures. The target count reports accepted discovered entries after static precedence in the last successful snapshot; discovery success does not establish successful SQL connections. Use normal per-database up/error metrics and logs for connection failures.
+Matched counts resources after lifecycle/tag filtering. Skipped counts invalid targets, duplicate names, static-name collisions, and targets with wallet preparation failures. Counts retain the last successful values during discovery failures. The target count reports accepted discovered entries in the last successful snapshot. Use normal per-database up/error metrics and logs to track SQL connections.
 
 ## IAM, networking, and database prerequisites
 

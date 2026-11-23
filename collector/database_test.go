@@ -139,7 +139,7 @@ func TestScrapeDatabaseSkipsWhileStartupInProgress(t *testing.T) {
 	metricCh := make(chan prometheus.Metric, 1)
 	now := time.Now()
 
-	exporter.scrapeDatabase(metricCh, errChan, database, &now)
+	exporter.scrapeDatabase(context.Background(), metricCh, errChan, database, &now)
 
 	select {
 	case err := <-errChan:
@@ -213,6 +213,7 @@ func newTestScheduledExporter(t *testing.T, scrapeInterval time.Duration) (*Expo
 	}
 
 	exporter := &Exporter{
+		ctx:             context.Background(),
 		mu:              &sync.Mutex{},
 		metricsToScrape: metricsToScrape,
 		duration: prometheus.NewGauge(prometheus.GaugeOpts{

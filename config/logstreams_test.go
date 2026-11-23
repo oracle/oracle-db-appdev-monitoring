@@ -6,6 +6,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -94,6 +95,48 @@ func TestLogStreamYAMLDurationAndTimestampColumn(t *testing.T) {
 	}
 	if streams[1].Interval != 20*time.Second || streams[1].TimestampColumn != "ts" {
 		t.Fatal("YAML options were not preserved")
+	}
+}
+
+func TestLogStreamSelectorsAllowAliasesBeforeOCIDiscovery(t *testing.T) {
+	streamFile := filepath.Join(t.TempDir(), "streams.yaml")
+	if err := os.WriteFile(streamFile, []byte(`logStreams:
+  - id: application
+    databases: [discovered-db]
+    query: SELECT ts FROM events WHERE ts BETWEEN :1 AND :2
+    timestampColumn: ts
+    output: {type: stdout}
+`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	const discovery = "databasesFrom:\n  oci:\n    compartments: [test-compartment]\n"
+	exporterConfig := "log:\n  disable: 1\nlogStreams:\n  custom: [" + streamFile + "]\ndatabases:\n  static-db: {}\n"
+	path := writeExporterConfig(t, exporterConfig)
+	if _, err := LoadMetricsConfiguration(testLogger(), &Config{ConfigFile: path}); err == nil || !strings.Contains(err.Error(), `unknown database "discovered-db"`) {
+		t.Fatalf("static-only configuration should reject unknown aliases, got %v", err)
+	}
+	path = writeExporterConfig(t, exporterConfig+discovery)
+	m, err := LoadMetricsConfiguration(testLogger(), &Config{ConfigFile: path})
+	if err != nil {
+		t.Fatalf("discovery configuration should accept aliases before discovery, got %v", err)
+	}
+	if len(m.LogStreams) != 1 || len(m.LogStreams[0].Databases) != 1 || m.LogStreams[0].Databases[0] != "discovered-db" {
+		t.Fatalf("expected selection to be preserved, got %+v", m.LogStreams)
+	}
+}
+
+func TestLogStreamRejectsUnsafeStaticFileAliasWithDiscovery(t *testing.T) {
+	cfg := MetricsConfiguration{
+		Databases:     map[string]DatabaseConfig{"unsafe/alias": {}},
+		DatabasesFrom: &DatabasesFromConfig{OCI: &OCIDatabasesFromConfig{}},
+		LogStreams: []LogStreamConfig{{
+			ID: "application", Query: "SELECT ts FROM events", TimestampColumn: "ts",
+			Output: LogOutput{Type: "file", Destination: "events.log", PerDatabaseFiles: true},
+		}},
+	}
+	err := cfg.validateLogStreams()
+	if err == nil || !strings.Contains(err.Error(), "cannot be used in an output filename") {
+		t.Fatalf("expected static alias validation, got %v", err)
 	}
 }
 

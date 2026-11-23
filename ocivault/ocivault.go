@@ -40,7 +40,7 @@ func GetVaultSecretContext(ctx context.Context, vaultId string, secretName strin
 	if err := ctx.Err(); err != nil {
 		return "", err
 	}
-	configProvider, err := oci.ConfigurationProviderForAuthMode(authMode)
+	configProvider, err := oci.ConfigurationProviderForAuthModeContext(ctx, authMode)
 	if err != nil {
 		return "", err
 	}

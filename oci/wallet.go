@@ -50,7 +50,7 @@ func PrepareWallet(ctx context.Context, auth AuthMode, databaseID, vaultID, wall
 	}
 	source := walletSource{normalizeAuthMode(auth), databaseID, vaultID, walletSecret}
 	return prepareWallet(ctx, source, func(ctx context.Context) ([]byte, error) {
-		provider, err := ConfigurationProviderForAuthMode(auth)
+		provider, err := ConfigurationProviderForAuthModeContext(ctx, auth)
 		if err != nil {
 			return nil, err
 		}

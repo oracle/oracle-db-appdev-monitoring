@@ -47,6 +47,11 @@ type LogOutput struct {
 
 func IsStdout(path string) bool { return path == "stdout" || path == "/dev/stdout" }
 
+// IsLogFileAlias reports whether a database alias can be used in a filename.
+func IsLogFileAlias(name string) bool {
+	return name != "." && name != ".." && filepath.Base(name) == name && !strings.ContainsAny(name, "/\\\x00")
+}
+
 // AlertLogOutput translates legacy file options into the shared output shape.
 // An explicit nested destination takes precedence over the legacy destination.
 func (m *MetricsConfiguration) AlertLogOutput() LogOutput {
@@ -131,6 +136,7 @@ func (m *MetricsConfiguration) validateLogStreams() error {
 	}
 
 	seen := map[string]bool{}
+	ociDiscovery := m.DatabasesFrom != nil && m.DatabasesFrom.OCI != nil
 	for _, s := range m.LogStreams {
 		if s.ID == "" || seen[s.ID] {
 			return fmt.Errorf("logStreams IDs must be nonempty and unique")
@@ -142,9 +148,13 @@ func (m *MetricsConfiguration) validateLogStreams() error {
 		if strings.TrimSpace(s.Query) == "" || strings.TrimSpace(s.TimestampColumn) == "" {
 			return fmt.Errorf("log stream %q: query and timestampColumn are required", s.ID)
 		}
-		for _, name := range s.Databases {
-			if _, ok := m.Databases[name]; !ok {
-				return fmt.Errorf("log stream %q: unknown database %q", s.ID, name)
+		// Discovery resolves aliases after configuration loads and can add or
+		// remove targets later. An absent alias currently matches no targets.
+		if !ociDiscovery {
+			for _, name := range s.Databases {
+				if _, ok := m.Databases[name]; !ok {
+					return fmt.Errorf("log stream %q: unknown database %q", s.ID, name)
+				}
 			}
 		}
 		if err := validateLogOutput(s.Output); err != nil {
@@ -171,7 +181,10 @@ func (m *MetricsConfiguration) validateLogStreams() error {
 			}
 		}
 		for _, name := range names {
-			if name == "." || name == ".." || filepath.Base(name) != name || strings.ContainsAny(name, "/\\\x00") {
+			database, exists := m.Databases[name]
+			// A discovered target is checked when its file collector is built,
+			// so an invalid alias cannot invalidate the entire stream set.
+			if exists && database.ResourceID == "" && !IsLogFileAlias(name) {
 				return fmt.Errorf("database name %q cannot be used in an output filename", name)
 			}
 		}

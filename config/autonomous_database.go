@@ -105,6 +105,7 @@ func databaseConfigFromAutonomousDatabase(autonomousDatabase adb.AutonomousDatab
 			return DatabaseConfig{}, err
 		}
 		database.URL = connectionString
+		database.DiscoveryMTLSProfile = mutual
 	}
 	if mutual && database.TNSAdmin == "" {
 		if database.ResourceID == "" {

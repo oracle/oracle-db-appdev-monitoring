@@ -4,6 +4,7 @@
 package db
 
 import (
+	"context"
 	"errors"
 	"io"
 	"log/slog"
@@ -15,7 +16,7 @@ import (
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
 )
 
-func TestWarmupConnectionPoolWithConfigurationLookupErrorUsesBackoff(t *testing.T) {
+func TestEnsureSessionRetriesFailedStartupCredentialLookup(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	db := NewDatabase(logger, "database", "db1", config.DatabaseConfig{
 		URL:          "dbhost/service",
@@ -35,5 +36,20 @@ func TestWarmupConnectionPoolWithConfigurationLookupErrorUsesBackoff(t *testing.
 	}
 	if db.invalidUntil == nil {
 		t.Fatal("expected invalidUntil to be set after configuration lookup failure")
+	}
+	if err := db.EnsureSession(t.Context()); !errors.Is(err, ErrConnectionNotReady) {
+		t.Fatalf("expected acquisition to honor connection backoff, got %v", err)
+	}
+	db.clearInvalid()
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	if err := db.EnsureSession(ctx); !errors.Is(err, context.Canceled) || db.IsValid() != nil {
+		t.Fatalf("canceled recovery should leave backoff clear, got %v", err)
+	}
+	if err := db.EnsureSession(t.Context()); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected a fresh credential lookup without a metrics scrape, got %v", err)
+	}
+	if db.IsValid() == nil {
+		t.Fatal("failed recovery should start connection backoff")
 	}
 }

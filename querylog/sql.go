@@ -7,6 +7,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -28,6 +29,14 @@ type sqlReader struct {
 	release func() error
 	now     time.Time
 	source  *SQLSource
+}
+
+func (s *SQLSource) prepare(ctx context.Context) error {
+	err := s.Database.EnsureSession(ctx)
+	if errors.Is(err, db.ErrConnectionNotReady) {
+		return ErrNotReady
+	}
+	return err
 }
 
 func (s *SQLSource) Open(ctx context.Context) (Reader, error) {

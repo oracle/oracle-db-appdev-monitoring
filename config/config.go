@@ -65,15 +65,16 @@ type WebConfig struct {
 }
 
 type DatabaseConfig struct {
-	ResourceID      string                 `yaml:"-"`
-	DiscoveryWallet *DiscoveryWalletConfig `yaml:"-"`
-	Username        string
-	Password        string
-	PasswordFile    string `yaml:"passwordFile"`
-	URL             string `yaml:"url"`
-	ConnectConfig   `yaml:",inline"`
-	Vault           *VaultConfig      `yaml:"vault,omitempty"`
-	Labels          map[string]string `yaml:"labels,omitempty"`
+	ResourceID           string                 `yaml:"-"`
+	DiscoveryWallet      *DiscoveryWalletConfig `yaml:"-"`
+	DiscoveryMTLSProfile bool                   `yaml:"-"` // OCI supplied the mutual TLS descriptor.
+	Username             string
+	Password             string
+	PasswordFile         string `yaml:"passwordFile"`
+	URL                  string `yaml:"url"`
+	ConnectConfig        `yaml:",inline"`
+	Vault                *VaultConfig      `yaml:"vault,omitempty"`
+	Labels               map[string]string `yaml:"labels,omitempty"`
 }
 
 type ConnectConfig struct {
@@ -425,8 +426,8 @@ func (m *MetricsConfiguration) validate(logger *slog.Logger) error {
 	if err := m.validateLoggingConfig(); err != nil {
 		return err
 	}
-	if err := m.validateLogStreams(); err != nil {
-		return err
+	if m.Metrics.ScrapeInterval != nil && *m.Metrics.ScrapeInterval < 0 {
+		return errors.New("metrics.scrapeInterval must be nonnegative")
 	}
 	if err := m.validateOTLPConfig(); err != nil {
 		return err
@@ -437,12 +438,6 @@ func (m *MetricsConfiguration) validate(logger *slog.Logger) error {
 func (m *MetricsConfiguration) validateOTLPConfig() error {
 	if m.OTLP == nil {
 		return nil
-	}
-	if strings.TrimSpace(m.OTLP.Endpoint) == "" {
-		return errors.New("otlp.endpoint is required when otlp is configured")
-	}
-	if m.Metrics.ScrapeInterval != nil && *m.Metrics.ScrapeInterval < 0 {
-		return errors.New("metrics.scrapeInterval must be nonnegative")
 	}
 	return validateOTLPTransport(m.OTLP)
 }

@@ -439,6 +439,24 @@ otlp:
 	}
 }
 
+func TestLoadMetricsConfigurationRejectsNegativeScrapeInterval(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		otlp string
+	}{
+		{name: "without OTLP"},
+		{name: "with OTLP", otlp: "otlp:\n  endpoint: https://otel-collector:4317\n"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			path := writeExporterConfig(t, "metrics:\n  scrapeInterval: -1s\n"+tt.otlp)
+			_, err := LoadMetricsConfiguration(testLogger(), &Config{ConfigFile: path})
+			if err == nil || !strings.Contains(err.Error(), "metrics.scrapeInterval must be nonnegative") {
+				t.Fatalf("expected scrape interval validation error, got %v", err)
+			}
+		})
+	}
+}
+
 func TestLoadMetricsConfigurationRejectsInvalidOTLPConfig(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -447,7 +465,6 @@ func TestLoadMetricsConfigurationRejectsInvalidOTLPConfig(t *testing.T) {
 		wantErr string
 	}{
 		{name: "missing endpoint", metrics: "scrapeInterval: 15s", otlp: "headers: {}", wantErr: "otlp.endpoint"},
-		{name: "negative interval", metrics: "scrapeInterval: -1s", otlp: "endpoint: https://otel-collector:4317", wantErr: "metrics.scrapeInterval"},
 		{name: "zero timeout", metrics: "scrapeInterval: 15s", otlp: "endpoint: https://otel-collector:4317\n  timeout: 0s", wantErr: "otlp.timeout"},
 		{name: "scheme-less endpoint", metrics: "scrapeInterval: 15s", otlp: "endpoint: otel-collector:4317", wantErr: "otlp.endpoint must"},
 		{name: "TLS with HTTP endpoint", metrics: "scrapeInterval: 15s", otlp: "endpoint: http://otel-collector:4317\n  tls: {}", wantErr: "otlp.tls cannot"},

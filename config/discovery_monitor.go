@@ -20,6 +20,7 @@ type DiscoveryMonitor struct {
 	configuration *MetricsConfiguration
 	static        map[string]DatabaseConfig
 	baseline      map[string]DatabaseConfig
+	failedWallets map[string]DatabaseConfig
 	snapshot      func(context.Context, *slog.Logger, *OCIDatabasesFromConfig) (discoverySnapshot, error)
 	discoveryMetrics
 }
@@ -76,11 +77,15 @@ func (m *DiscoveryMonitor) Initialize(ctx context.Context, logger *slog.Logger) 
 	}
 	snapshot, err := m.snapshot(discoveryCtx, logger, m.configuration.DatabasesFrom.OCI)
 	if err == nil {
-		var collisions int
-		collisions, err = m.configuration.mergeDiscoveredDatabases(discoveryCtx, logger, snapshot.Databases)
-		snapshot.Skipped += collisions
+		var skipped int
+		m.failedWallets, skipped, err = m.configuration.mergeDiscoveredDatabases(discoveryCtx, logger, snapshot.Databases)
+		snapshot.Skipped += skipped
 	}
 	m.baseline = normalizedDiscoveryTargets(m.configuration.Databases)
+	// Keep failed wallet candidates in the metadata baseline so an unchanged
+	// listing does not restart the exporter on every refresh. The existing
+	// wallet renewal timer also retries these targets.
+	maps.Copy(m.baseline, m.failedWallets)
 	accepted := len(m.configuration.Databases) - len(m.static)
 	m.record(started, err, accepted, snapshot.Matched, snapshot.Skipped)
 	if err != nil {
@@ -113,6 +118,10 @@ func (m *DiscoveryMonitor) Poll(ctx context.Context, logger *slog.Logger) (bool,
 			continue
 		}
 		effective[name] = cfg
+		if failed, ok := m.failedWallets[name]; ok && reflect.DeepEqual(failed, cfg) {
+			snapshot.Skipped++
+			continue
+		}
 		accepted++
 	}
 	m.record(started, nil, accepted, snapshot.Matched, snapshot.Skipped)

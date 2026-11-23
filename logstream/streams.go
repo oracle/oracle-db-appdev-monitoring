@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"slices"
 	"sync"
 
 	"github.com/oracle/oracle-db-appdev-monitoring/config"
@@ -36,14 +37,12 @@ func Start(ctx context.Context, workers *sync.WaitGroup, logger *slog.Logger, m 
 	}
 	// Read again after installing watchers so an edit during startup cannot
 	// leave collectors using definitions older than the watched fingerprint.
-	updated := *m
-	var err error
-	updated.LogStreams, err = config.LoadLogStreams(m)
+	streams, err := config.LoadLogStreams(m)
 	if err != nil {
 		cancelWatching()
 		return err
 	}
-	collectors, err := newCollectors(&updated, databases, version)
+	collectors, err := newCollectors(logger, m, streams, databases, version)
 	if err != nil {
 		cancelWatching()
 		return err
@@ -58,12 +57,12 @@ func Start(ctx context.Context, workers *sync.WaitGroup, logger *slog.Logger, m 
 			case <-ctx.Done():
 				return
 			case <-reloads:
-				updated.LogStreams, err = config.LoadLogStreams(m)
+				streams, err := config.LoadLogStreams(m)
 				if err != nil {
 					logger.Error("Unable to reload log streams; keeping current collectors", "error", err)
 					continue
 				}
-				next, err := newCollectors(&updated, databases, version)
+				next, err := newCollectors(logger, m, streams, databases, version)
 				if err != nil {
 					logger.Error("Unable to configure reloaded log streams; keeping current collectors", "error", err)
 					continue
@@ -127,7 +126,7 @@ type collectorGroup struct {
 	transport  *otlp.LogTransport
 }
 
-func newCollectors(m *config.MetricsConfiguration, databases []*db.Database, version string) (*collectorGroup, error) {
+func newCollectors(logger *slog.Logger, m *config.MetricsConfiguration, streams []config.LogStreamConfig, databases []*db.Database, version string) (*collectorGroup, error) {
 	group := &collectorGroup{}
 	cleanup := func() {
 		for _, c := range group.collectors {
@@ -136,9 +135,6 @@ func newCollectors(m *config.MetricsConfiguration, databases []*db.Database, ver
 		if group.transport != nil {
 			_ = group.transport.Close()
 		}
-	}
-	if len(databases) == 0 || len(m.LogStreams) == 0 {
-		return group, nil
 	}
 	makeOutput := func(out config.LogOutput, database, timestampColumn string) (querylog.Output, error) {
 		switch out.Type {
@@ -162,6 +158,10 @@ func newCollectors(m *config.MetricsConfiguration, databases []*db.Database, ver
 		}
 	}
 	add := func(database *db.Database, s config.LogStreamConfig) error {
+		if database.Config.ResourceID != "" && s.Output.PerDatabaseFiles && !config.IsLogFileAlias(database.Name) {
+			logger.Warn("Skipping log stream with an unsafe database filename", "database", database.Name, "stream", s.ID)
+			return nil
+		}
 		output, err := makeOutput(s.Output, database.Name, s.TimestampColumn)
 		if err != nil {
 			return err
@@ -176,18 +176,13 @@ func newCollectors(m *config.MetricsConfiguration, databases []*db.Database, ver
 		return nil
 	}
 	for _, database := range databases {
-		for _, s := range m.LogStreams {
-			selected := len(s.Databases) == 0
-			for _, name := range s.Databases {
-				if name == database.Name {
-					selected = true
-				}
+		for _, s := range streams {
+			if len(s.Databases) != 0 && !slices.Contains(s.Databases, database.Name) {
+				continue
 			}
-			if selected {
-				if err := add(database, s); err != nil {
-					cleanup()
-					return nil, err
-				}
+			if err := add(database, s); err != nil {
+				cleanup()
+				return nil, err
 			}
 		}
 	}
